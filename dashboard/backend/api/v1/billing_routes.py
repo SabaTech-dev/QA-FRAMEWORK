@@ -139,7 +139,7 @@ async def upgrade_subscription(
 @router.post("/webhook")
 async def stripe_webhook(
     request: Request,
-    stripe_signature: str = Header(alias="Stripe-Signature"),
+    stripe_signature: str = Header(None, alias="Stripe-Signature"),
     db: AsyncSession = Depends(get_db_session)
 ):
     """
@@ -149,6 +149,11 @@ async def stripe_webhook(
     Events include: payment success/failure, subscription updates, etc.
     """
     logger.info("Received Stripe webhook")
+    
+    # Check if signature is present
+    if not stripe_signature:
+        logger.error("Missing Stripe-Signature header")
+        raise HTTPException(status_code=400, detail="Missing Stripe-Signature header")
     
     payload = await request.body()
     
@@ -162,6 +167,9 @@ async def stripe_webhook(
     except stripe.error.SignatureVerificationError as e:
         logger.error("Invalid signature", error=str(e))
         raise HTTPException(status_code=400, detail="Invalid signature")
+    except Exception as e:
+        logger.error("Webhook construction failed", error=str(e))
+        raise HTTPException(status_code=400, detail="Webhook validation failed")
     
     try:
         result = await stripe_service.handle_webhook_event(db, event)

@@ -44,8 +44,8 @@ async def register(
     Returns:
         UserResponse with user info (without password)
     """
-    from services.auth_service import register_user
-    return await register_user(db, user_create)
+    from services.user_service import create_user_service
+    return await create_user_service(user_create, db)
 
 
 # OAuth

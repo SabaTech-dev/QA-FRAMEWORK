@@ -130,56 +130,6 @@ router.include_router(onboarding_routes.router)
 #         clear_request_id()
 
 
-# ==================== Auth Routes ====================
-
-
-@router.post("/auth/login", response_model=TokenResponse)
-async def login(login_request: LoginRequest, db: AsyncSession = Depends(get_db)):
-    """
-    Login and get access token.
-
-    Authenticates a user with username and password, returning a JWT access token
-    for use in subsequent authenticated requests.
-
-    Args:
-        login_request: LoginRequest containing username and password
-        db: Database session (injected)
-
-    Returns:
-        TokenResponse containing access_token and token_type
-
-    Raises:
-        HTTPException 401: Invalid authentication credentials
-
-    Example:
-        POST /api/v1/auth/login
-        {
-            "username": "admin",
-            "password": "secure_password123"
-        }
-
-        Response:
-        {
-            "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-            "token_type": "bearer"
-        }
-    """
-    logger.info("Login endpoint called", username=login_request.username)
-    try:
-        response = await login_for_access_token(login_request, db)
-        logger.info(
-            "Login endpoint completed successfully", username=login_request.username
-        )
-        return response
-    except HTTPException as e:
-        logger.warning(
-            "Login endpoint failed",
-            username=login_request.username,
-            status_code=e.status_code,
-        )
-        raise
-
-
 # ==================== Dashboard Routes ====================
 
 

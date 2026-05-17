@@ -23,7 +23,7 @@ from prometheus_client import (
     CollectorRegistry,
 )
 
-from database import get_db_session as get_db, engine
+from database import get_db_session as get_db, engine, AsyncSessionFactory
 from core.logging_config import get_logger
 from config import settings
 
@@ -92,7 +92,7 @@ async def check_database_health() -> Dict[str, Any]:
     """Check database connectivity and performance."""
     start_time = time.time()
     try:
-        async with AsyncSession(engine) as session:
+        async with AsyncSessionFactory() as session:
             result = await session.execute(text("SELECT 1"))
             await result.scalar()
 

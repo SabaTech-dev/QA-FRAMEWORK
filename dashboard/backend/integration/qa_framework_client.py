@@ -12,12 +12,15 @@ from pathlib import Path
 import tempfile
 import json
 
+# QA-FRAMEWORK path from environment or default for container
+QA_FRAMEWORK_PATH = os.environ.get("QA_FRAMEWORK_PATH", "/app/QA-FRAMEWORK")
+
 class QAFrameworkClient:
     """
     Client to integrate with the existing QA-FRAMEWORK
     """
     
-    def __init__(self, framework_path: str = "/home/ubuntu/.openclaw/workspace/QA-FRAMEWORK"):
+    def __init__(self, framework_path: str = QA_FRAMEWORK_PATH):
         self.framework_path = Path(framework_path)
         if not self.framework_path.exists():
             raise FileNotFoundError(f"QA-FRAMEWORK not found at {self.framework_path}")
