@@ -1,0 +1,403 @@
+# =============================================================================
+# Trivy Security Scanning Workflow
+# Comprehensive DevSecOps scanning for QA-FRAMEWORK
+# - Filesystem vulnerability & secret scanning
+# - Container image scanning (backend + frontend Dockerfiles)
+# - SBOM generation
+# - IaC misconfiguration detection
+# - GitHub Security tab integration (SARIF)
+# =============================================================================
+
+name: Trivy Security Scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Daily at 1 AM UTC (before nightly tests at 3 AM)
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+
+# Cancel in-run scans on the same branch/PR to save minutes
+concurrency:
+  group: trivy-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write   # Required for SARIF upload to GitHub Security tab
+  actions: read
+  pull-requests: write      # Required for PR review comments
+
+env:
+  TRIVY_VERSION: "0.71.0"
+  TRIVY_DB_REPOSITORY: "mirror.gcr.io/aquasec/trivy-db:2"
+
+jobs:
+  # ===========================================================================
+  # JOB 1: Filesystem Scan (vulnerabilities, secrets, misconfigurations)
+  # =================================================================----------
+  trivy-fs-scan:
+    name: Trivy Filesystem Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Install Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+          format: 'sarif'
+          output: 'trivy-fs-results.sarif'
+          scanners: 'vuln,secret,misconfig'
+          trivy-config: trivy.yaml
+        env:
+          TRIVY_DB_REPOSITORY: ${{ env.TRIVY_DB_REPOSITORY }}
+          TRIVY_SKIP_DB_UPDATE: "false"
+          TRIVY_JAVA_DB_REPOSITORY: ""
+
+      - name: Upload FS scan SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-fs-results.sarif'
+          category: 'trivy-fs'
+
+      - name: Upload FS scan results artifact
+        uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: trivy-fs-results
+          path: trivy-fs-results.sarif
+          retention-days: 30
+
+      - name: Summarize FS findings
+        if: always()
+        run: |
+          echo "## 🔍 Trivy Filesystem Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f trivy-fs-results.sarif ]; then
+            CRITICAL=$(grep -o '"CRITICAL"' trivy-fs-results.sarif | wc -l)
+            HIGH=$(grep -o '"HIGH"' trivy-fs-results.sarif | wc -l)
+            
+            echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| CRITICAL | $CRITICAL |" >> $GITHUB_STEP_SUMMARY
+            echo "| HIGH | $HIGH |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ No SARIF report generated" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ===========================================================================
+  # JOB 2: Dockerfile Image Scan (backend)
+  # =================================================================----------
+  trivy-image-backend:
+    name: Trivy Scan - Backend Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Build backend Docker image
+        run: docker build -t qa-framework-backend:scan -f dashboard/backend/Dockerfile .
+
+      - name: Scan backend image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'qa-framework-backend:scan'
+          format: 'sarif'
+          output: 'trivy-backend-image.sarif'
+          severity: 'CRITICAL,HIGH'
+          scanners: 'vuln,secret,misconfig'
+        env:
+          TRIVY_DB_REPOSITORY: ${{ env.TRIVY_DB_REPOSITORY }}
+          TRIVY_SKIP_DB_UPDATE: "false"
+
+      - name: Upload backend image SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-backend-image.sarif'
+          category: 'trivy-backend-image'
+
+      - name: Upload backend scan artifact
+        uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: trivy-backend-image-results
+          path: trivy-backend-image.sarif
+          retention-days: 30
+
+  # ===========================================================================
+  # JOB 3: Dockerfile Image Scan (frontend)
+  # =================================================================----------
+  trivy-image-frontend:
+    name: Trivy Scan - Frontend Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Build frontend Docker image
+        run: docker build -t qa-framework-frontend:scan -f dashboard/frontend/Dockerfile .
+
+      - name: Scan frontend image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'qa-framework-frontend:scan'
+          format: 'sarif'
+          output: 'trivy-frontend-image.sarif'
+          severity: 'CRITICAL,HIGH'
+          scanners: 'vuln,secret,misconfig'
+        env:
+          TRIVY_DB_REPOSITORY: ${{ env.TRIVY_DB_REPOSITORY }}
+          TRIVY_SKIP_DB_UPDATE: "false"
+
+      - name: Upload frontend image SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-frontend-image.sarif'
+          category: 'trivy-frontend-image'
+
+      - name: Upload frontend scan artifact
+        uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: trivy-frontend-image-results
+          path: trivy-frontend-image.sarif
+          retention-days: 30
+
+  # ===========================================================================
+  # JOB 4: SBOM Generation
+  # =================================================================----------
+  trivy-sbom:
+    name: Trivy SBOM Generation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Generate SBOM (SPDX JSON)
+        run: |
+          trivy fs --format spdx-json --output sbom-spdx.json .
+        env:
+          TRIVY_DB_REPOSITORY: ${{ env.TRIVY_DB_REPOSITORY }}
+          TRIVY_SKIP_DB_UPDATE: "true"
+
+      - name: Generate SBOM (CycloneDX JSON)
+        run: |
+          trivy fs --format cyclonedx --output sbom-cyclonedx.json .
+        env:
+          TRIVY_DB_REPOSITORY: ${{ env.TRIVY_DB_REPOSITORY }}
+          TRIVY_SKIP_DB_UPDATE: "true"
+
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: sbom-reports
+          path: |
+            sbom-spdx.json
+            sbom-cyclonedx.json
+          retention-days: 90
+
+      - name: SBOM Summary
+        run: |
+          echo "## 📦 SBOM Generated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Format | File |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|------|" >> $GITHUB_STEP_SUMMARY
+          echo "| SPDX JSON | sbom-spdx.json |" >> $GITHUB_STEP_SUMMARY
+          echo "| CycloneDX JSON | sbom-cyclonedx.json |" >> $GITHUB_STEP_SUMMARY
+
+  # ===========================================================================
+  # JOB 5: IaC Misconfiguration Scan
+  # =================================================================----------
+  trivy-iac:
+    name: Trivy IaC Misconfiguration Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Scan IaC files with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+          format: 'sarif'
+          output: 'trivy-iac-results.sarif'
+        env:
+          TRIVY_DB_REPOSITORY: ${{ env.TRIVY_DB_REPOSITORY }}
+          TRIVY_SKIP_DB_UPDATE: "true"
+
+      - name: Upload IaC SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-iac-results.sarif'
+          category: 'trivy-iac'
+
+      - name: Upload IaC scan artifact
+        uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: trivy-iac-results
+          path: trivy-iac-results.sarif
+          retention-days: 30
+
+  # ===========================================================================
+  # JOB 6: PR Review Comment with Trivy Results
+  # =================================================================----------
+  trivy-pr-comment:
+    name: Trivy PR Review
+    runs-on: ubuntu-latest
+    needs: [trivy-fs-scan, trivy-image-backend, trivy-image-frontend, trivy-iac]
+    if: github.event_name == 'pull_request' && always()
+    steps:
+      - name: Download all Trivy artifacts
+        uses: actions/download-artifact@v5
+        with:
+          pattern: 'trivy-*-results'
+          merge-multiple: true
+
+      - name: Parse and summarize findings
+        id: summary
+        run: |
+          TOTAL=0
+          CRITICAL=0
+          HIGH=0
+          
+          for f in trivy-*.sarif; do
+            if [ -f "$f" ]; then
+              C=$(grep -o '"CRITICAL"' "$f" | wc -l)
+              H=$(grep -o '"HIGH"' "$f" | wc -l)
+              CRITICAL=$((CRITICAL + C))
+              HIGH=$((HIGH + H))
+            fi
+          done
+          
+          TOTAL=$((CRITICAL + HIGH))
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+          echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+          echo "high=$HIGH" >> $GITHUB_OUTPUT
+          
+          if [ "$TOTAL" -eq 0 ]; then
+            echo "status=✅ PASS" >> $GITHUB_OUTPUT
+          elif [ "$CRITICAL" -gt 0 ]; then
+            echo "status=❌ FAIL" >> $GITHUB_OUTPUT
+          else
+            echo "status=⚠️ WARN" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment PR with Trivy results
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const total = '${{ steps.summary.outputs.total }}';
+            const critical = '${{ steps.summary.outputs.critical }}';
+            const high = '${{ steps.summary.outputs.high }}';
+            const status = '${{ steps.summary.outputs.status }}';
+            
+            const body = `## ${status} Trivy Security Scan Results
+            
+            | Severity | Count |
+            |----------|-------|
+            | 🔴 CRITICAL | ${critical} |
+            | 🟠 HIGH | ${high} |
+            | **Total** | **${total}** |
+            
+            **Scans performed:**
+            - 📁 Filesystem (vulnerabilities, secrets, misconfigurations)
+            - 🐳 Backend Docker image
+            - 🐳 Frontend Docker image
+            - 🏗️ IaC misconfiguration detection
+            
+            ${critical > 0 ? '**❌ CRITICAL vulnerabilities must be resolved before merge.**' : ''}
+            ${high > 0 && critical == 0 ? '**⚠️ HIGH vulnerabilities should be addressed. Review required.**' : ''}
+            ${total == 0 ? '**✅ No CRITICAL or HIGH vulnerabilities detected.**' : ''}
+            
+            <details>
+            <summary>📋 View detailed SARIF reports</summary>
+            
+            Download artifacts from this workflow run for full SARIF reports.
+            Results are also available in the GitHub Security tab.
+            
+            </details>
+            
+            ---
+            *Trivy v0.71.0 | [aquasecurity/trivy](https://github.com/aquasecurity/trivy)*
+            `;
+            
+            // Find existing Trivy comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const trivyComment = comments.find(c => 
+              c.user.type === 'Bot' && c.body.includes('Trivy Security Scan Results')
+            );
+            
+            if (trivyComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: trivyComment.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body
+              });
+            }
+
+  # ===========================================================================
+  # JOB 7: Gate check (fails pipeline on CRITICAL vulns)
+  # =================================================================----------
+  trivy-gate:
+    name: Trivy Security Gate
+    runs-on: ubuntu-latest
+    needs: [trivy-fs-scan, trivy-image-backend, trivy-image-frontend, trivy-iac]
+    if: always()
+    steps:
+      - name: Download all Trivy artifacts
+        uses: actions/download-artifact@v5
+        with:
+          pattern: 'trivy-*-results'
+          merge-multiple: true
+
+      - name: Check for CRITICAL vulnerabilities
+        run: |
+          CRITICAL=0
+          for f in trivy-*.sarif; do
+            if [ -f "$f" ]; then
+              C=$(grep -o '"CRITICAL"' "$f" | wc -l)
+              CRITICAL=$((CRITICAL + C))
+            fi
+          done
+          
+          echo "Total CRITICAL findings: $CRITICAL"
+          
+          if [ "$CRITICAL" -gt 0 ]; then
+            echo "❌ Security gate FAILED: $CRITICAL CRITICAL vulnerabilities found"
+            exit 1
+          else
+            echo "✅ Security gate PASSED: No CRITICAL vulnerabilities"
+          fi

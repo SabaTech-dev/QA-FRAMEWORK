@@ -1,0 +1,38 @@
+# Trivy Configuration File
+# QA-Framework Security Scanning
+
+# Global settings
+timeout: 10m
+
+# Vulnerability settings
+vulnerability:
+  type: [os, library]
+  severity: [CRITICAL, HIGH]
+  # Ignore unfixed vulnerabilities that have no available fix
+  ignore-unfixed: true
+
+# Secret scanning settings
+secret:
+  # Exclude test files and documentation from secret scanning
+  config: trivy-secret.yaml
+
+# Misconfiguration settings
+misconfig:
+  # Include IaC files: dockerfile, yaml (K8s, Compose), GitHub Actions
+  scanners: [dockerfile, yaml, github]
+
+# License scanning (informational)
+license:
+  # Flag packages with forbidden licenses
+  forbidden:
+    - AGPL-1.0
+    - AGPL-3.0
+  # Flag packages with unknown licenses for review
+  partial: true
+
+# File/directory exclusions
+# Note: .trivyignore is also supported for CVE-level ignores
+
+# Reporting
+format: table
+exit-code: 0  # Don't fail by default; gate job handles that
