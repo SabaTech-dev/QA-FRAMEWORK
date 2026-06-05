@@ -36,7 +36,7 @@ redis = "5.0.1"
 psutil = "5.9.8"
 
 [tool.poetry.group.dev.dependencies]
-black = "24.1.1"
+black = "26.5.1"
 ruff = "0.2.1"
 mypy = "1.8.0"
 pre-commit = "3.6.0"
