@@ -237,7 +237,7 @@ class QueryCache:
         
         return None
     
-    def set(self, query: str, result: Any, params: tuple = ():
+    def set(self, query: str, result: Any, params: tuple = ()):
         """
         Cache query result
         

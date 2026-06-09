@@ -1,0 +1,22 @@
+# Gitleaks configuration for QA-FRAMEWORK
+# Prevents secret leakage in git history
+
+[allowlist]
+  description = "Global allow list"
+  paths = [
+    '''tests/security/test_owasp_top10_2025\.py$''',
+    '''\.env\.example$''',
+    '''\.env\.template$''',
+  ]
+
+[[rules]]
+  id = "generic-api-key"
+  description = "Generic API Key"
+  regex = '''(?i)(?:api_key|apikey|api[-_]?token)\s*[:=]\s*['\"]?[a-zA-Z0-9_\-]{20,}'''
+  tags = ["key", "API"]
+
+[[rules]]
+  id = "secret-key"
+  description = "Secret Key"
+  regex = '''(?i)(?:secret[-_]?key|secret)\s*[:=]\s*['\"]?[a-zA-Z0-9_\-]{20,}'''
+  tags = ["key", "secret"]

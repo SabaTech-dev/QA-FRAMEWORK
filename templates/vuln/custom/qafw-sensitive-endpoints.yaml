@@ -1,0 +1,60 @@
+id: qafw-sensitive-endpoints
+
+info:
+  name: QA-Framework Sensitive Endpoint Discovery
+  author: qa-framework
+  severity: medium
+  description: Detects exposed sensitive endpoints including admin panels, config files, and debug interfaces.
+  tags: exposure,sensitive,discovery
+
+requests:
+  # Common sensitive paths
+  - method: GET
+    path:
+      - "{{BaseURL}}/admin"
+      - "{{BaseURL}}/admin/"
+      - "{{BaseURL}}/config"
+      - "{{BaseURL}}/config.json"
+      - "{{BaseURL}}/config.yml"
+      - "{{BaseURL}}/.env"
+      - "{{BaseURL}}/.git/config"
+      - "{{BaseURL}}/wp-admin"
+      - "{{BaseURL}}/debug"
+      - "{{BaseURL}}/api/"
+      - "{{BaseURL}}/api/docs"
+      - "{{BaseURL}}/swagger"
+      - "{{BaseURL}}/swagger.json"
+      - "{{BaseURL}}/openapi.json"
+      - "{{BaseURL}}/graphql"
+      - "{{BaseURL}}/actuator"
+      - "{{BaseURL}}/actuator/health"
+      - "{{BaseURL}}/server-status"
+      - "{{BaseURL}}/phpinfo.php"
+      - "{{BaseURL}}/info.php"
+      - "{{BaseURL}}/test.php"
+
+    matchers-condition: or
+    matchers:
+      - type: word
+        words:
+          - "admin"
+          - "dashboard"
+          - "login"
+          - "password"
+          - "secret"
+          - "api key"
+          - "token"
+        part: body
+
+      - type: status
+        status:
+          - 200
+          - 401
+          - 403
+          - 500
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - "(?i)(admin|dashboard|login|password|secret|token|api[_-]?key)"

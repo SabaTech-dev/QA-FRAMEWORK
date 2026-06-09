@@ -15,17 +15,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0  # Full history for proper diff
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@42375524e23d412d93fb67b49958b491fce71c38
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Cache pip packages
-        uses: actions/cache@v4
+        uses: actions/cache@5a3ec84eff668545956fd18022155c73e4d9b325
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
@@ -65,7 +65,7 @@ jobs:
 
       - name: Comment PR with results
         if: always()
-        uses: actions/github-script@v8
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
         with:
           script: |
             const message = `## PR Check Results
@@ -91,7 +91,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
 

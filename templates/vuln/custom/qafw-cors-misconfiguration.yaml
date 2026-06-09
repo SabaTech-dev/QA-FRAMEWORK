@@ -1,0 +1,35 @@
+id: qafw-cors-misconfiguration
+
+info:
+  name: QA-Framework CORS Misconfiguration Detection
+  author: qa-framework
+  severity: high
+  description: Detects CORS misconfigurations that could lead to cross-origin data theft.
+  tags: cors,security,misconfig
+
+requests:
+  - method: OPTIONS
+    path:
+      - "{{BaseURL}}"
+      - "{{BaseURL}}/api/"
+      - "{{BaseURL}}/api/v1/"
+
+    headers:
+      Origin: https://evil.com
+      Access-Control-Request-Method: GET
+
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "Access-Control-Allow-Origin: https://evil.com"
+          - "Access-Control-Allow-Origin: *"
+          - "Access-Control-Allow-Origin: null"
+
+    extractors:
+      - type: kval
+        part: header
+        kval:
+          - access-control-allow-origin
+          - access-control-allow-credentials
+          - access-control-allow-methods

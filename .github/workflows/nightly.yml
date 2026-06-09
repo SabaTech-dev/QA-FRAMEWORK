@@ -54,20 +54,20 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@42375524e23d412d93fb67b49958b491fce71c38
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Install Poetry
-        uses: abatilo/actions-poetry@v2
+        uses: abatilo/actions-poetry@c67cb3ee85d6ecca34a202b2e00c17d9fd9b1449
         with:
           poetry-version: ${{ env.POETRY_VERSION }}
 
       - name: Cache Poetry packages
-        uses: actions/cache@v4
+        uses: actions/cache@5a3ec84eff668545956fd18022155c73e4d9b325
         with:
           path: ~/.cache/pypoetry
           key: ${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.python-version }}-poetry-${{ hashFiles('**/pyproject.toml') }}
@@ -175,7 +175,7 @@ jobs:
           echo "Tests for '${{ matrix.test-type }}' were skipped (not implemented yet)" >> $GITHUB_STEP_SUMMARY
 
       - name: Upload results
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
         if: always()
         with:
           name: ${{ matrix.test-type }}-py${{ matrix.python-version }}-results
@@ -195,7 +195,7 @@ jobs:
     if: always()
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005353372de801cfa
         with:
           pattern: '*-results'
           merge-multiple: true
@@ -218,14 +218,14 @@ jobs:
           done
 
       - name: Upload nightly report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
         with:
           name: nightly-report
           path: nightly-report.md
 
       - name: Create issue on significant failures
         if: failure()
-        uses: actions/github-script@v8
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
         with:
           script: |
             const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');

@@ -1,0 +1,17 @@
+# Nuclei Vulnerability Scanner Dockerfile
+# Wraps ProjectDiscovery Nuclei for QA-Framework integration
+#
+# Build: docker build -t qa-framework/nuclei -f Dockerfile.nuclei .
+# Usage: docker run --rm qa-framework/nuclei -u https://example.com -json
+
+FROM projectdiscovery/nuclei:latest
+
+LABEL maintainer="QA-Framework"
+LABEL description="Nuclei Scanner for QA-Framework - Template-based vulnerability scanning"
+
+# Add custom templates
+COPY custom-templates/ /root/nuclei-templates/custom/
+
+# Default: update templates and run help
+ENTRYPOINT ["nuclei"]
+CMD ["--help"]

@@ -23,13 +23,21 @@ RUN npm run build
 # Production stage
 FROM node:18-alpine
 
+# Create non-root user for security (F-002 FIX)
+RUN addgroup -g 1001 -S appuser && \
+    adduser -S -D -H -u 1001 -s /sbin/nologin -G appuser appuser && \
+    chown -R appuser:appuser /app
+
 WORKDIR /app
 
 # Install serve for production
 RUN npm install -g serve
 
-# Copy built assets from builder
-COPY --from=builder /app/dist ./dist
+# Copy built assets from builder with correct ownership
+COPY --from=builder --chown=appuser:appuser /app/dist ./dist
+
+# Switch to non-root user (F-002 FIX)
+USER appuser
 
 # Expose port
 EXPOSE 3000

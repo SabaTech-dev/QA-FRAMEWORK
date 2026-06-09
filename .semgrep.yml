@@ -1,0 +1,62 @@
+# Semgrep rules for QA-FRAMEWORK - OWASP Top 10:2025 compliance
+rules:
+  # A01 - Broken Access Control
+  - id: no-hardcoded-passwords
+    patterns:
+      - pattern: $X = "..."
+      - metavariable-regex:
+          metavariable: $X
+          regex: '(?i)(password|passwd|pwd|secret|token|api_key|apikey)'
+      - pattern-not-inside: os.environ[...]
+      - pattern-not-inside: os.getenv(...)
+    message: "Potential hardcoded secret (A01: Broken Access Control)"
+    severity: ERROR
+    languages: [python]
+
+  # A02 - Cryptographic Failures
+  - id: no-md5-hash
+    pattern: hashlib.md5(...)
+    message: "MD5 is cryptographically broken (A02: Cryptographic Failures)"
+    severity: WARNING
+    languages: [python]
+
+  - id: no-sha1-hash
+    pattern: hashlib.sha1(...)
+    message: "SHA1 is cryptographically weak (A02: Cryptographic Failures)"
+    severity: WARNING
+    languages: [python]
+
+  # A03 - Injection
+  - id: no-eval
+    pattern: eval(...)
+    message: "eval() is dangerous - potential code injection (A03: Injection)"
+    severity: ERROR
+    languages: [python]
+
+  - id: no-exec
+    pattern: exec(...)
+    message: "exec() is dangerous - potential code injection (A03: Injection)"
+    severity: ERROR
+    languages: [python]
+
+  - id: no-sql-string-format
+    patterns:
+      - pattern: $DB.execute($QUERY % ...)
+      - pattern-not: $DB.execute($QUERY, ...)
+    message: "SQL string formatting - potential SQL injection (A03)"
+    severity: ERROR
+    languages: [python]
+
+  # A05 - Security Misconfiguration
+  - id: no-debug-true
+    pattern: DEBUG = True
+    message: "DEBUG should not be True in production (A05: Security Misconfiguration)"
+    severity: WARNING
+    languages: [python]
+
+  # A10 - Mishandling of Exceptional Conditions
+  - id: no-bare-except
+    pattern: except:
+    message: "Bare except swallows all exceptions silently (A10: Exceptional Conditions)"
+    severity: WARNING
+    languages: [python]

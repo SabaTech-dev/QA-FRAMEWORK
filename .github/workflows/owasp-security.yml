@@ -1,0 +1,191 @@
+# =============================================================================
+# OWASP Top 10:2025 Security Compliance Pipeline
+# Runs OWASP-specific checks: semgrep, gitleaks, OWASP test suite, SBOM
+# =============================================================================
+
+name: OWASP Top 10:2025 Security
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Weekly OWASP compliance check (Sundays 3 AM UTC)
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+
+concurrency:
+  group: owasp-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  # ===========================================================================
+  # Semgrep Static Analysis
+  # ===========================================================================
+  semgrep:
+    name: Semgrep SAST (OWASP Rules)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@11673a7242b228c18e2d859616c43e1f78d987d8
+        with:
+          config: .semgrep.yml
+          output-format: sarif
+          output: semgrep-results.sarif
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+      - name: Upload Semgrep SARIF
+        uses: github/codeql-action/upload-sarif@b0c4fd77f6c559021d78430ec4d0d169ae74a4eb
+        if: always()
+        with:
+          sarif_file: semgrep-results.sarif
+          category: semgrep-owasp
+
+      - name: Upload Semgrep artifact
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        if: always()
+        with:
+          name: semgrep-results
+          path: semgrep-results.sarif
+          retention-days: 30
+
+  # ===========================================================================
+  # Gitleaks Secret Scanning
+  # ===========================================================================
+  gitleaks:
+    name: Gitleaks Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0  # Full history for secret scanning
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@1d8e58a52f35a39aedf3dae9e47fe5f5e7ddfd1a
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+  # ===========================================================================
+  # OWASP Top 10:2025 Test Suite
+  # ===========================================================================
+  owasp-tests:
+    name: OWASP Compliance Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Set up Python
+        uses: actions/setup-python@42375524e23d412d93fb67b49958b491fce71c38
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install pytest pytest-html
+          pip install -r requirements.txt 2>/dev/null || pip install pydantic pydantic-settings || true
+
+      - name: Run OWASP Top 10:2025 compliance tests
+        run: |
+          pytest tests/security/test_owasp_top10_2025.py \
+            -v \
+            --tb=short \
+            --html=owasp-report.html \
+            --self-contained-html \
+            -W ignore::pytest.PytestConfigWarning \
+            || true
+        continue-on-error: true
+
+      - name: Upload OWASP test report
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        if: always()
+        with:
+          name: owasp-compliance-report
+          path: owasp-report.html
+          retention-days: 30
+
+      - name: Summarize OWASP results
+        if: always()
+        run: |
+          echo "## 🛡️ OWASP Top 10:2025 Compliance Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f owasp-report.html ]; then
+            echo "✅ OWASP compliance test report generated" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ OWASP compliance test report not generated" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ===========================================================================
+  # SBOM Generation (Syft + CycloneDX)
+  # ===========================================================================
+  sbom-syft:
+    name: SBOM Generation (Syft)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Install Syft
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Generate SBOM with Syft
+        run: |
+          syft . -o cyclonedx-json > sbom-syft-cyclonedx.json
+          syft . -o spdx-json > sbom-syft-spdx.json
+
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          name: sbom-syft
+          path: |
+            sbom-syft-cyclonedx.json
+            sbom-syft-spdx.json
+          retention-days: 90
+
+  # ===========================================================================
+  # OWASP Compliance Gate
+  # ===========================================================================
+  owasp-gate:
+    name: OWASP Security Gate
+    runs-on: ubuntu-latest
+    needs: [semgrep, gitleaks, owasp-tests]
+    if: always()
+    steps:
+      - name: Download Semgrep results
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005353372de801cfa
+        with:
+          name: semgrep-results
+          continue-on-error: true
+
+      - name: Check for critical findings
+        run: |
+          CRITICAL=0
+          if [ -f semgrep-results.sarif ]; then
+            C=$(grep -o '"severity": "error"' semgrep-results.sarif 2>/dev/null | wc -l)
+            CRITICAL=$((CRITICAL + C))
+          fi
+          
+          echo "Total CRITICAL findings: $CRITICAL"
+          
+          if [ "$CRITICAL" -gt 0 ]; then
+            echo "❌ OWASP gate FAILED: $CRITICAL CRITICAL findings"
+            exit 1
+          else
+            echo "✅ OWASP gate PASSED"
+          fi

@@ -36,6 +36,7 @@ from schemas import (
 )
 from services.auth_service import get_current_user, login_for_access_token
 from api.v1 import auth_routes, billing_routes, feedback_routes, beta_routes, analytics_routes, email_routes, cron_routes, bulk_routes, browser_use_routes, onboarding_routes
+from api.v1.scan import router as scan_routes
 from services.auth_service import get_current_user, login_for_access_token
 from services.suite_service import (
     create_suite_service,
@@ -82,6 +83,7 @@ router.include_router(cron_routes.router)
 router.include_router(bulk_routes.router)
 router.include_router(browser_use_routes.router)
 router.include_router(onboarding_routes.router)
+router.include_router(scan_routes)
 
 
 # @router.middleware("http")

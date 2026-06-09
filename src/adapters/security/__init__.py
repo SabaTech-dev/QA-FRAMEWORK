@@ -6,6 +6,18 @@ from .auth_tester import AuthTester, AuthTestCase
 from .rate_limit_tester import RateLimitTester
 from .security_client import SecurityClient
 
+# Vulnerability scanning (Nuclei + WSTG integration)
+from src.adapters.vuln import (
+    NucleiScanner,
+    WSTGScanner,
+    UnifiedVulnParser,
+    VulnReportGenerator,
+    VulnScanResult,
+    VulnerabilityFinding,
+    VulnSeverity,
+    VulnCategory,
+)
+
 __all__ = [
     "SQLInjectionTester",
     "SQLInjectionPayload",
@@ -15,4 +27,12 @@ __all__ = [
     "AuthTestCase",
     "RateLimitTester",
     "SecurityClient",
+    "NucleiScanner",
+    "WSTGScanner",
+    "UnifiedVulnParser",
+    "VulnReportGenerator",
+    "VulnScanResult",
+    "VulnerabilityFinding",
+    "VulnSeverity",
+    "VulnCategory",
 ]

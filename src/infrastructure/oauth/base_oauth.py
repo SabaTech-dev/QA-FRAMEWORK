@@ -1,12 +1,22 @@
-"""Base OAuth Provider Implementation."""
+"""Base OAuth Provider Implementation — with OWASP SSRF Protection."""
 from abc import abstractmethod
 from datetime import datetime, timezone, timedelta
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Set
 import os
+import logging
+
 import httpx
 
 from domain.auth.interfaces import OAuthProvider
 from domain.auth.entities import OAuthUser, Token
+from src.core.security.url_validator import (
+    validate_url,
+    DEFAULT_ALLOWED_DOMAINS,
+    URLValidationError,
+)
+
+
+logger = logging.getLogger(__name__)
 
 
 class OAuthError(Exception):
@@ -34,11 +44,40 @@ class OAuthRefreshError(OAuthError):
     pass
 
 
+# Default OAuth-specific allowed domains (extends the standard allowlist)
+OAUTH_ALLOWED_DOMAINS: Set[str] = DEFAULT_ALLOWED_DOMAINS | {
+    "accounts.google.com",
+    "github.com",
+    "api.github.com",
+    "login.microsoftonline.com",
+    "login.live.com",
+    "graph.microsoft.com",
+    "appleid.apple.com",
+    "api.twitter.com",
+    "api.linkedin.com",
+    "www.linkedin.com",
+    "apis.google.com",
+    "oauth2.googleapis.com",
+    "www.googleapis.com",
+    "accounts.spotify.com",
+    "api.spotify.com",
+    "slack.com",
+    "api.slack.com",
+    "discord.com",
+    "discordapp.com",
+    "api.discord.com",
+}
+
+
 class BaseOAuthProvider(OAuthProvider):
     """Base implementation for OAuth 2.0 providers.
     
     Provides common functionality for OAuth 2.0 authorization code flow.
     Subclasses must implement provider-specific methods.
+    
+    SSRF Protection:
+        All outbound HTTP requests are validated against an OAuth-specific
+        allowlist to prevent Server-Side Request Forgery (OWASP A01).
     """
     
     def __init__(
@@ -46,12 +85,24 @@ class BaseOAuthProvider(OAuthProvider):
         client_id: Optional[str] = None,
         client_secret: Optional[str] = None,
         redirect_uri: Optional[str] = None,
+        ssrf_enabled: bool = True,
+        allowed_domains: Optional[Set[str]] = None,
     ):
-        """Initialize OAuth provider."""
+        """Initialize OAuth provider with optional SSRF protection.
+        
+        Args:
+            client_id: OAuth client ID
+            client_secret: OAuth client secret
+            redirect_uri: OAuth redirect URI
+            ssrf_enabled: Enable/disable SSRF URL validation
+            allowed_domains: Custom allowlist of trusted OAuth domains
+        """
         self._client_id = client_id
         self._client_secret = client_secret
         self._redirect_uri = redirect_uri
         self._http_client: Optional[httpx.AsyncClient] = None
+        self._ssrf_enabled = ssrf_enabled
+        self._allowed_domains = allowed_domains if allowed_domains is not None else OAUTH_ALLOWED_DOMAINS
     
     @property
     def client_id(self) -> str:
@@ -82,6 +133,20 @@ class BaseOAuthProvider(OAuthProvider):
             )
         return self._http_client
     
+    def _validate_url(self, url: str) -> None:
+        """
+        Validate a URL against the OAuth SSRF allowlist.
+        
+        Args:
+            url: The URL to validate.
+            
+        Raises:
+            URLValidationError: If the URL is not in the allowlist and SSRF is enabled.
+        """
+        if not self._ssrf_enabled:
+            return
+        validate_url(url, allowed_domains=self._allowed_domains)
+    
     async def _make_request(
         self,
         method: str,
@@ -90,7 +155,10 @@ class BaseOAuthProvider(OAuthProvider):
         data: Optional[Dict[str, Any]] = None,
         json_data: Optional[Dict[str, Any]] = None,
     ) -> httpx.Response:
-        """Make HTTP request with error handling."""
+        """Make HTTP request with SSRF validation and error handling."""
+        # SSRF protection: validate the target URL before making the request
+        self._validate_url(url)
+        
         client = self._get_http_client()
         
         try:
@@ -139,6 +207,11 @@ class BaseOAuthProvider(OAuthProvider):
             raise OAuthConfigurationError(f"{self.name} OAuth provider not configured")
         
         uri = redirect_uri or self.redirect_uri
+        
+        # Validate redirect URI against the allowlist
+        if self._ssrf_enabled and not uri.startswith("http://localhost"):
+            self._validate_url(uri)
+        
         params = self._get_authorization_params(state, uri)
         return self._build_url(self._authorization_url, params)
     
@@ -226,3 +299,17 @@ class BaseOAuthProvider(OAuthProvider):
     async def _exchange_code_impl(
         self,
         code: str,
+        redirect_uri: str,
+    ) -> httpx.Response:
+        """Implement the actual token exchange HTTP call."""
+        pass
+    
+    @abstractmethod
+    async def _refresh_token_impl(self, refresh_token: str) -> httpx.Response:
+        """Implement the actual token refresh HTTP call."""
+        pass
+    
+    @abstractmethod
+    async def get_user_info(self, token: Token) -> OAuthUser:
+        """Fetch user info using the access token."""
+        pass

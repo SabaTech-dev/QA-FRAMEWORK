@@ -1,0 +1,424 @@
+name: PR Deploy to Coolify
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    types: [opened, synchronize, reopened, closed]
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "18"
+
+jobs:
+  # Deploy Backend PR Preview
+  deploy-backend-preview:
+    name: Deploy Backend Preview
+    runs-on: ubuntu-latest
+    if: github.event.action != 'closed'
+    outputs:
+      preview_url: ${{ steps.deploy.outputs.preview_url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+
+      - name: Log in to Coolify Registry
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ${{ secrets.COOLIFY_REGISTRY_URL }}
+          username: ${{ secrets.COOLIFY_REGISTRY_USERNAME }}
+          password: ${{ secrets.COOLIFY_REGISTRY_PASSWORD }}
+
+      - name: Build and push Backend Docker image
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25
+        with:
+          context: .
+          file: ./dashboard/backend/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.COOLIFY_REGISTRY_URL }}/qa-framework-backend-pr-${{ github.event.pull_request.number }}:latest
+            ${{ secrets.COOLIFY_REGISTRY_URL }}/qa-framework-backend-pr-${{ github.event.pull_request.number }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to Coolify Backend
+        id: deploy
+        run: |
+          # Deploy using Coolify API
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          PREVIEW_NAME="qa-framework-backend-pr-$PR_NUMBER"
+          
+          # Create/update preview deployment
+          RESPONSE=$(curl -s -X POST "${{ secrets.COOLIFY_API_URL }}/api/v1/applications/${{ secrets.COOLIFY_BACKEND_APP_ID }}/preview" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"pull_request_id\": $PR_NUMBER,
+              \"pull_request_html_url\": \"${{ github.event.pull_request.html_url }}\",
+              \"docker_registry_image_tag\": \"qa-framework-backend-pr-$PR_NUMBER:latest\"
+            }")
+          
+          echo "Deployment response: $RESPONSE"
+          
+          # Extract preview URL
+          PREVIEW_URL=$(echo $RESPONSE | jq -r '.preview_url // .fqdn // empty')
+          echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
+          
+          if [ -n "$PREVIEW_URL" ]; then
+            echo "✅ Backend preview deployed: https://$PREVIEW_URL"
+          else
+            echo "⚠️ Backend preview deployment initiated, URL pending"
+          fi
+
+      - name: Comment PR with Backend Preview URL
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
+        with:
+          script: |
+            const previewUrl = '${{ steps.deploy.outputs.preview_url }}';
+            const message = `## 🔧 Backend Preview Deployment
+            
+            **PR #${{ github.event.pull_request.number }}**
+            
+            ${previewUrl ? `🚀 **Preview URL**: https://${previewUrl}` : '⏳ Deployment in progress... URL will be available shortly'}
+            
+            **Commit**: \`${{ github.sha }}\`
+            **Branch**: \`${{ github.head_ref }}\`
+            
+            ---
+            *This preview will be automatically updated when new commits are pushed to this PR.*
+            `;
+            
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('Backend Preview Deployment')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: message
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: message
+              });
+            }
+
+  # Deploy Frontend PR Preview
+  deploy-frontend-preview:
+    name: Deploy Frontend Preview
+    runs-on: ubuntu-latest
+    if: github.event.action != 'closed'
+    outputs:
+      preview_url: ${{ steps.deploy.outputs.preview_url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: dashboard/frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd dashboard/frontend
+          npm ci
+
+      - name: Build Frontend
+        run: |
+          cd dashboard/frontend
+          npm run build
+        env:
+          VITE_API_URL: ${{ secrets.COOLIFY_FRONTEND_PREVIEW_API_URL }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+
+      - name: Log in to Coolify Registry
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ${{ secrets.COOLIFY_REGISTRY_URL }}
+          username: ${{ secrets.COOLIFY_REGISTRY_USERNAME }}
+          password: ${{ secrets.COOLIFY_REGISTRY_PASSWORD }}
+
+      - name: Build and push Frontend Docker image
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25
+        with:
+          context: ./dashboard/frontend
+          file: ./dashboard/frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.COOLIFY_REGISTRY_URL }}/qa-framework-frontend-pr-${{ github.event.pull_request.number }}:latest
+            ${{ secrets.COOLIFY_REGISTRY_URL }}/qa-framework-frontend-pr-${{ github.event.pull_request.number }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to Coolify Frontend
+        id: deploy
+        run: |
+          # Deploy using Coolify API
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          PREVIEW_NAME="qa-framework-frontend-pr-$PR_NUMBER"
+          
+          # Create/update preview deployment
+          RESPONSE=$(curl -s -X POST "${{ secrets.COOLIFY_API_URL }}/api/v1/applications/${{ secrets.COOLIFY_FRONTEND_APP_ID }}/preview" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"pull_request_id\": $PR_NUMBER,
+              \"pull_request_html_url\": \"${{ github.event.pull_request.html_url }}\",
+              \"docker_registry_image_tag\": \"qa-framework-frontend-pr-$PR_NUMBER:latest\"
+            }")
+          
+          echo "Deployment response: $RESPONSE"
+          
+          # Extract preview URL
+          PREVIEW_URL=$(echo $RESPONSE | jq -r '.preview_url // .fqdn // empty')
+          echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
+          
+          if [ -n "$PREVIEW_URL" ]; then
+            echo "✅ Frontend preview deployed: https://$PREVIEW_URL"
+          else
+            echo "⚠️ Frontend preview deployment initiated, URL pending"
+          fi
+
+      - name: Comment PR with Frontend Preview URL
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
+        with:
+          script: |
+            const previewUrl = '${{ steps.deploy.outputs.preview_url }}';
+            const message = `## 🎨 Frontend Preview Deployment
+            
+            **PR #${{ github.event.pull_request.number }}**
+            
+            ${previewUrl ? `🚀 **Preview URL**: https://${previewUrl}` : '⏳ Deployment in progress... URL will be available shortly'}
+            
+            **Commit**: \`${{ github.sha }}\`
+            **Branch**: \`${{ github.head_ref }}\`
+            
+            ---
+            *This preview will be automatically updated when new commits are pushed to this PR.*
+            `;
+            
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('Frontend Preview Deployment')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: message
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: message
+              });
+            }
+
+  # Health Check Preview Deployments
+  health-check:
+    name: Health Check Previews
+    runs-on: ubuntu-latest
+    needs: [deploy-backend-preview, deploy-frontend-preview]
+    if: github.event.action != 'closed'
+    steps:
+      - name: Wait for deployments to be ready
+        run: sleep 60
+
+      - name: Check Backend Health
+        id: backend-health
+        run: |
+          BACKEND_URL="${{ needs.deploy-backend-preview.outputs.preview_url }}"
+          if [ -n "$BACKEND_URL" ]; then
+            echo "Checking backend health at https://$BACKEND_URL/health"
+            
+            for i in {1..10}; do
+              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://$BACKEND_URL/health" || echo "000")
+              
+              if [ "$HTTP_CODE" = "200" ]; then
+                echo "✅ Backend health check passed"
+                echo "status=healthy" >> $GITHUB_OUTPUT
+                exit 0
+              fi
+              
+              echo "Attempt $i/10: Backend not ready (HTTP $HTTP_CODE)"
+              sleep 10
+            done
+            
+            echo "❌ Backend health check failed after 10 attempts"
+            echo "status=unhealthy" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "⚠️ No backend preview URL available, skipping health check"
+            echo "status=skipped" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check Frontend Health
+        id: frontend-health
+        run: |
+          FRONTEND_URL="${{ needs.deploy-frontend-preview.outputs.preview_url }}"
+          if [ -n "$FRONTEND_URL" ]; then
+            echo "Checking frontend health at https://$FRONTEND_URL"
+            
+            for i in {1..10}; do
+              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://$FRONTEND_URL" || echo "000")
+              
+              if [ "$HTTP_CODE" = "200" ]; then
+                echo "✅ Frontend health check passed"
+                echo "status=healthy" >> $GITHUB_OUTPUT
+                exit 0
+              fi
+              
+              echo "Attempt $i/10: Frontend not ready (HTTP $HTTP_CODE)"
+              sleep 10
+            done
+            
+            echo "❌ Frontend health check failed after 10 attempts"
+            echo "status=unhealthy" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "⚠️ No frontend preview URL available, skipping health check"
+            echo "status=skipped" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment PR with Health Check Results
+        if: always()
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
+        with:
+          script: |
+            const backendStatus = '${{ steps.backend-health.outputs.status }}';
+            const frontendStatus = '${{ steps.frontend-health.outputs.status }}';
+            
+            const message = `## 🏥 Health Check Results
+            
+            **PR #${{ github.event.pull_request.number }}**
+            
+            ### Backend
+            ${backendStatus === 'healthy' ? '✅ Healthy' : backendStatus === 'unhealthy' ? '❌ Unhealthy' : '⏭️ Skipped'}
+            
+            ### Frontend
+            ${frontendStatus === 'healthy' ? '✅ Healthy' : frontendStatus === 'unhealthy' ? '❌ Unhealthy' : '⏭️ Skipped'}
+            
+            ---
+            *Health checks completed at ${new Date().toISOString()}*
+            `;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: message
+            });
+
+  # Cleanup Preview Deployments on PR Close
+  cleanup-previews:
+    name: Cleanup Preview Deployments
+    runs-on: ubuntu-latest
+    if: github.event.action == 'closed'
+    steps:
+      - name: Delete Backend Preview
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          
+          RESPONSE=$(curl -s -X DELETE "${{ secrets.COOLIFY_API_URL }}/api/v1/applications/${{ secrets.COOLIFY_BACKEND_APP_ID }}/preview/$PR_NUMBER" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}")
+          
+          echo "Backend preview cleanup response: $RESPONSE"
+
+      - name: Delete Frontend Preview
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          
+          RESPONSE=$(curl -s -X DELETE "${{ secrets.COOLIFY_API_URL }}/api/v1/applications/${{ secrets.COOLIFY_FRONTEND_APP_ID }}/preview/$PR_NUMBER" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}")
+          
+          echo "Frontend preview cleanup response: $RESPONSE"
+
+      - name: Comment PR with Cleanup Confirmation
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
+        with:
+          script: |
+            const message = `## 🧹 Preview Cleanup
+            
+            **PR #${{ github.event.pull_request.number }}** - **${{ github.event.pull_request.merged ? 'Merged' : 'Closed' }}**
+            
+            ✅ Preview deployments have been cleaned up
+            
+            **Backend Preview**: Deleted
+            **Frontend Preview**: Deleted
+            
+            ---
+            *Resources freed at ${new Date().toISOString()}*
+            `;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: message
+            });
+
+  # Notify on Failure
+  notify-failure:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: [deploy-backend-preview, deploy-frontend-preview, health-check]
+    if: failure()
+    steps:
+      - name: Send Telegram Notification
+        run: |
+          TELEGRAM_BOT_TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN }}"
+          TELEGRAM_CHAT_ID="${{ secrets.TELEGRAM_CHAT_ID }}"
+          
+          MESSAGE="❌ **PR Deployment Failed**
+          
+          **Repository**: ${{ github.repository }}
+          **PR**: #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}
+          **Author**: @${{ github.actor }}
+          **Branch**: ${{ github.head_ref }}
+          **Commit**: ${{ github.sha }}
+          
+          [View PR](${{ github.event.pull_request.html_url }})
+          [View Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          
+          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"chat_id\": \"$TELEGRAM_CHAT_ID\",
+              \"text\": \"$MESSAGE\",
+              \"parse_mode\": \"Markdown\"
+            }"

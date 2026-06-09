@@ -1,0 +1,8 @@
+# Trivy Ignore File
+# QA-Framework
+# Add CVEs here that have been reviewed and accepted (with justification)
+#
+# Format: CVE-ID # Justification (owner, date)
+#
+# Example:
+# CVE-2024-12345 # Accepted: only affects Windows, we run Linux. Reviewed by security 2026-06-04

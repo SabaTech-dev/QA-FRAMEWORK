@@ -1,0 +1,56 @@
+id: qafw-security-headers
+
+info:
+  name: QA-Framework Security Headers Audit
+  author: qa-framework
+  severity: medium
+  description: Checks for missing HTTP security headers (HSTS, CSP, X-Frame-Options, etc.)
+  tags: security,headers,config
+
+requests:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+
+    matchers:
+      # Check for missing HSTS
+      - type: word
+        part: header
+        words:
+          - "Strict-Transport-Security"
+        negative: true
+        name: missing-hsts
+
+      # Check for missing CSP
+      - type: word
+        part: header
+        words:
+          - "Content-Security-Policy"
+        negative: true
+        name: missing-csp
+
+      # Check for missing X-Frame-Options
+      - type: word
+        part: header
+        words:
+          - "X-Frame-Options"
+        negative: true
+        name: missing-xfo
+
+      # Check for missing X-Content-Type-Options
+      - type: word
+        part: header
+        words:
+          - "X-Content-Type-Options"
+        negative: true
+        name: missing-xcto
+
+    extractors:
+      - type: kval
+        part: header
+        kval:
+          - server
+          - x-powered-by
+          - via
+
+    matchers-condition: or

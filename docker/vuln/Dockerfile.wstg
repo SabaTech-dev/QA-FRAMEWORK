@@ -1,0 +1,42 @@
+# WSTG Scanner Dockerfile
+# OWASP Web Security Testing Guide automated scanner
+#
+# Build: docker build -t qa-framework/wstg -f Dockerfile.wstg .
+# Usage: docker run --rm qa-framework/wstg --target https://example.com --format json
+
+FROM python:3.11-slim
+
+LABEL maintainer="QA-Framework"
+LABEL description="WSTG Scanner for QA-Framework - OWASP Web Security Testing Guide"
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    wget \
+    git \
+    jq \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+RUN pip install --no-cache-dir \
+    requests==2.31.0 \
+    beautifulsoup4==4.12.2 \
+    lxml==5.1.0 \
+    urllib3==2.2.0
+
+# Create scanner user
+RUN useradd -m -s /bin/bash scanner
+WORKDIR /app
+
+# Copy scanner scripts
+COPY wstg_scanner.py /app/wstg_scanner.py
+COPY wstg_tests/ /app/wstg_tests/
+
+# Make scripts executable
+RUN chmod +x /app/wstg_scanner.py
+RUN chown -R scanner:scanner /app
+
+USER scanner
+
+ENTRYPOINT ["python", "/app/wstg_scanner.py"]
+CMD ["--help"]

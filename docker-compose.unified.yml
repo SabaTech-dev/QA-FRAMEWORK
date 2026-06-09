@@ -95,6 +95,40 @@ services:
       retries: 3
     restart: unless-stopped
 
+  # ==================== VULNERABILITY SCANNER SERVICES ====================
+
+  # Nuclei Scanner - Template-based vulnerability scanner
+  nuclei-scanner:
+    image: projectdiscovery/nuclei:latest
+    container_name: qa-framework-nuclei
+    profiles:
+      - scanners
+      - full
+    volumes:
+      - nuclei-templates:/root/nuclei-templates
+      - ./templates/vuln/custom:/custom-templates
+      - ./reports/vuln:/output
+    networks:
+      - qa-network
+    command: ["--help"]
+    restart: "no"
+
+  # WSTG Scanner - OWASP Web Security Testing Guide
+  wstg-scanner:
+    build:
+      context: ./docker/vuln
+      dockerfile: Dockerfile.wstg
+    container_name: qa-framework-wstg
+    profiles:
+      - scanners
+      - full
+    volumes:
+      - ./reports/vuln:/output
+    networks:
+      - qa-network
+    command: ["--help"]
+    restart: "no"
+
   # ==================== MONITORING SERVICES ====================
   
   # Prometheus
@@ -156,6 +190,7 @@ volumes:
   prometheus-data:
   grafana-data:
   alertmanager-data:
+  nuclei-templates:
 
 # Networks
 networks:

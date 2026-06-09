@@ -1,0 +1,73 @@
+id: qafw-information-disclosure
+
+info:
+  name: QA-Framework Information Disclosure Detection
+  author: qa-framework
+  severity: medium
+  description: Detects information disclosure via error messages, directory listing, and debug endpoints.
+  tags: exposure,disclosure,info
+
+requests:
+  # Directory listing
+  - method: GET
+    path:
+      - "{{BaseURL}}/images/"
+      - "{{BaseURL}}/assets/"
+      - "{{BaseURL}}/static/"
+      - "{{BaseURL}}/uploads/"
+      - "{{BaseURL}}/backup/"
+      - "{{BaseURL}}/logs/"
+
+    matchers:
+      - type: word
+        words:
+          - "Index of"
+          - "Directory listing for"
+          - "<title>Index of"
+        part: body
+
+  # Error disclosure
+  - method: GET
+    path:
+      - "{{BaseURL}}/.git/"
+      - "{{BaseURL}}/.git/HEAD"
+      - "{{BaseURL}}/.svn/"
+      - "{{BaseURL}}/.DS_Store"
+      - "{{BaseURL}}/robots.txt"
+      - "{{BaseURL}}/sitemap.xml"
+      - "{{BaseURL}}/crossdomain.xml"
+      - "{{BaseURL}}/clientaccesspolicy.xml"
+
+    matchers-condition: or
+    matchers:
+      - type: word
+        words:
+          - "ref: refs/heads"
+          - "svn:"
+          - "Sitemap:"
+          - "Disallow:"
+          - "<?xml"
+
+      - type: status
+        status:
+          - 200
+
+  # Stack trace detection
+  - method: GET
+    path:
+      - "{{BaseURL}}/nonexistent-page-that-will-error"
+      - "{{BaseURL}}/?__debug=1"
+      - "{{BaseURL}}/?debug=1"
+
+    matchers:
+      - type: regex
+        part: body
+        regex:
+          - "stack trace"
+          - "Traceback \\(most recent call last\\)"
+          - "Fatal error"
+          - "Warning:.*on line"
+          - "Parse error:.*"
+          - "JDBC Driver"
+          - "SQLSTATE"
+          - "com\\.(mysql|microsoft|oracle)"

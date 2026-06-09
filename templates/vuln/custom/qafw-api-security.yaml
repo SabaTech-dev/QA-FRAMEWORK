@@ -1,0 +1,60 @@
+id: qafw-api-security
+
+info:
+  name: QA-Framework API Security Checks
+  author: qa-framework
+  severity: high
+  description: Tests API endpoints for common security issues including missing auth, rate limiting, and injection.
+  tags: api,security,auth
+
+requests:
+  # Test authentication requirement
+  - method: GET
+    path:
+      - "{{BaseURL}}/api/users"
+      - "{{BaseURL}}/api/admin"
+      - "{{BaseURL}}/api/v1/users"
+      - "{{BaseURL}}/api/v1/admin"
+      - "{{BaseURL}}/graphql"
+      - "{{BaseURL}}/api/graphql"
+
+    matchers:
+      - type: status
+        status:
+          - 200
+        name: unauthenticated-access
+
+  # Test for GraphQL introspection
+  - method: POST
+    path:
+      - "{{BaseURL}}/graphql"
+      - "{{BaseURL}}/api/graphql"
+
+    body: '{"query": "{__schema{types{name fields{name}}}}"}'
+    headers:
+      Content-Type: application/json
+
+    matchers:
+      - type: word
+        words:
+          - "__schema"
+          - "data"
+          - "types"
+        part: body
+        name: graphql-introspection-enabled
+
+  # Test for API version disclosure
+  - method: GET
+    path:
+      - "{{BaseURL}}/api/version"
+      - "{{BaseURL}}/version"
+      - "{{BaseURL}}/api/status"
+
+    matchers:
+      - type: regex
+        part: body
+        regex:
+          - "\"version\":"
+          - "v[0-9]+\\.[0-9]+\\.[0-9]+"
+          - "\"build\":"
+          - "\"commit\":"
