@@ -107,12 +107,12 @@ class CacheService:
         cached_result = self.test_cache.get(key)
 
         if cached_result is not None:
-            self.stats.record_hit()
+            self.stats.record_hit(key)
             logger.info(f"Cache hit for key: {key}")
             return cached_result
 
         # Cache miss, execute and cache
-        self.stats.record_miss()
+        self.stats.record_miss(key)
 
         logger.info(f"Cache miss for key: {key}, executing...")
 
@@ -149,6 +149,14 @@ class CacheService:
             test_id: Invalidate cache for this specific test
             pattern: Invalidate all cache matching pattern (regex)
         """
+        # Validate that only one invalidation strategy is used at a time
+        provided = sum(1 for p in [test_suite_id, test_id, pattern] if p is not None)
+        if provided > 1:
+            raise ValueError(
+                "Only one invalidation strategy can be used at a time. "
+                "Provide exactly one of: test_suite_id, test_id, or pattern."
+            )
+
         if test_suite_id:
             keys = self.test_cache.get_keys_by_suite(test_suite_id)
             for key in keys:

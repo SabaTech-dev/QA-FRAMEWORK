@@ -97,7 +97,10 @@ class Settings(BaseSettings):
                 warning_messages.append("DATABASE_URL not set - using in-memory SQLite (not suitable for production)")
             
             if not self.secret_key:
-                warning_messages.append("JWT_SECRET_KEY not set - generating temporary key (sessions will not persist)")
+                # Generate a development-only secret key for JWT
+                secret_key_str = "dev-secret-key-not-for-production-use"
+                object.__setattr__(self, 'secret_key', secret_key_str)
+                warning_messages.append("JWT_SECRET_KEY not set - using dev fallback (sessions will not persist across restarts)")
             
             if self.ENABLE_BILLING and not self.STRIPE_API_KEY:
                 warning_messages.append("Billing enabled but STRIPE_API_KEY not set - billing will fail")

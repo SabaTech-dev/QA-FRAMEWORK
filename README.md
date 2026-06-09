@@ -229,6 +229,52 @@ cd ../performance
 locust -f locustfile.py
 ```
 
+### 🚀 Quick Start: Backend Local
+
+Start the dashboard backend locally **without Docker**:
+
+```bash
+cd dashboard/backend
+
+# 1. Create virtual environment (first time only)
+python3 -m venv .venv
+source .venv/bin/activate  # Linux/Mac
+# or .venv\Scripts\activate  # Windows
+pip install -r requirements.txt
+
+# 2. Start the backend (uses SQLite automatically when DATABASE_URL is unset)
+ENVIRONMENT=development .venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000
+
+# Backend runs at: http://localhost:8000
+# API docs at: http://localhost:8000/api/v1/docs
+```
+
+**Environment variables (all optional in development):**
+- `DATABASE_URL` — PostgreSQL URL. If unset, falls back to SQLite (`./qafw.db`)
+- `REDIS_URL` — Redis URL. If unset, defaults to `redis://localhost:6379/0`
+- `JWT_SECRET_KEY` — JWT signing key. If unset, a dev fallback is used
+- `ENVIRONMENT` — `development` or `production` (default: `development`)
+
+### 🧪 Run Dashboard Backend Tests
+
+```bash
+cd dashboard/backend
+source .venv/bin/activate
+
+# Run all unit/integration/backend tests
+ENVIRONMENT=development REDIS_URL="redis://localhost:6379/0" pytest tests/unit/ tests/core/ tests/services/ tests/middleware/ tests/integration/ tests/integration_clients/ tests/infrastructure/ -v
+
+# Run only unit tests (fast, no external deps required)
+ENVIRONMENT=development DATABASE_URL="" pytest tests/unit/ -v
+```
+
+**Notes:**
+- Integration tests need PostgreSQL and Redis running.
+- Stripe tests need valid `STRIPE_API_KEY`.
+- Unit tests (164 tests) run without any external service.
+- Railway service has expired — `REDIS_URL` pointing to Railway will fail;
+  set it to a local Redis instance instead.
+
 ## 📈 Monitoreo y Observabilidad
 
 ### Métricas Disponibles

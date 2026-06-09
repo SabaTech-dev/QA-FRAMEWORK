@@ -10,6 +10,7 @@ Covers:
 - Cache hit/miss tracking
 """
 
+import asyncio
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
 from fastapi import FastAPI, Request

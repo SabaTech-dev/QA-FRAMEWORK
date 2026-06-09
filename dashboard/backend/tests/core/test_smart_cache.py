@@ -272,7 +272,7 @@ class TestSmartCacheSet:
         
         # Check that value was JSON serialized
         call_args = mock_redis.setex.call_args
-        serialized_value = call_args[0][1]  # Second argument (value)
+        serialized_value = call_args[0][2]  # Third argument (value)
         
         # Should be valid JSON
         result = json.loads(serialized_value)
@@ -392,8 +392,10 @@ class TestSmartCacheInvalidate:
     def test_invalidate_dependent(self, mock_redis_class):
         """Test invalidate dependent keys."""
         mock_redis = Mock()
+        import hashlib
+        real_key = f"qa:test:{hashlib.md5('base'.encode()).hexdigest()[:16]}"
         mock_redis.scan_iter.return_value = ["qa:deps:key1", "qa:deps:key2"]
-        mock_redis.smembers.side_effect = [{"qa:test:base"}, set()]
+        mock_redis.smembers.side_effect = [{real_key}, set()]
         mock_redis.delete.return_value = 1
         mock_redis_class.return_value = mock_redis
         
@@ -401,7 +403,7 @@ class TestSmartCacheInvalidate:
         count = cache.invalidate_dependent("test", "base")
         
         assert count == 1
-        assert mock_redis.scan_iter.assert_called_once_with("qa:deps:*")
+        mock_redis.scan_iter.assert_called_once_with("qa:deps:*")
 
 
 class TestSmartCacheStats:
@@ -500,7 +502,7 @@ class TestSmartCacheWarmCache:
         count = cache.warm_cache({}, {})
         
         assert count == 0
-        assert mock_redis.setex.assert_not_called()
+        mock_redis.setex.assert_not_called()
     
     @patch('core.smart_cache.redis.Redis')
     def test_warm_cache_uses_default_config(self, mock_redis_class):
@@ -519,7 +521,7 @@ class TestSmartCacheWarmCache:
         assert count == 1
         # Should use default TTL of 300 (5 minutes)
         call_args = mock_redis.setex.call_args
-        ttl = call_args[0][1]
+        ttl = call_args[0][1]  # Second argument (TTL)
         assert ttl == 300
 
 
@@ -636,7 +638,7 @@ class TestEdgeCases:
         assert result is True
         # Check serialization
         call_args = mock_redis.setex.call_args
-        serialized = call_args[0][1]
+        serialized = call_args[0][2]  # Third argument (value) after key and ttl
         deserialized = json.loads(serialized)
         assert deserialized == complex_obj
     
@@ -709,7 +711,7 @@ class TestEdgeCases:
         assert result is True
         # Check that None is serialized correctly
         call_args = mock_redis.setex.call_args
-        serialized = call_args[0][1]
+        serialized = call_args[0][2]  # Third argument (value)
         deserialized = json.loads(serialized)
         assert deserialized is None
     
@@ -726,6 +728,6 @@ class TestEdgeCases:
         
         assert result is True
         call_args = mock_redis.setex.call_args
-        serialized = call_args[0][1]
+        serialized = call_args[0][2]  # Third argument (value)
         deserialized = json.loads(serialized)
         assert deserialized == [1, 2, 3, 4, 5]

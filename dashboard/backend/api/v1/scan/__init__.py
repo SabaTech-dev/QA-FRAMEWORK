@@ -26,6 +26,52 @@ _active_scans: Dict[str, Dict[str, Any]] = {}
 _scan_results: Dict[str, Dict[str, Any]] = {}
 
 
+from pydantic import BaseModel, Field, HttpUrl
+
+
+class WebScanRequest(BaseModel):
+    """Request body for web vulnerability scan."""
+
+    target: str = Field(
+        ..., description="Target URL to scan (e.g., https://example.com)",
+        examples=["https://example.com"],
+    )
+    skip_nuclei: bool = Field(False, description="Skip Nuclei scan")
+    skip_wstg: bool = Field(False, description="Skip WSTG scan")
+    nuclei_templates: Optional[List[str]] = Field(
+        None, description="Specific Nuclei templates to run"
+    )
+    wstg_categories: Optional[List[str]] = Field(
+        None, description="WSTG categories to test (e.g., WSTG-INPV, WSTG-ATHN)"
+    )
+    severity_filter: Optional[str] = Field(
+        None, description="Minimum severity filter (critical, high, medium, low, info)",
+        pattern="^(critical|high|medium|low|info)$",
+    )
+    auth_token: Optional[str] = Field(None, description="Bearer token for authenticated scanning")
+    cookie: Optional[str] = Field(None, description="Session cookie for authenticated scanning")
+    rate_limit: int = Field(150, ge=5, le=1000, description="Max requests per second")
+    timeout: Optional[int] = Field(None, ge=60, le=3600, description="Scan timeout in seconds")
+
+
+class NetworkScanRequest(BaseModel):
+    """Request body for network vulnerability scan."""
+
+    target: str = Field(
+        ..., description="Target IP/CIDR to scan (e.g., 10.0.0.1/24)",
+        examples=["10.0.0.1/24", "192.168.1.0/24"],
+    )
+    templates: Optional[List[str]] = Field(
+        None, description="Specific Nuclei templates to use (default: network, dns, ssl)"
+    )
+    severity_filter: Optional[str] = Field(
+        None, description="Minimum severity filter",
+        pattern="^(critical|high|medium|low|info)$",
+    )
+    rate_limit: int = Field(500, ge=10, le=5000, description="Max packets per second")
+    timeout: Optional[int] = Field(None, ge=60, le=7200, description="Scan timeout in seconds")
+
+
 def get_nuclei_scanner():
     """Get Nuclei scanner instance (lazy import to avoid dependency issues)."""
     try:
@@ -400,51 +446,3 @@ async def _run_network_scan(scan_id: str, request: "NetworkScanRequest"):
 
     _active_scans[scan_id]["status"] = "completed"
     logger.info(f"Network scan {scan_id} completed: {_scan_results[scan_id].get('total_findings', 0)} findings")
-
-
-# ─── Pydantic Schemas (inline to avoid import order issues) ───
-
-from pydantic import BaseModel, Field, HttpUrl
-
-
-class WebScanRequest(BaseModel):
-    """Request body for web vulnerability scan."""
-
-    target: str = Field(
-        ..., description="Target URL to scan (e.g., https://example.com)",
-        examples=["https://example.com"],
-    )
-    skip_nuclei: bool = Field(False, description="Skip Nuclei scan")
-    skip_wstg: bool = Field(False, description="Skip WSTG scan")
-    nuclei_templates: Optional[List[str]] = Field(
-        None, description="Specific Nuclei templates to run"
-    )
-    wstg_categories: Optional[List[str]] = Field(
-        None, description="WSTG categories to test (e.g., WSTG-INPV, WSTG-ATHN)"
-    )
-    severity_filter: Optional[str] = Field(
-        None, description="Minimum severity filter (critical, high, medium, low, info)",
-        pattern="^(critical|high|medium|low|info)$",
-    )
-    auth_token: Optional[str] = Field(None, description="Bearer token for authenticated scanning")
-    cookie: Optional[str] = Field(None, description="Session cookie for authenticated scanning")
-    rate_limit: int = Field(150, ge=5, le=1000, description="Max requests per second")
-    timeout: Optional[int] = Field(None, ge=60, le=3600, description="Scan timeout in seconds")
-
-
-class NetworkScanRequest(BaseModel):
-    """Request body for network vulnerability scan."""
-
-    target: str = Field(
-        ..., description="Target IP/CIDR to scan (e.g., 10.0.0.1/24)",
-        examples=["10.0.0.1/24", "192.168.1.0/24"],
-    )
-    templates: Optional[List[str]] = Field(
-        None, description="Specific Nuclei templates to use (default: network, dns, ssl)"
-    )
-    severity_filter: Optional[str] = Field(
-        None, description="Minimum severity filter",
-        pattern="^(critical|high|medium|low|info)$",
-    )
-    rate_limit: int = Field(500, ge=10, le=5000, description="Max packets per second")
-    timeout: Optional[int] = Field(None, ge=60, le=7200, description="Scan timeout in seconds")
