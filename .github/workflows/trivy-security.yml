@@ -106,7 +106,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Build backend Docker image
-        run: docker build -t qa-framework-backend:scan -f dashboard/backend/Dockerfile .
+        run: docker build -t qa-framework-backend:scan -f dashboard/backend/Dockerfile dashboard/backend
 
       - name: Scan backend image with Trivy
         uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8
@@ -146,7 +146,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Build frontend Docker image
-        run: docker build -t qa-framework-frontend:scan -f dashboard/frontend/Dockerfile .
+        run: docker build -t qa-framework-frontend:scan -f dashboard/frontend/Dockerfile dashboard/frontend
 
       - name: Scan frontend image with Trivy
         uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8

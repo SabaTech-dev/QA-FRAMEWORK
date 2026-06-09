@@ -207,15 +207,22 @@ jobs:
           echo "## Summary" >> nightly-report.md
           echo "" >> nightly-report.md
           
-          # Count tests from XML files
+          # Count tests from XML files (handle no matches gracefully)
+          shopt -s nullglob
+          found_xml=false
           for file in *.xml; do
-            if [ -f "$file" ]; then
-              TESTS=$(grep -o 'tests="[0-9]*"' "$file" | head -1 | grep -o '[0-9]*')
-              FAILURES=$(grep -o 'failures="[0-9]*"' "$file" | head -1 | grep -o '[0-9]*')
-              ERRORS=$(grep -o 'errors="[0-9]*"' "$file" | head -1 | grep -o '[0-9]*')
-              echo "- $(basename $file .xml): $TESTS tests, $FAILURES failures, $ERRORS errors" >> nightly-report.md
-            fi
+            found_xml=true
+            TESTS=$(grep -o 'tests="[0-9]*"' "$file" | head -1 | grep -o '[0-9]*')
+            FAILURES=$(grep -o 'failures="[0-9]*"' "$file" | head -1 | grep -o '[0-9]*')
+            ERRORS=$(grep -o 'errors="[0-9]*"' "$file" | head -1 | grep -o '[0-9]*')
+            echo "- $(basename $file .xml): $TESTS tests, $FAILURES failures, $ERRORS errors" >> nightly-report.md
           done
+          shopt -u nullglob
+          
+          if [ "$found_xml" = false ]; then
+            echo "No JUnit XML results found - all test types may have been skipped or errored before report generation." >> nightly-report.md
+            echo "Check individual job logs for details." >> nightly-report.md
+          fi
 
       - name: Upload nightly report
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
