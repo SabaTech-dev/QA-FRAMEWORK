@@ -7,7 +7,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user
+# Copy and install Python dependencies (as root, before switching user)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Create non-root user and set up permissions
 RUN addgroup --system --gid 1001 appgroup && \
     adduser --system --uid 1001 --ingroup appgroup appuser && \
     chown -R appuser:appgroup /app
@@ -15,10 +19,6 @@ RUN addgroup --system --gid 1001 appgroup && \
 ENV HOME=/app
 
 USER appuser
-
-# Copy requirements from backend directory
-COPY --chown=appuser:appgroup requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application
 COPY --chown=appuser:appgroup . .
