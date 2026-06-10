@@ -14,6 +14,8 @@ import Register from './pages/Register'
 import Landing from './pages/Landing'
 import ForgotPassword from './pages/ForgotPassword'
 import Onboarding from './pages/Onboarding'
+import Waitlist from './pages/Waitlist'
+import AdminWaitlist from './pages/AdminWaitlist'
 import NotFound from './pages/NotFound'
 import useAuthStore from './stores/authStore'
 
@@ -47,6 +49,7 @@ function App() {
       <Routes>
         {/* Public routes - ALWAYS accessible */}
         <Route path="/" element={<Landing />} />
+        <Route path="/waitlist" element={<Waitlist />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -108,6 +111,15 @@ function App() {
           <ProtectedRoute>
             <Layout sidebarOpen={sidebarOpen} onSidebarToggle={() => setSidebarOpen(!sidebarOpen)}>
               <Settings />
+            </Layout>
+          </ProtectedRoute>
+        } />
+
+        {/* Admin routes - protected */}
+        <Route path="/admin/waitlist" element={
+          <ProtectedRoute>
+            <Layout sidebarOpen={sidebarOpen} onSidebarToggle={() => setSidebarOpen(!sidebarOpen)}>
+              <AdminWaitlist />
             </Layout>
           </ProtectedRoute>
         } />

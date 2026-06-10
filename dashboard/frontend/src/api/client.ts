@@ -275,3 +275,39 @@ export const onboardingAPI = {
   skip: () =>
     apiClient.post('/onboarding/skip'),
 }
+
+export const waitlistAPI = {
+  signup: (data: {
+    email: string
+    name: string
+    role?: string
+    company?: string
+    use_case?: string
+    source?: string
+  }) => apiClient.post('/waitlist/signup', data),
+
+  list: (params?: {
+    page?: number
+    page_size?: number
+    status_filter?: string
+    role_filter?: string
+  }) => apiClient.get('/waitlist/list', { params }),
+
+  getById: (id: number) =>
+    apiClient.get(`/waitlist/${id}`),
+
+  approve: (id: number) =>
+    apiClient.post(`/waitlist/approve/${id}`),
+
+  reject: (id: number) =>
+    apiClient.post(`/waitlist/${id}/reject`),
+
+  delete: (id: number) =>
+    apiClient.delete(`/waitlist/${id}`),
+
+  getStats: () =>
+    apiClient.get('/waitlist/stats'),
+
+  checkEmail: (email: string) =>
+    apiClient.get(`/waitlist/check/${encodeURIComponent(email)}`),
+}

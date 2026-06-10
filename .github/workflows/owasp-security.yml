@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@v4
 
       - name: Run Semgrep
         uses: returntocorp/semgrep-action@11673a7242b228c18e2d859616c43e1f78d987d8
@@ -48,14 +48,14 @@ jobs:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
 
       - name: Upload Semgrep SARIF
-        uses: github/codeql-action/upload-sarif@b0c4fd77f6c559021d78430ec4d0d169ae74a4eb
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: semgrep-results.sarif
           category: semgrep-owasp
 
       - name: Upload Semgrep artifact
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: semgrep-results
@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full history for secret scanning
 
@@ -88,10 +88,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@42375524e23d412d93fb67b49958b491fce71c38
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -112,7 +112,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload OWASP test report
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: owasp-compliance-report
@@ -138,7 +138,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@v4
 
       - name: Install Syft
         run: |
@@ -150,7 +150,7 @@ jobs:
           syft . -o spdx-json > sbom-syft-spdx.json
 
       - name: Upload SBOM artifacts
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@v4
         with:
           name: sbom-syft
           path: |
@@ -168,7 +168,7 @@ jobs:
     if: always()
     steps:
       - name: Download Semgrep results
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005353372de801cfa
+        uses: actions/download-artifact@v4
         with:
           name: semgrep-results
           continue-on-error: true
