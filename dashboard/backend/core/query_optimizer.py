@@ -211,7 +211,7 @@ class QueryCache:
         """Generate hash for query and parameters"""
         import hashlib
         content = f"{query}:{params}"
-        return hashlib.md5(content.encode()).hexdigest()
+        return hashlib.sha256(content.encode()).hexdigest()[:32]
     
     def get(self, query: str, params: tuple = ()) -> Optional[Any]:
         """

@@ -222,7 +222,7 @@ class BaseUser(HttpUser):
                     headers=headers,
                     name="cleanup_execution",
                 )
-            except:
+            except Exception:
                 pass
 
         # Delete created cases
@@ -233,7 +233,7 @@ class BaseUser(HttpUser):
                     headers=headers,
                     name="cleanup_case",
                 )
-            except:
+            except Exception:
                 pass
 
         # Delete created suites
@@ -244,7 +244,7 @@ class BaseUser(HttpUser):
                     headers=headers,
                     name="cleanup_suite",
                 )
-            except:
+            except Exception:
                 pass
 
 

@@ -410,7 +410,7 @@ def cached(
                 prefix = key_prefix or func.__name__
                 # Create hash from args and kwargs
                 key_data = f"{args}:{kwargs}"
-                key_hash = hashlib.md5(key_data.encode()).hexdigest()
+                key_hash = hashlib.sha256(key_data.encode()).hexdigest()[:32]
                 cache_key = f"{prefix}:{key_hash}"
 
             # Try to get from cache
@@ -431,7 +431,7 @@ def cached(
             else:
                 prefix = key_prefix or func.__name__
                 key_data = f"{args}:{kwargs}"
-                key_hash = hashlib.md5(key_data.encode()).hexdigest()
+                key_hash = hashlib.sha256(key_data.encode()).hexdigest()[:32]
                 cache_key = f"{prefix}:{key_hash}"
 
             # Try to get from cache

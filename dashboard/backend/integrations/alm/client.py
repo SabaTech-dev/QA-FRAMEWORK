@@ -114,7 +114,7 @@ class ALMIntegration(IntegrationBase):
             # ALM logout
             try:
                 await self._client.post('/authentication-point/logout')
-            except:
+            except Exception:
                 pass
             await self._client.aclose()
             self._client = None

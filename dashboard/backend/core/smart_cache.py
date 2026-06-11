@@ -82,7 +82,7 @@ class SmartCache:
     
     def _generate_key(self, prefix: str, identifier: str) -> str:
         """Generate cache key from prefix and identifier."""
-        key_hash = hashlib.md5(identifier.encode()).hexdigest()[:16]
+        key_hash = hashlib.sha256(identifier.encode()).hexdigest()[:16]
         return f"qa:{prefix}:{key_hash}"
     
     def _generate_tags_key(self, tag: str) -> str:
