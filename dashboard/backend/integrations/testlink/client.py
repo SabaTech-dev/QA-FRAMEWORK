@@ -170,7 +170,7 @@ class TestLinkIntegration(IntegrationBase):
                 self.api_key, plan_name, project
             )
             plan_id = plan_response['id']
-        except:
+        except Exception:
             # Plan might already exist, try to find it
             plans = self._client.tl.getProjectTestPlans(self.api_key, project_id)
             plan_id = None
@@ -203,7 +203,7 @@ class TestLinkIntegration(IntegrationBase):
                     )
                     if search_result:
                         test_case_id = search_result[0]['id']
-                except:
+                except Exception:
                     pass
                 
                 if not test_case_id:

@@ -56,7 +56,7 @@ rules:
 
   # A10 - Mishandling of Exceptional Conditions
   - id: no-bare-except
-    pattern: except:
+    pattern-regex: '^\s*except\s*:'
     message: "Bare except swallows all exceptions silently (A10: Exceptional Conditions)"
     severity: WARNING
-    languages: [python]
+    languages: [generic]

@@ -171,7 +171,7 @@ class IntegrationManager:
                     # We can't use await here in a sync method, so we'll skip disconnect for now
                     # In a real implementation, this would need to be async
                     pass
-            except:
+            except Exception:
                 pass  # Ignore disconnect errors
             
             del self._instances[provider]

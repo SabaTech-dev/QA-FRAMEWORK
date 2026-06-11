@@ -454,6 +454,50 @@ class BetaSignupListResponse(BaseModel):
     page: int
     page_size: int
 
+# Waitlist Schemas
+class WaitlistSignupStatus(str, Enum):
+    pending = "pending"
+    approved = "approved"
+    rejected = "rejected"
+
+
+class WaitlistSignupBase(BaseModel):
+    email: str = Field(..., pattern=r'^[\w\.-]+@[\w\.-]+\.\w+$')
+    name: str = Field(..., min_length=1, max_length=200)
+    role: Optional[str] = Field(default=None, max_length=100)
+    company: Optional[str] = Field(default=None, max_length=200)
+    use_case: Optional[str] = None
+
+
+class WaitlistSignupCreate(WaitlistSignupBase):
+    source: Optional[str] = None
+
+
+class WaitlistSignupUpdate(BaseModel):
+    status: Optional[WaitlistSignupStatus] = None
+    notes: Optional[str] = None
+
+
+class WaitlistSignupResponse(WaitlistSignupBase):
+    id: int
+    status: WaitlistSignupStatus = WaitlistSignupStatus.pending
+    source: Optional[str] = None
+    invite_sent_at: Optional[datetime] = None
+    approved_at: Optional[datetime] = None
+    rejected_at: Optional[datetime] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class WaitlistSignupListResponse(BaseModel):
+    items: List[WaitlistSignupResponse]
+    total: int
+    page: int
+    page_size: int
+
+
 class DashboardStats(BaseModel):
     """Dashboard statistics response model."""
     total_suites: int

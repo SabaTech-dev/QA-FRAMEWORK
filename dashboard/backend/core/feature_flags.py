@@ -87,7 +87,7 @@ class FeatureFlag:
         percentage = self.config.get("percentage", 0)
         
         # Hash user ID to get consistent result
-        hash_value = int(hashlib.md5(f"{self.name}:{user_id}".encode()).hexdigest(), 16)
+        hash_value = int(hashlib.sha256(f"{self.name}:{user_id}".encode()).hexdigest(), 16)
         user_bucket = hash_value % 100
         
         return user_bucket < percentage
@@ -136,7 +136,7 @@ class FeatureFlag:
         current_percentage = start_percentage + (end_percentage - start_percentage) * progress
         
         # Use a fixed bucket for gradual (not user-specific)
-        current_bucket = int(hashlib.md5(self.name.encode()).hexdigest(), 16) % 100
+        current_bucket = int(hashlib.sha256(self.name.encode()).hexdigest(), 16) % 100
         
         return current_bucket < current_percentage
     
@@ -146,7 +146,7 @@ class FeatureFlag:
         weights = self.config.get("weights", [50, 50])
         
         # Hash user ID to get consistent variant
-        hash_value = int(hashlib.md5(f"{self.name}:{user_id}".encode()).hexdigest(), 16)
+        hash_value = int(hashlib.sha256(f"{self.name}:{user_id}".encode()).hexdigest(), 16)
         bucket = hash_value % 100
         
         # Determine variant based on weights

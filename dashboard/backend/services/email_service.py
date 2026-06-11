@@ -259,6 +259,77 @@ class EmailTemplate:
 """
 
 
+    # Waitlist Approved Template
+    WAITLIST_APPROVED = """
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+        .content {{ background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }}
+        .button {{ display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; }}
+        .footer {{ text-align: center; margin-top: 20px; color: #666; font-size: 12px; }}
+        .features {{ background: white; padding: 20px; border-radius: 5px; margin: 20px 0; }}
+        .limits {{ background: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #ffc107; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 You're In! Welcome to QA-FRAMEWORK</h1>
+            <p>Your waitlist spot has been upgraded to full beta access</p>
+        </div>
+        <div class="content">
+            <h2>Hi {name},</h2>
+            <p>Great news! You've been approved for QA-FRAMEWORK beta access. We're excited to have you on board.</p>
+
+            <div class="features">
+                <h3>🚀 What You Get:</h3>
+                <div class="feature-item">✅ <strong>AI Self-Healing Tests</strong> - Tests that fix themselves</div>
+                <div class="feature-item">✅ <strong>AI Test Generation</strong> - Generate tests from requirements</div>
+                <div class="feature-item">✅ <strong>Flaky Detection</strong> - Automatic flaky test quarantine</div>
+                <div class="feature-item">✅ <strong>Dashboard & Analytics</strong> - Comprehensive test insights</div>
+            </div>
+
+            <div class="limits">
+                <strong>⚡ Beta Limits:</strong>
+                <ul>
+                    <li>Up to <strong>5 scans</strong> per day</li>
+                    <li><strong>1 concurrent</strong> scan at a time</li>
+                    <li><strong>5-minute</strong> scan timeout</li>
+                    <li><strong>100MB</strong> storage per project</li>
+                </ul>
+            </div>
+
+            <p style="text-align: center; margin: 30px 0;">
+                <a href="{dashboard_url}" class="button">Go to Dashboard</a>
+            </p>
+
+            <p><strong>Get started:</strong></p>
+            <ol>
+                <li>Click the button above to access your dashboard</li>
+                <li>Create your first test project</li>
+                <li>Connect your repository or start testing</li>
+                <li>Share feedback to help shape the product</li>
+            </ol>
+
+            <p>Questions? Join our <a href="{discord_url}">Discord community</a> or reply to this email.</p>
+
+            <p>Happy testing!<br>The QA-FRAMEWORK Team</p>
+        </div>
+        <div class="footer">
+            <p>&copy; {year} QA-FRAMEWORK. All rights reserved.</p>
+            <p>Sent to {email}</p>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+
 class EmailService:
     """Email service for sending emails with templates"""
     
@@ -379,7 +450,25 @@ class EmailService:
         subject = "🎉 Welcome to QA-FRAMEWORK!"
         
         return await self.send_email(to_email, subject, html)
-    
+
+    async def send_waitlist_approved(
+        self,
+        to_email: str,
+        name: str
+    ) -> bool:
+        """Send waitlist approval email with beta access"""
+        html = EmailTemplate.WAITLIST_APPROVED.format(
+            name=name,
+            email=to_email,
+            dashboard_url=f"{self.base_url}/login",
+            discord_url=f"{self.base_url}/discord",
+            year=self.year
+        )
+
+        subject = "🎉 You're Approved! Welcome to QA-FRAMEWORK Beta"
+
+        return await self.send_email(to_email, subject, html)
+
     async def send_test_report(
         self,
         to_email: str,
