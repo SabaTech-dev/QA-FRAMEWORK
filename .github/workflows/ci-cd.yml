@@ -27,20 +27,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
 
       - name: Set up Python
-        uses: actions/setup-python@42375524e23d412d93fb67b49958b491fce71c38
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install Poetry
-        uses: abatilo/actions-poetry@c67cb3ee85d6ecca34a202b2e00c17d9fd9b1449
+        uses: abatilo/actions-poetry@v4
         with:
           poetry-version: ${{ env.POETRY_VERSION }}
 
       - name: Cache Poetry packages
-        uses: actions/cache@5a3ec84eff668545956fd18022155c73e4d9b325
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: ~/.cache/pypoetry
           key: ${{ env.CACHE_VERSION }}-${{ runner.os }}-poetry-${{ hashFiles('**/pyproject.toml') }}
@@ -73,7 +73,7 @@ jobs:
         run: pip install pip-audit && pip-audit -r requirements.txt --desc --output-format json --output-file safety-report.json || true
 
       - name: Upload security reports
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: security-reports
@@ -93,20 +93,20 @@ jobs:
         python-version: ["3.11", "3.12"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@42375524e23d412d93fb67b49958b491fce71c38
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Install Poetry
-        uses: abatilo/actions-poetry@c67cb3ee85d6ecca34a202b2e00c17d9fd9b1449
+        uses: abatilo/actions-poetry@v4
         with:
           poetry-version: ${{ env.POETRY_VERSION }}
 
       - name: Cache Poetry packages
-        uses: actions/cache@5a3ec84eff668545956fd18022155c73e4d9b325
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: ~/.cache/pypoetry
           key: ${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.python-version }}-poetry-${{ hashFiles('**/pyproject.toml') }}
@@ -128,7 +128,7 @@ jobs:
             -n auto
 
       - name: Upload unit test results
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: unit-test-results-${{ matrix.python-version }}
@@ -172,20 +172,20 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
 
       - name: Set up Python
-        uses: actions/setup-python@42375524e23d412d93fb67b49958b491fce71c38
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install Poetry
-        uses: abatilo/actions-poetry@c67cb3ee85d6ecca34a202b2e00c17d9fd9b1449
+        uses: abatilo/actions-poetry@v4
         with:
           poetry-version: ${{ env.POETRY_VERSION }}
 
       - name: Cache Poetry packages
-        uses: actions/cache@5a3ec84eff668545956fd18022155c73e4d9b325
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: ~/.cache/pypoetry
           key: ${{ env.CACHE_VERSION }}-${{ runner.os }}-poetry-${{ hashFiles('**/pyproject.toml') }}
@@ -219,7 +219,7 @@ jobs:
           REDIS_URL: redis://localhost:6379/0
 
       - name: Upload integration test results
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: integration-test-results
@@ -236,10 +236,10 @@ jobs:
     needs: integration-tests
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
 
       - name: Set up Python
-        uses: actions/setup-python@42375524e23d412d93fb67b49958b491fce71c38
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -249,7 +249,7 @@ jobs:
           sudo apt-get install -y libgbm-dev libwoff1 libopus0 libwebpdemux2 libenchant-2-2 libsecret-1-0 libhyphen0 libgdk-pixbuf2.0-0 libegl1 libgles2
 
       - name: Cache pip packages
-        uses: actions/cache@5a3ec84eff668545956fd18022155c73e4d9b325
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: ~/.cache/pip
           key: ${{ env.CACHE_VERSION }}-${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
@@ -292,7 +292,7 @@ jobs:
           CI: true
 
       - name: Upload Playwright test results
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: playwright-test-results
@@ -303,7 +303,7 @@ jobs:
           retention-days: 7
 
       - name: Upload E2E test results
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: e2e-test-results
@@ -321,15 +321,15 @@ jobs:
     if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[perf]')
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
 
       - name: Set up Python
-        uses: actions/setup-python@42375524e23d412d93fb67b49958b491fce71c38
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Cache pip packages
-        uses: actions/cache@5a3ec84eff668545956fd18022155c73e4d9b325
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: ~/.cache/pip
           key: ${{ env.CACHE_VERSION }}-${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
@@ -350,7 +350,7 @@ jobs:
             --junitxml=junit-performance.xml || echo "Performance tests completed with warnings"
 
       - name: Upload performance results
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: performance-test-results
@@ -367,15 +367,15 @@ jobs:
     needs: code-quality
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
 
       - name: Set up Python
-        uses: actions/setup-python@42375524e23d412d93fb67b49958b491fce71c38
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Cache pip packages
-        uses: actions/cache@5a3ec84eff668545956fd18022155c73e4d9b325
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: ~/.cache/pip
           key: ${{ env.CACHE_VERSION }}-${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
@@ -394,7 +394,7 @@ jobs:
         run: pip-audit -r requirements.txt --desc --output-format json --output-file dependency-scan.json || true
 
       - name: Upload security test results
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: security-test-results
@@ -414,10 +414,10 @@ jobs:
       checks: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
 
       - name: Set up Python
-        uses: actions/setup-python@42375524e23d412d93fb67b49958b491fce71c38
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -441,7 +441,7 @@ jobs:
           fail_ci_if_error: false
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: coverage-report
           path: coverage-report/
@@ -454,10 +454,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
 
       - name: Set up Python
-        uses: actions/setup-python@42375524e23d412d93fb67b49958b491fce71c38
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -471,7 +471,7 @@ jobs:
           mkdocs build
 
       - name: Upload documentation
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: documentation
           path: site/
@@ -485,10 +485,10 @@ jobs:
     needs: [code-quality]
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
 
       - name: Set up Python
-        uses: actions/setup-python@42375524e23d412d93fb67b49958b491fce71c38
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -505,7 +505,7 @@ jobs:
           trivy filesystem --format cyclonedx --output qa-framework-sbom.cdx .
 
       - name: Upload SBOM as artifact
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: sbom
           path: qa-framework-sbom.cdx
@@ -526,10 +526,10 @@ jobs:
     needs: [unit-tests, code-quality, generate-sbom]
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
 
       - name: Set up Python
-        uses: actions/setup-python@42375524e23d412d93fb67b49958b491fce71c38
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -545,7 +545,7 @@ jobs:
         run: twine check dist/*
 
       - name: Upload package
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: package
           path: dist/
