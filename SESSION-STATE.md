@@ -21,6 +21,8 @@
 |---|---|---|---|
 | 1 | 🆕 Módulo accuracy_testing domain | 22:04 | Domain layer: value_objects, entities, interfaces. 4 benchmarks sentencia BGH AI liability. Rule-based evaluator. 32/32 tests ✅ |
 | 2 | 📋 npm v12 migration plan | 22:20 | Audit completo de pipelines CI/CD + Dockerfiles. Plan en reports/coder/. Riesgo BAJO — no hay impacto crítico. |
+| 3 | 🔧 Security fixes accuracy testing | 22:25 | F-ACC-001: commit+push+PR#88. F-ACC-002: input validation. F-ACC-003: input length limits. F-ACC-004: sensitive data filtering. F-ACC-005: immutable compute. 56/56 tests ✅ |
+| 4 | 🧪 QA accuracy testing module | 23:07 | 110/110 tests ✅ (56 original + 54 extended). Funcional, validación, ReDoS, inmutabilidad, data leak, integración. 0 bugs, 0 flakes. Report: reports/qa/accuracy-testing-2026-06-10.md |
 
 ### FASES ACTUALES
 
