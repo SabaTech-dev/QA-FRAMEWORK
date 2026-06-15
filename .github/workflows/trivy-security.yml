@@ -47,7 +47,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Install Trivy
-        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -109,7 +109,7 @@ jobs:
         run: docker build -t qa-framework-backend:scan -f dashboard/backend/Dockerfile dashboard/backend
 
       - name: Scan backend image with Trivy
-        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
           image-ref: 'qa-framework-backend:scan'
           format: 'sarif'
@@ -149,7 +149,7 @@ jobs:
         run: docker build -t qa-framework-frontend:scan -f dashboard/frontend/Dockerfile dashboard/frontend
 
       - name: Scan frontend image with Trivy
-        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
           image-ref: 'qa-framework-frontend:scan'
           format: 'sarif'
@@ -232,7 +232,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Scan IaC files with Trivy
-        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
           scan-type: 'config'
           scan-ref: '.'
