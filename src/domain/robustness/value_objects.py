@@ -104,20 +104,22 @@ class AdversarialExample:
     perturbation_ratio: float = 0.0
 
     def __post_init__(self):
-        if self.perturbation_ratio < 0 or self.perturbation_ratio > MAX_PERTURBATION_RATIO:
-            raise ValueError(
-                f"perturbation_ratio must be in [0, {MAX_PERTURBATION_RATIO}], "
-                f"got {self.perturbation_ratio}"
-            )
+        # Clamp ratio to valid range for defensive safety
+        object.__setattr__(self, 'perturbation_ratio',
+            max(0.0, min(MAX_PERTURBATION_RATIO, self.perturbation_ratio)))
 
     @property
     def has_perturbation(self) -> bool:
         return self.perturbation_count > 0
 
     def to_dict(self) -> dict:
+        orig = self.original_text[:500]
+        pert = self.perturbed_text[:500]
         return {
-            "original_text": self.original_text[:500],  # truncate for reports
-            "perturbed_text": self.perturbed_text[:500],
+            "original_text": orig + ("...[truncated]" if len(self.original_text) > 500 else ""),
+            "original_text_length": len(self.original_text),
+            "perturbed_text": pert + ("...[truncated]" if len(self.perturbed_text) > 500 else ""),
+            "perturbed_text_length": len(self.perturbed_text),
             "attack_type": self.attack_type.value,
             "perturbation_count": self.perturbation_count,
             "perturbation_ratio": round(self.perturbation_ratio, 4),

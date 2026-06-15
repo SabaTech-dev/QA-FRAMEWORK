@@ -134,15 +134,22 @@ class TestAdversarialExample:
         )
         assert ex.has_perturbation is False
 
-    def test_invalid_ratio_raises(self):
-        with pytest.raises(ValueError, match="perturbation_ratio"):
-            AdversarialExample(perturbation_ratio=0.6)
+    def test_ratio_clamped(self):
+        ex = AdversarialExample(perturbation_ratio=0.6)
+        assert ex.perturbation_ratio == pytest.approx(0.5)  # clamped to MAX_PERTURBATION_RATIO
 
-    def test_to_dict_truncates(self):
+        ex2 = AdversarialExample(perturbation_ratio=-0.1)
+        assert ex2.perturbation_ratio == pytest.approx(0.0)  # clamped min
+
+    def test_to_dict_truncates_with_indicator(self):
         long_text = "x" * 1000
         ex = AdversarialExample(original_text=long_text, perturbed_text=long_text)
         d = ex.to_dict()
-        assert len(d["original_text"]) <= 500
+        assert d["original_text_length"] == 1000
+        assert d["original_text"].endswith("...[truncated]")
+        assert len(d["original_text"]) == 500 + len("...[truncated]")
+        assert d["perturbed_text"].endswith("...[truncated]")
+        assert d["perturbed_text_length"] == 1000
 
 
 # ========================================================================

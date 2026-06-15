@@ -111,7 +111,7 @@ class StatisticalFairnessAnalyzer:
         Equal opportunity: P(Ŷ=1 | Y=1, G=g) should be equal across groups.
         Only considers positive-label samples (true positive rate).
         """
-        if len(predictions) != len(labels) != len(subgroup_labels):
+        if not (len(predictions) == len(labels) == len(subgroup_labels)):
             raise ValueError("All input lists must have same length")
         if not predictions:
             return []
@@ -154,7 +154,7 @@ class StatisticalFairnessAnalyzer:
         Equalized odds: both TPR and FPR should be equal across groups.
         Returns the average of TPR and FPR per group.
         """
-        if len(predictions) != len(labels) != len(subgroup_labels):
+        if not (len(predictions) == len(labels) == len(subgroup_labels)):
             raise ValueError("All input lists must have same length")
         if not predictions:
             return []
@@ -238,7 +238,7 @@ class StatisticalFairnessAnalyzer:
         This is a custom metric: per-group accuracy to detect
         performance disparities across demographic groups.
         """
-        if len(predictions) != len(labels) != len(subgroup_labels):
+        if not (len(predictions) == len(labels) == len(subgroup_labels)):
             raise ValueError("All input lists must have same length")
         if not predictions:
             return []
@@ -256,7 +256,7 @@ class StatisticalFairnessAnalyzer:
             ci = self._wilson_ci(correct, len(indices))
 
             metrics.append(SubgroupMetric(
-                metric=FairnessMetric.CALIBORATION,  # using calibration slot for accuracy
+                metric=FairnessMetric.CALIBRATION,  # using calibration slot for accuracy
                 value=accuracy,
                 sample_size=len(indices),
                 confidence_interval_lower=ci[0],
@@ -280,7 +280,7 @@ class StatisticalFairnessAnalyzer:
 
         Returns a full FairnessReport with all metrics computed.
         """
-        if len(predictions) != len(labels) != len(subgroup_labels):
+        if not (len(predictions) == len(labels) == len(subgroup_labels)):
             raise ValueError("All input lists must have same length")
 
         report = FairnessReport(

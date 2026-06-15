@@ -59,7 +59,7 @@ _FAIRNESS_RULES = {
         "short_description": "Disparate impact ratio (4/5ths rule)",
         "default_level": SARIFLevel.ERROR,
     },
-    FairnessMetric.CALIBORATION: {
+    FairnessMetric.CALIBRATION: {
         "id": "QA-FAIR-005",
         "name": "PerSubgroupAccuracy",
         "short_description": "Per-subgroup accuracy disparity",

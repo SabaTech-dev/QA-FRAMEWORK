@@ -32,6 +32,7 @@ from src.domain.robustness.value_objects import (
     PerturbationMethod,
     validate_attack_epsilon,
     MAX_PERTURBATION_RATIO,
+    MAX_TEXT_LENGTH,
 )
 
 
@@ -96,6 +97,9 @@ class TextAttackSimulator:
             List of adversarial examples (may be empty if text is too short)
         """
         validate_attack_epsilon(epsilon)
+
+        if len(text) > MAX_TEXT_LENGTH:
+            raise ValueError(f"Text exceeds max length {MAX_TEXT_LENGTH}, got {len(text)}")
 
         if not text or not text.strip():
             return []

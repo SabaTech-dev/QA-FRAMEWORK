@@ -45,7 +45,7 @@ class TestFairnessMetric:
         assert FairnessMetric.EQUALIZED_ODDS.value == "equalized_odds"
         assert FairnessMetric.PREDICTIVE_PARITY.value == "predictive_parity"
         assert FairnessMetric.DISPARATE_IMPACT.value == "disparate_impact"
-        assert FairnessMetric.CALIBORATION.value == "calibration"
+        assert FairnessMetric.CALIBRATION.value == "calibration"
 
     def test_str_enum(self):
         assert isinstance(FairnessMetric.DEMOGRAPHIC_PARITY, str)

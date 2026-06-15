@@ -28,7 +28,7 @@ class FairnessMetric(str, Enum):
     EQUALIZED_ODDS = "equalized_odds"
     PREDICTIVE_PARITY = "predictive_parity"
     DISPARATE_IMPACT = "disparate_impact"
-    CALIBORATION = "calibration"
+    CALIBRATION = "calibration"
 
 
 class FairnessLevel(str, Enum):
