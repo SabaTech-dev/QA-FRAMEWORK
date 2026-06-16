@@ -2,6 +2,7 @@
 LLM Adapter for Test Generation
 
 Integrates with LLM providers (OpenAI, Gemini) for generating tests.
+All LLM calls are traced via Langfuse for observability.
 """
 
 from typing import Optional, List
@@ -12,6 +13,7 @@ from src.domain.test_generation.value_objects import (
     TestFramework,
     TestCaseMetadata,
 )
+from src.infrastructure.observability import get_tracer
 
 
 class LLMTestGenerator:
@@ -19,6 +21,7 @@ class LLMTestGenerator:
     Adapter for LLM-based test generation.
     
     Supports OpenAI and Gemini APIs for generating test code.
+    All generation calls are automatically traced via Langfuse.
     """
     
     def __init__(
@@ -31,6 +34,7 @@ class LLMTestGenerator:
         self.api_key = api_key
         self.model = model
         self._client = None
+        self._tracer = get_tracer()
     
     def generate_test(
         self,
@@ -39,20 +43,43 @@ class LLMTestGenerator:
         context: dict,
     ) -> GeneratedTest:
         """Generate a test from a requirement."""
-        prompt = self._build_requirement_prompt(requirement, framework)
-        
-        # Mock implementation - in production, would call LLM API
-        test_code = self._generate_mock_test(requirement, framework)
-        
-        return GeneratedTest(
-            name=f"test_{requirement.get('title', 'unknown').lower().replace(' ', '_')}",
-            test_code=test_code,
-            framework=framework,
-            imports=self._get_framework_imports(framework),
-            test_function=self._extract_function_name(test_code),
-            assertions=["assert result is not None"],
-            tags=requirement.get("tags", []),
-        )
+        trace_meta = {
+            "operation": "generate_test",
+            "provider": self.provider,
+            "model": self.model,
+            "framework": framework.value,
+            "requirement_title": requirement.get("title", "unknown"),
+        }
+
+        with self._tracer.trace_generation(
+            name=f"generate_test:{requirement.get('title', 'unknown')}",
+            metadata=trace_meta,
+        ) as ctx:
+            prompt = self._build_requirement_prompt(requirement, framework)
+            ctx.set_input({"prompt": prompt, "requirement": requirement, "framework": framework.value})
+            
+            # Mock implementation - in production, would call LLM API
+            test_code = self._generate_mock_test(requirement, framework)
+            
+            result = GeneratedTest(
+                name=f"test_{requirement.get('title', 'unknown').lower().replace(' ', '_')}",
+                test_code=test_code,
+                framework=framework,
+                imports=self._get_framework_imports(framework),
+                test_function=self._extract_function_name(test_code),
+                assertions=["assert result is not None"],
+                tags=requirement.get("tags", []),
+            )
+            
+            ctx.set_output({
+                "test_name": result.name,
+                "test_code": test_code,
+                "framework": framework.value,
+            })
+            ctx.set_metadata("model", self.model)
+            ctx.set_metadata("provider", self.provider)
+            
+            return result
     
     def generate_test_for_edge_case(
         self,
@@ -60,49 +87,110 @@ class LLMTestGenerator:
         framework: TestFramework,
     ) -> GeneratedTest:
         """Generate a test for an edge case."""
-        test_code = self._generate_edge_case_test(edge_case, framework)
-        
-        return GeneratedTest(
-            name=f"test_edge_{edge_case.name.lower().replace(' ', '_')}",
-            test_code=test_code,
-            framework=framework,
-            generation_type="edge_case",
-            imports=self._get_framework_imports(framework),
-            test_function=self._extract_function_name(test_code),
-            assertions=[f"assert {edge_case.expected_behavior}"],
-            tags=["edge-case", edge_case.category],
-        )
+        trace_meta = {
+            "operation": "generate_edge_case_test",
+            "provider": self.provider,
+            "model": self.model,
+            "framework": framework.value,
+            "edge_case_name": edge_case.name,
+            "edge_case_category": getattr(edge_case, "category", "unknown"),
+        }
+
+        with self._tracer.trace_generation(
+            name=f"generate_edge_case:{edge_case.name}",
+            metadata=trace_meta,
+        ) as ctx:
+            ctx.set_input({
+                "edge_case": {
+                    "name": edge_case.name,
+                    "description": getattr(edge_case, "description", ""),
+                    "category": getattr(edge_case, "category", ""),
+                    "risk_level": getattr(edge_case, "risk_level", ""),
+                    "input_values": getattr(edge_case, "input_values", {}),
+                    "expected_behavior": getattr(edge_case, "expected_behavior", ""),
+                },
+                "framework": framework.value,
+            })
+
+            test_code = self._generate_edge_case_test(edge_case, framework)
+            
+            result = GeneratedTest(
+                name=f"test_edge_{edge_case.name.lower().replace(' ', '_')}",
+                test_code=test_code,
+                framework=framework,
+                generation_type="edge_case",
+                imports=self._get_framework_imports(framework),
+                test_function=self._extract_function_name(test_code),
+                assertions=[f"assert {edge_case.expected_behavior}"],
+                tags=["edge-case", edge_case.category],
+            )
+
+            ctx.set_output({
+                "test_name": result.name,
+                "test_code": test_code,
+            })
+            
+            return result
     
     def estimate_confidence(self, requirement: dict, test_code: str) -> float:
         """Estimate confidence score for generated test."""
-        # Mock confidence estimation
-        # In production, would use LLM to evaluate test quality
-        base_score = 0.7
-        
-        # Adjust based on test characteristics
-        if "assert" in test_code:
-            base_score += 0.1
-        if "setup" in test_code.lower() or "teardown" in test_code.lower():
-            base_score += 0.05
-        if len(test_code.split("\n")) > 10:
-            base_score += 0.05
-        
-        return min(base_score, 1.0)
+        with self._tracer.trace_generation(
+            name="estimate_confidence",
+            metadata={"operation": "estimate_confidence", "model": self.model},
+        ) as ctx:
+            ctx.set_input({
+                "requirement_title": requirement.get("title", "unknown"),
+                "test_code_length": len(test_code),
+            })
+            
+            # Mock confidence estimation
+            # In production, would use LLM to evaluate test quality
+            base_score = 0.7
+            
+            # Adjust based on test characteristics
+            if "assert" in test_code:
+                base_score += 0.1
+            if "setup" in test_code.lower() or "teardown" in test_code.lower():
+                base_score += 0.05
+            if len(test_code.split("\n")) > 10:
+                base_score += 0.05
+            
+            score = min(base_score, 1.0)
+            
+            ctx.set_output({"confidence_score": score})
+            
+            # Record score in Langfuse
+            self._tracer.record_score(
+                trace_id=ctx.trace_id,
+                name="confidence",
+                value=score,
+                comment=f"Auto-estimated confidence for {requirement.get('title', 'test')}",
+            )
+            
+            return score
     
     def suggest_improvements(self, test_code: str) -> List[str]:
         """Suggest improvements to test code."""
-        suggestions = []
-        
-        if "assert" not in test_code:
-            suggestions.append("Add assertions to validate expected behavior")
-        
-        if "try" not in test_code and "except" not in test_code:
-            suggestions.append("Consider adding error handling")
-        
-        if "TODO" in test_code or "FIXME" in test_code:
-            suggestions.append("Remove placeholder comments")
-        
-        return suggestions
+        with self._tracer.trace_generation(
+            name="suggest_improvements",
+            metadata={"operation": "suggest_improvements", "model": self.model},
+        ) as ctx:
+            ctx.set_input({"test_code_length": len(test_code)})
+            
+            suggestions = []
+            
+            if "assert" not in test_code:
+                suggestions.append("Add assertions to validate expected behavior")
+            
+            if "try" not in test_code and "except" not in test_code:
+                suggestions.append("Consider adding error handling")
+            
+            if "TODO" in test_code or "FIXME" in test_code:
+                suggestions.append("Remove placeholder comments")
+            
+            ctx.set_output({"suggestions_count": len(suggestions), "suggestions": suggestions})
+            
+            return suggestions
     
     def _build_requirement_prompt(self, requirement: dict, framework: TestFramework) -> str:
         """Build prompt for LLM."""

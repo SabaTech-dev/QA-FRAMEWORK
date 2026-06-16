@@ -67,3 +67,6 @@ python-multipart>=0.0.27
 
 # Payment Processing
 stripe==8.4.0  # Stripe Python SDK
+
+# LLM Observability & Tracing
+langfuse>=2.0.0

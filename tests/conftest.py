@@ -45,6 +45,7 @@ pytest_plugins = [
     "tests.fixtures.advanced_fixtures",
     "tests.fixtures.adapters",
     "tests.fixtures.contract_fixtures",
+    "tests.fixtures.langfuse_fixtures",
 ]
 
 # =============================================================================
