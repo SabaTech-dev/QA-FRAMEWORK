@@ -12,7 +12,7 @@ bcrypt==4.1.2
 python-multipart>=0.0.27
 aiofiles==24.1.0
 websockets==14.0
-redis==5.2.0
+redis==8.0.0
 rq==1.16.2
 celery==5.4.0
 flower==2.0.1
