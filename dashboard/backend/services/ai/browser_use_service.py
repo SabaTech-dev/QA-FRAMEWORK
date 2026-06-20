@@ -98,6 +98,15 @@ class BrowserUseService:
             llm = self._get_llm()
             options = options or {}
             
+            # Langfuse tracing — attach callback handler if configured
+            from services.ai.langfuse_client import get_langchain_handler, is_tracing_enabled
+            callbacks = []
+            if is_tracing_enabled():
+                handler = get_langchain_handler()
+                if handler:
+                    callbacks.append(handler)
+                    logger.info("langfuse_tracing_enabled", task_id=task_id)
+            
             agent = Agent(
                 task=prompt,
                 llm=llm,

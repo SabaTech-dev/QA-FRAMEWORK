@@ -36,3 +36,7 @@ qrcode[pil]==7.4.2
 aiohttp>=3.13.3
 browser-use>=0.1.0
 langchain-groq>=0.1.0
+
+# Langfuse — LLM Observability
+langfuse>=2.0.0
+langfuse-langchain>=2.0.0
