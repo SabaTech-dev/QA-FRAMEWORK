@@ -1,0 +1,24 @@
+name: LLM Red Team
+on:
+  schedule:
+    - cron: "0 6 * * 1"  # Weekly Monday 6AM UTC
+  workflow_dispatch:
+
+jobs:
+  redteam:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install -g promptfoo
+      - run: npx promptfoo redteam run
+        working-directory: security/redteam
+        env:
+          QA_FRAMEWORK_BASE_URL: ${{ secrets.QA_FW_BASE_URL }}
+          QA_FRAMEWORK_JWT_TOKEN: ${{ secrets.QA_FW_TEST_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: redteam-report
+          path: security/redteam/output/
