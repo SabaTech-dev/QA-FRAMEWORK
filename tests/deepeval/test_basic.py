@@ -8,7 +8,7 @@ from deepeval.test_case import LLMTestCase
 from deepeval.metrics import (
     AnswerRelevancyMetric,
     FaithfulnessMetric,
-    SemanticSimilarityMetric,
+    HallucinationMetric,
 )
 
 
@@ -80,20 +80,21 @@ def test_faithfulness(
     assert metric.is_successful(), f"Faithfulness score: {metric.score}"
 
 
-def test_semantic_similarity(
-    sample_actual_output, sample_expected_output
+def test_hallucination(
+    sample_input, sample_actual_output, sample_retrieval_context
 ):
-    """Actual output should be semantically similar to expected output."""
+    """Output should not contain hallucinated information beyond context."""
     test_case = LLMTestCase(
+        input=sample_input,
         actual_output=sample_actual_output,
-        expected_output=sample_expected_output,
+        retrieval_context=sample_retrieval_context,
     )
-    metric = SemanticSimilarityMetric(
+    metric = HallucinationMetric(
         threshold=0.5,
         model="openai/gpt-4o-mini",
     )
     metric.measure(test_case)
-    assert metric.is_successful(), f"Semantic similarity score: {metric.score}"
+    assert metric.is_successful(), f"Hallucination score: {metric.score}"
 
 
 # ── Integration: run all metrics together ──────────────────────────
@@ -112,7 +113,7 @@ def test_deepeval_evaluate_pipeline(
     )
     metrics = [
         AnswerRelevancyMetric(threshold=0.5, model="openai/gpt-4o-mini"),
-        SemanticSimilarityMetric(threshold=0.5, model="openai/gpt-4o-mini"),
+        HallucinationMetric(threshold=0.5, model="openai/gpt-4o-mini"),
     ]
     # evaluate returns test results; we just verify it runs without error
     results = evaluate(
