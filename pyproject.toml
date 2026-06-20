@@ -52,6 +52,11 @@ mkdocstrings = {extras = ["python"], version = "^0.24.0"}
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
+[dependency-groups]
+dev = [
+    "deepeval>=4.0.6",
+]
+
 [tool.black]
 line-length = 100
 target-version = ['py311']
