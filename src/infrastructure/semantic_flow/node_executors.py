@@ -7,11 +7,11 @@ CompositeNodeExecutor permite combinar varios executors en uno solo.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, Optional
+from typing import Callable, Dict, Optional
 
 from src.domain.semantic_flow.entities import ExecutionContext, Node, NodeResult
 from src.domain.semantic_flow.interfaces import NodeExecutor
-from src.domain.semantic_flow.value_objects import NodeStatus, NodeType
+from src.domain.semantic_flow.value_objects import NodeType
 
 
 # Tipo callable para handlers de ACTION: (node, context) -> NodeResult

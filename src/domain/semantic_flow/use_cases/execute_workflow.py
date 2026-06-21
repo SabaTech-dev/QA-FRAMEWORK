@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 
 from ..entities import (
+    Edge,
     ExecutionContext,
     Node,
     NodeResult,
@@ -29,7 +30,7 @@ from ..entities import (
     WorkflowResult,
 )
 from ..interfaces import NodeExecutor, NullNodeExecutor, SemanticProcessor
-from ..value_objects import NodeId, NodeStatus, NodeType, WorkflowId, WorkflowStatus
+from ..value_objects import NodeStatus, NodeType, WorkflowId, WorkflowStatus
 
 
 DEFAULT_MAX_STEPS = 1000
@@ -43,7 +44,7 @@ class ExecuteWorkflowInput:
     workflow: Workflow
     branch_query: str = ""
     max_steps: int = DEFAULT_MAX_STEPS
-    initial_variables: dict = field(default_factory=dict)
+    initial_variables: dict[str, object] = field(default_factory=dict)
 
 
 @dataclass
@@ -218,7 +219,7 @@ class ExecuteWorkflow:
     def _select_decision_edge(
         self,
         workflow: Workflow,
-        edges: List,
+        edges: List[Edge],
         last_result: NodeResult,
     ) -> Optional[Node]:
         """Selecciona arista cuyo condition coincide con status."""
@@ -232,7 +233,7 @@ class ExecuteWorkflow:
     def _select_semantic_edge(
         self,
         workflow: Workflow,
-        edges: List,
+        edges: List[Edge],
         branch_query: str,
     ) -> Optional[Node]:
         """Selecciona arista por similitud semantica con branch_query."""
@@ -258,7 +259,7 @@ class ExecuteWorkflow:
                 return workflow.get_node(str(edge.target))
         return None
 
-    def _select_default_edge(self, workflow: Workflow, edges: List) -> Optional[Node]:
+    def _select_default_edge(self, workflow: Workflow, edges: List[Edge]) -> Optional[Node]:
         """Primera arista incondicional, o la de mayor prioridad."""
         # Preferir incondicionales
         for edge in edges:

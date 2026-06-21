@@ -5,7 +5,6 @@ RED phase: define el contrato de validacion de workflows (ciclos,
 nodos huerfanos, ausencia de START/END, edges rotos).
 """
 
-import pytest
 
 from src.domain.semantic_flow.entities import Node, Edge, Workflow
 from src.domain.semantic_flow.value_objects import NodeType, NodeId, EdgeId

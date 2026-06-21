@@ -8,10 +8,10 @@ abstracciones, no de implementaciones concretas (DIP).
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Protocol
+from typing import List, Optional, Protocol
 
 from .entities import ExecutionContext, Node, NodeResult, Workflow
-from .value_objects import NodeId, SemanticMatch, WorkflowId
+from .value_objects import SemanticMatch, WorkflowId
 
 
 class SemanticProcessor(Protocol):

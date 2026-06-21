@@ -104,14 +104,14 @@ class _TypedId:
 
     def __init__(self, value: str | None = None) -> None:
         if value is None or value == "":
-            object.__setattr__(self, "_value", str(uuid.uuid4()))
+            self._value: str = str(uuid.uuid4())
         else:
-            object.__setattr__(self, "_value", str(value))
+            self._value = str(value)
 
     @classmethod
     def from_string(cls, value: str) -> "_TypedId":
         """Constructor explicito desde string."""
-        return cls(value)  # type: ignore[return-value]
+        return cls(value)
 
     def __str__(self) -> str:
         return self._value

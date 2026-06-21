@@ -12,9 +12,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Set
+from typing import Dict, Iterator, List, Optional, Set
 
-from ..entities import Workflow
+from ..entities import Edge, Workflow
 from ..value_objects import NodeType
 
 
@@ -194,7 +194,9 @@ class ValidateWorkflow:
         for start_nid in workflow.nodes:
             if color[start_nid] != 0:
                 continue
-            stack: List[tuple] = [(start_nid, iter(workflow.outgoing_edges(start_nid)))]
+            stack: List[tuple[str, Iterator[Edge]]] = [
+                (start_nid, iter(workflow.outgoing_edges(start_nid)))
+            ]
             color[start_nid] = 1
             while stack:
                 current_nid, edge_iter = stack[-1]

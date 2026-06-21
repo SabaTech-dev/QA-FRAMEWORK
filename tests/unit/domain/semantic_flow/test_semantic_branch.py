@@ -91,7 +91,6 @@ class TestSemanticBranch:
                 "network timeout": 0.3,
             }
         )
-        from src.domain.semantic_flow.use_cases.execute_workflow import ExecuteWorkflow
 
         from src.domain.semantic_flow.entities import NodeResult
 
@@ -114,6 +113,7 @@ class TestSemanticBranch:
             semantic_processor=proc,
         )
         out = use_case.execute(ExecuteWorkflowInput(workflow=wf, branch_query="login auth error"))
+        assert out.success is True
         assert "auth" in recorder.visited
         assert "network" not in recorder.visited
 
@@ -134,10 +134,6 @@ class TestSemanticBranch:
             start_node_id=NodeId("start"),
         )
         proc = _FakeSemanticProcessor({"alpha": 0.2})  # below threshold 0.5
-        from src.domain.semantic_flow.use_cases.execute_workflow import (
-            ExecuteWorkflow,
-            ExecuteWorkflowInput,
-        )
 
         class _RecordingExecutor:
             def __init__(self):
@@ -153,6 +149,7 @@ class TestSemanticBranch:
             semantic_processor=proc,
         )
         out = use_case.execute(ExecuteWorkflowInput(workflow=wf, branch_query="zzz"))
+        assert out.result.status.value == "completed"
         assert "a" not in recorder.visited
 
     def test_semantic_processor_uses_query_from_input(self):
@@ -172,10 +169,6 @@ class TestSemanticBranch:
             start_node_id=NodeId("start"),
         )
         proc = _FakeSemanticProcessor({"apple": 0.9})
-        from src.domain.semantic_flow.use_cases.execute_workflow import (
-            ExecuteWorkflow,
-            ExecuteWorkflowInput,
-        )
 
         class _PassExecutor:
             def execute(self, node, context):

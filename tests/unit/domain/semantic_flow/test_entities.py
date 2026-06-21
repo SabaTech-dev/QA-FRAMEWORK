@@ -7,7 +7,6 @@ NodeResult, WorkflowResult antes de implementarlos.
 
 from datetime import datetime
 
-import pytest
 
 from src.domain.semantic_flow.entities import (
     Node,

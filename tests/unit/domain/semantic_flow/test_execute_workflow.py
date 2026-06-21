@@ -5,18 +5,13 @@ RED phase: define el contrato de ejecucion de workflows, caso lineal,
 caso con decision binaria, caso con fallo, caso vacio.
 """
 
-import pytest
-
 from src.domain.semantic_flow.entities import Node, Edge, Workflow, NodeResult
 from src.domain.semantic_flow.interfaces import (
-    SemanticProcessor,
     NodeExecutor,
-    WorkflowRepository,
 )
 from src.domain.semantic_flow.use_cases.execute_workflow import (
     ExecuteWorkflow,
     ExecuteWorkflowInput,
-    ExecuteWorkflowOutput,
 )
 from src.domain.semantic_flow.value_objects import (
     NodeType,
@@ -24,7 +19,6 @@ from src.domain.semantic_flow.value_objects import (
     EdgeId,
     WorkflowId,
     WorkflowStatus,
-    NodeStatus,
 )
 
 
@@ -170,6 +164,8 @@ class TestExecuteWorkflowDecision:
             }
         )
         out = ExecuteWorkflow(node_executor=executor).execute(ExecuteWorkflowInput(workflow=wf))
+        # DECISION failure is routing info, not workflow failure
+        assert out.success is True
         assert "fail" in executor.calls
         assert "ok" not in executor.calls
 
