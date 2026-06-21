@@ -43,14 +43,25 @@ class AssertionNodeExecutor(NodeExecutor):
     """
     Executor para nodos ASSERTION.
 
+    ⚠️ TRUST BOUNDARY: node.inputs['assert'] se ejecuta como callable.
+    Solo usar con workflows de confianza (system-defined, no user-submitted).
+    User-submitted workflows deben pasar por un sanitizer que rechace
+    callables antes de llegar a este executor.
+
     Evalua una asercion definida en node.inputs['assert'] (callable
     (context) -> bool). Si devuelve True, PASSED; si False, FAILED.
     """
 
     def execute(self, node: Node, context: ExecutionContext) -> NodeResult:
         assertion = node.inputs.get("assert")
+        # Trust boundary: reject builtins from untrusted sources
         if not callable(assertion):
             return NodeResult.passed(node_id=node.id)
+        if getattr(assertion, "__module__", "").startswith("builtins"):
+            return NodeResult.failed(
+                node_id=node.id,
+                error="Rejected built-in callable (trust boundary violation)",
+            )
         try:
             ok = bool(assertion(context))
         except Exception as exc:
