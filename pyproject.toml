@@ -77,4 +77,15 @@ markers = [
     "e2e: End-to-end tests",
     "performance: Performance tests",
     "security: Security tests",
+    "agentic: Agentic QA PoC tests (Playwright Test Agents + Promptfoo + DeepEval)",
+    "promptfoo: Tests que invocan el binario promptfoo (requieren Node)",
+    "deepeval: Tests que usan DeepEval (métricas LLM)",
+    "llm: Tests que requieren API key de un LLM (gateados por entorno)",
+]
+
+[dependency-groups]
+dev = [
+    "deepeval>=4.0.6",
+    "pytest-cov>=4.1",
+    "pyyaml>=6.0",
 ]

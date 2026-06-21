@@ -29,6 +29,10 @@ htmlcov/
 .nox/
 allure-results/
 allure-report/
+.deeval/
+.deepeval/
+promptfoo-cache/
+reports/
 
 # Virtual Environment
 venv/

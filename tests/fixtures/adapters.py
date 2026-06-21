@@ -17,7 +17,17 @@ from typing import Any, AsyncGenerator, Dict, Generator, Optional
 
 import pytest
 import httpx
-from playwright.async_api import async_playwright, Browser, BrowserContext, Page
+
+# Playwright es una dependencia opcional (capa UI). Al guardar el import
+# permitimos que la colección de tests funcione en entornos sin navegador
+# (p. ej. CI ligero o el PoC de QA agéntico, que usa Playwright vía Node).
+try:
+    from playwright.async_api import async_playwright, Browser, BrowserContext, Page  # noqa: F401
+except ImportError:  # pragma: no cover - depende del entorno
+    async_playwright = None  # type: ignore[assignment]
+    Browser = None  # type: ignore[assignment,misc]
+    BrowserContext = None  # type: ignore[assignment,misc]
+    Page = None  # type: ignore[assignment,misc]
 
 from src.adapters.http.httpx_client import HTTPXClient
 from src.adapters.ui.playwright_page import PlaywrightPage

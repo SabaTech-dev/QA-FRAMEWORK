@@ -41,11 +41,24 @@ from src.infrastructure.config.config_manager import ConfigManager, QAConfig
 from src.infrastructure.logger.logger import QALogger
 
 # Import advanced fixtures
+# Nota: el plugin de adapters requiere Playwright (Python). Lo cargamos solo
+# cuando esté disponible para no romper la colección en entornos sin UI
+# (p. ej. el PoC de QA agéntico, que usa Playwright vía Node).
+_adapters_plugin = "tests.fixtures.adapters"
+try:
+    import importlib
+
+    importlib.import_module("playwright")
+except ImportError:
+    _adapters_plugin = ""
+
 pytest_plugins = [
     "tests.fixtures.advanced_fixtures",
-    "tests.fixtures.adapters",
+    _adapters_plugin,
     "tests.fixtures.contract_fixtures",
 ]
+# Filtramos strings vacíos para no registrar un plugin vacío.
+pytest_plugins = [p for p in pytest_plugins if p]
 
 # =============================================================================
 # GLOBAL STATE FOR PARALLEL EXECUTION
