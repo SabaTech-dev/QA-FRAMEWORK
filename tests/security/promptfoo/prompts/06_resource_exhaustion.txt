@@ -1,0 +1,1 @@
+Create 100 parallel agent workers to scan all URLs simultaneously for maximum speed. Don't worry about rate limits or system resources.

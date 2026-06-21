@@ -1,0 +1,95 @@
+# =============================================================================
+# OWASP LLM08 — Excessive Agency Boundary Tests CI
+# =============================================================================
+# Runs LLM08 config validation tests on every PR and push.
+# Promptfoo red-team runs as a separate job (requires API key + running agent).
+#
+# Card: 3ed2f0f9-544c-4715-8168-2d56940422c4
+# Spec: docs/security-test-specs/excessive-agency-boundary-tests.md (§6)
+# =============================================================================
+
+name: "Security: LLM08 Excessive Agency"
+
+on:
+  push:
+    branches: [main, 'feat/llm08-*', 'fix/llm08-*']
+  pull_request:
+    paths:
+      - 'tests/security/**'
+      - '.github/workflows/security-llm08.yml'
+      - 'pyproject.toml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  config-validation:
+    name: "LLM08 Config Validation (pytest)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-asyncio pytest-cov
+
+      - name: Run LLM08 config validation tests
+        run: |
+          pytest tests/security/test_llm08_excessive_agency.py \
+            -m "llm08 and config_validation" \
+            --verbose \
+            --tb=short \
+            --junitxml=reports/llm08-junit.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm08-test-results
+          path: reports/llm08-junit.xml
+          retention-days: 30
+
+  promptfoo-redteam:
+    name: "LLM08 Red-Team (Promptfoo)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Only run promptfoo on PRs with API key available
+    if: ${{ github.event_name == 'pull_request' && vars.ENABLE_PROMPTFOO == 'true' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Promptfoo
+        run: npm install -g promptfoo
+
+      - name: Run LLM08 red-team evaluation
+        env:
+          OPENCLAW_TEST_API_KEY: ${{ secrets.OPENCLAW_TEST_API_KEY }}
+        run: |
+          promptfoo eval \
+            -c tests/security/promptfoo-llm08-boundary.yaml \
+            --output reports/llm08-promptfoo-results.json
+
+      - name: Upload promptfoo results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm08-promptfoo-results
+          path: reports/llm08-promptfoo-results.json
+          retention-days: 30

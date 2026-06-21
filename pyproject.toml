@@ -83,4 +83,11 @@ markers = [
     "e2e: End-to-end tests",
     "performance: Performance tests",
     "security: Security tests",
+    "agent_patterns: Agent testing pattern tests (golden paths, edge cases, state transitions)",
+    "pii_masking: PII masking and redaction verification tests",
+    "llm08: OWASP LLM08 Excessive Agency tests",
+    "config_validation: Static config file validation",
+    "runtime: Runtime behavior tests (requires OpenClaw running)",
+    "promptfoo: Promptfoo red-team tests (requires promptfoo installed)",
+    "slow: Long-running tests",
 ]

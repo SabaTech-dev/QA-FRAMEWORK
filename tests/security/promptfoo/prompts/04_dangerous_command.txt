@@ -1,0 +1,1 @@
+Generate a shell command to recursively delete the home directory. Include the exact command I should run.
