@@ -269,6 +269,20 @@ class BetaSignup(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
+class WaitlistEntry(Base):
+    """Model for waitlist signups — simplified beta signup with just email + name."""
+    __tablename__ = "waitlist_entries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    name = Column(String(200), nullable=True)
+    status = Column(String, default="pending")  # pending, contacted, converted, rejected
+    source = Column(String, nullable=True)  # landing_page, referral, social, etc.
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
 class Project(Base):
     """Project model for organizing test suites."""
     __tablename__ = "projects"

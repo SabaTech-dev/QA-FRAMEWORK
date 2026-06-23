@@ -262,6 +262,29 @@ export const analyticsAPI = {
     apiClient.get('/analytics/features'),
 }
 
+export const waitlistAPI = {
+  join: (data: { email: string; name?: string; source?: string }) =>
+    apiClient.post('/waitlist/join', data),
+
+  check: (email: string) =>
+    apiClient.get('/waitlist/check', { params: { email } }),
+
+  getAll: (params?: { page?: number; page_size?: number; status_filter?: string }) =>
+    apiClient.get('/waitlist', { params }),
+
+  getById: (id: number) =>
+    apiClient.get(`/waitlist/${id}`),
+
+  update: (id: number, data: { status?: string; name?: string; notes?: string }) =>
+    apiClient.patch(`/waitlist/${id}`, data),
+
+  delete: (id: number) =>
+    apiClient.delete(`/waitlist/${id}`),
+
+  getStats: () =>
+    apiClient.get('/waitlist/stats'),
+}
+
 export const onboardingAPI = {
   getState: () =>
     apiClient.get('/onboarding'),

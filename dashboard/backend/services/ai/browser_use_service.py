@@ -11,29 +11,53 @@ from models.browser_use_task import BrowserUseTask, TaskStatus
 from config import settings
 from core.logging_config import get_logger
 
+try:
+    from src.infrastructure.observability import get_langfuse_tracer, get_langfuse_handler
+except ImportError:
+    get_langfuse_tracer = None  # type: ignore[assignment]
+    get_langfuse_handler = None  # type: ignore[assignment]
+
 logger = get_logger(__name__)
+
+
+class _null_context:
+    """No-op context manager for when Langfuse is disabled."""
+    def __enter__(self):
+        return None
+    def __exit__(self, *args):
+        pass
 
 
 class BrowserUseService:
     """Service for executing browser-use tasks."""
-    
+
     def __init__(self):
         self.active_tasks: Dict[str, asyncio.Task] = {}
         self._llm = None
-    
+
     def _get_llm(self):
         """Get LLM instance based on configuration."""
         if self._llm is None:
             if settings.BROWSER_USE_LLM_PROVIDER == "groq":
                 from langchain_groq import ChatGroq
+
+                callbacks = []
+                if get_langfuse_handler is not None:
+                    try:
+                        handler = get_langfuse_handler()
+                        callbacks.append(handler)
+                    except Exception as exc:
+                        logger.warning("Langfuse handler not available: %s", exc)
+
                 self._llm = ChatGroq(
                     model=settings.BROWSER_USE_MODEL,
-                    api_key=settings.GROQ_API_KEY
+                    api_key=settings.GROQ_API_KEY,
+                    callbacks=callbacks if callbacks else None,
                 )
             else:
                 raise ValueError(f"Unsupported LLM provider: {settings.BROWSER_USE_LLM_PROVIDER}")
         return self._llm
-    
+
     async def execute_task(
         self,
         prompt: str,
@@ -44,19 +68,19 @@ class BrowserUseService:
     ) -> str:
         """
         Execute a browser-use task asynchronously.
-        
+
         Args:
             prompt: Natural language task description
             url: Target URL
             user_id: User ID executing the task
             db: Database session
             options: Optional execution options
-        
+
         Returns:
             Task ID
         """
         task_id = f"bu_{uuid4().hex[:8]}"
-        
+
         # Create task record
         db_task = BrowserUseTask(
             task_id=task_id,
@@ -68,17 +92,17 @@ class BrowserUseService:
         )
         db.add(db_task)
         await db.commit()
-        
+
         logger.info("Created browser-use task", task_id=task_id, prompt=prompt, url=url)
-        
+
         # Start background execution
         async_task = asyncio.create_task(
             self._execute_browser_agent(task_id, prompt, url, db, options)
         )
         self.active_tasks[task_id] = async_task
-        
+
         return task_id
-    
+
     async def _execute_browser_agent(
         self,
         task_id: str,
@@ -88,47 +112,68 @@ class BrowserUseService:
         options: Optional[Dict[str, Any]] = None
     ):
         """Execute browser-use agent in background."""
-        try:
-            # Update status to running
-            await self._update_task_status(db, task_id, TaskStatus.RUNNING)
-            
-            # Import browser-use here to avoid import errors if not installed
-            from browser_use import Agent
-            
-            llm = self._get_llm()
-            options = options or {}
-            
-            agent = Agent(
-                task=prompt,
-                llm=llm,
-                browser_config={
-                    "headless": options.get("headless", True),
-                }
+        tracer = get_langfuse_tracer() if get_langfuse_tracer is not None else None
+
+        with (
+            tracer.span(
+                name="browser-use-agent",
+                input={"prompt": prompt, "url": url, "task_id": task_id},
+                metadata={"service": "browser_use", "task_id": task_id},
             )
-            
-            start_time = datetime.utcnow()
-            
-            # Run the agent
-            result = await agent.run(url)
-            
-            duration = (datetime.utcnow() - start_time).total_seconds()
-            
-            # Update task with results
-            await self._update_task_result(
-                db, task_id, TaskStatus.COMPLETED,
-                result=self._parse_result(result),
-                duration_seconds=int(duration)
-            )
-            
-            logger.info("Browser-use task completed", task_id=task_id, duration=duration)
-            
-        except Exception as e:
-            logger.error("Browser-use task failed", task_id=task_id, error=str(e))
-            await self._update_task_result(
-                db, task_id, TaskStatus.FAILED,
-                error_message=str(e)
-            )
-    
+            if tracer and tracer.is_active
+            else _null_context()
+        ) as span:
+            try:
+                # Update status to running
+                await self._update_task_status(db, task_id, TaskStatus.RUNNING)
+
+                # Import browser-use here to avoid import errors if not installed
+                from browser_use import Agent
+
+                llm = self._get_llm()
+                options = options or {}
+
+                agent = Agent(
+                    task=prompt,
+                    llm=llm,
+                    browser_config={
+                        "headless": options.get("headless", True),
+                    }
+                )
+
+                start_time = datetime.utcnow()
+
+                # Run the agent
+                result = await agent.run(url)
+
+                duration = (datetime.utcnow() - start_time).total_seconds()
+
+                parsed = self._parse_result(result)
+
+                # Update task with results
+                await self._update_task_result(
+                    db, task_id, TaskStatus.COMPLETED,
+                    result=parsed,
+                    duration_seconds=int(duration),
+                )
+
+                if span is not None:
+                    span.update(
+                        output=parsed,
+                        metadata={"duration_seconds": duration, "status": "completed"},
+                    )
+
+                logger.info("Browser-use task completed", task_id=task_id, duration=duration)
+
+            except Exception as e:
+                logger.error("Browser-use task failed", task_id=task_id, error=str(e))
+                await self._update_task_result(
+                    db, task_id, TaskStatus.FAILED,
+                    error_message=str(e),
+                )
+                if span is not None:
+                    span.update(output={"error": str(e)}, level="ERROR")
+
     def _parse_result(self, result: Any) -> Dict:
         """Parse browser-use result into dict."""
         if isinstance(result, dict):
@@ -136,7 +181,7 @@ class BrowserUseService:
         if hasattr(result, 'model_dump'):
             return result.model_dump()
         return {"raw_result": str(result)}
-    
+
     async def _update_task_status(
         self,
         db: AsyncSession,
@@ -151,7 +196,7 @@ class BrowserUseService:
         if task:
             task.status = status
             await db.commit()
-    
+
     async def _update_task_result(
         self,
         db: AsyncSession,
@@ -176,7 +221,7 @@ class BrowserUseService:
                 task.duration_seconds = duration_seconds
             task.completed_at = datetime.utcnow()
             await db.commit()
-    
+
     async def get_status(
         self,
         task_id: str,
@@ -189,7 +234,7 @@ class BrowserUseService:
         task = result.scalar_one_or_none()
         if not task:
             return None
-        
+
         return {
             "task_id": task.task_id,
             "status": task.status.value,
@@ -197,7 +242,7 @@ class BrowserUseService:
             "current_step": None,
             "error": task.error_message
         }
-    
+
     async def get_results(
         self,
         task_id: str,
@@ -210,7 +255,7 @@ class BrowserUseService:
         task = result.scalar_one_or_none()
         if not task:
             return None
-        
+
         return {
             "task_id": task.task_id,
             "status": task.status.value,

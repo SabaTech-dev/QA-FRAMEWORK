@@ -52,6 +52,9 @@ types-PyYAML==6.0.12.12
 types-requests==2.31.0.20240106
 types-urllib3==1.26.25.14
 
+# LLM Observability
+langfuse>=2.0.0  # Langfuse tracing for LLM calls
+
 # Health Checks & Monitoring
 asyncpg==0.29.0  # PostgreSQL async driver
 aiomysql>=0.3.0  # MySQL async driver

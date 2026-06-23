@@ -559,3 +559,49 @@ from schemas.browser_use import (
     BrowserUseStatusResponse,
     BrowserUseResultsResponse,
 )
+
+
+# ─── Waitlist Schemas ─────────────────────────────────────────
+
+from enum import Enum
+
+
+class WaitlistStatus(str, Enum):
+    pending = "pending"
+    contacted = "contacted"
+    converted = "converted"
+    rejected = "rejected"
+
+
+class WaitlistEntryBase(BaseModel):
+    email: str = Field(..., pattern=r'^[\w\.-]+@[\w\.-]+\.\w+$')
+    name: Optional[str] = Field(default=None, max_length=200)
+    source: Optional[str] = None
+
+
+class WaitlistEntryCreate(WaitlistEntryBase):
+    pass
+
+
+class WaitlistEntryUpdate(BaseModel):
+    status: Optional[WaitlistStatus] = None
+    name: Optional[str] = Field(default=None, max_length=200)
+    notes: Optional[str] = None
+
+
+class WaitlistEntryResponse(WaitlistEntryBase):
+    id: int
+    status: WaitlistStatus = WaitlistStatus.pending
+    notes: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class WaitlistListResponse(BaseModel):
+    items: List[WaitlistEntryResponse]
+    total: int
+    page: int
+    page_size: int
