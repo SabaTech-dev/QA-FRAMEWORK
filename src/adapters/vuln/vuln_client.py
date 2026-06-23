@@ -17,6 +17,7 @@ from src.adapters.vuln import (
 )
 from src.adapters.vuln.nuclei_scanner import NucleiScanner
 from src.adapters.vuln.wstg_scanner import WSTGScanner
+from src.adapters.vuln.zap_scanner import ZAPScanner
 
 logger = logging.getLogger(__name__)
 
@@ -25,17 +26,17 @@ class VulnClient:
     """Unified vulnerability scanning client.
 
     Provides a single interface for all vulnerability scanning operations
-    using Nuclei (template-based) and WSTG (OWASP methodology).
+    using Nuclei (template-based), WSTG (OWASP methodology), and ZAP (OWASP ZAP).
 
     Usage:
         client = VulnClient()
-        
+
         # Web scan
         result = await client.scan_web("https://example.com")
-        
-        # Network scan  
+
+        # Network scan
         result = await client.scan_network("10.0.0.1/24")
-        
+
         # Generate report
         paths = client.generate_report(result)
     """
@@ -53,6 +54,7 @@ class VulnClient:
         """
         self._nuclei = NucleiScanner(output_dir=output_dir)
         self._wstg = WSTGScanner(output_dir=output_dir)
+        self._zap = ZAPScanner(output_dir=output_dir)
         self._reporter = VulnReportGenerator(output_dir=report_output_dir)
         self._closed = False
 
@@ -61,6 +63,7 @@ class VulnClient:
         target: str,
         use_nuclei: bool = True,
         use_wstg: bool = True,
+        use_zap: bool = False,
         nuclei_templates: Optional[List[str]] = None,
         wstg_categories: Optional[List[str]] = None,
         severity_filter: Optional[str] = None,
@@ -70,12 +73,13 @@ class VulnClient:
     ) -> VulnScanResult:
         """Run a comprehensive web vulnerability scan.
 
-        Combines Nuclei and WSTG scans for maximum coverage.
+        Combines Nuclei, WSTG, and ZAP scans for maximum coverage.
 
         Args:
             target: URL to scan
             use_nuclei: Whether to run Nuclei scan
             use_wstg: Whether to run WSTG scan
+            use_zap: Whether to run ZAP scan
             nuclei_templates: Specific Nuclei templates
             wstg_categories: Specific WSTG categories
             severity_filter: Minimum severity to report
@@ -115,6 +119,15 @@ class VulnClient:
                 results.append(wr)
             except Exception as e:
                 logger.error(f"WSTG scan failed: {e}")
+
+        if use_zap:
+            try:
+                zr = await self._zap.scan_web(
+                    target=target,
+                )
+                results.append(zr)
+            except Exception as e:
+                logger.error(f"ZAP scan failed: {e}")
 
         if not results:
             return VulnScanResult(
@@ -174,7 +187,7 @@ class VulnClient:
 
         Args:
             target: Target URL or IP
-            scanner: "nuclei" or "wstg"
+            scanner: "nuclei", "wstg", or "zap"
             templates: Specific templates to use
 
         Returns:
@@ -184,8 +197,10 @@ class VulnClient:
             return await self._nuclei.scan_web(target=target, templates=templates)
         elif scanner.lower() == "wstg":
             return await self._wstg.scan_web(target=target)
+        elif scanner.lower() == "zap":
+            return await self._zap.scan_web(target=target)
         else:
-            raise ValueError(f"Unknown scanner: {scanner}. Use 'nuclei' or 'wstg'.")
+            raise ValueError(f"Unknown scanner: {scanner}. Use 'nuclei', 'wstg', or 'zap'.")
 
     def generate_report(
         self, result: VulnScanResult, base_name: Optional[str] = None
@@ -221,6 +236,7 @@ class VulnClient:
         return {
             "nuclei": await self._nuclei.health_check(),
             "wstg": await self._wstg.health_check(),
+            "zap": await self._zap.health_check(),
         }
 
     async def close(self):
@@ -228,6 +244,7 @@ class VulnClient:
         self._closed = True
         await self._nuclei.close()
         await self._wstg.close()
+        await self._zap.close()
 
     async def __aenter__(self) -> "VulnClient":
         return self

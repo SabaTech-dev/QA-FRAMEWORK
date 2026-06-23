@@ -37,6 +37,8 @@ pytest-benchmark==4.0.0
 # Security Testing
 bandit==1.7.6
 safety>=3.0.0
+aiohttp>=3.9.0
+zaproxy>=0.4.0
 
 # Code Quality
 black>=26.3.1

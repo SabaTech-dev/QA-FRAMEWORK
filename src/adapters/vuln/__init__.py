@@ -17,6 +17,7 @@ from .vuln_parser import (
 from .vuln_report import VulnReportGenerator
 from .nuclei_scanner import NucleiScanner
 from .wstg_scanner import WSTGScanner
+from .zap_scanner import ZAPScanner
 from .vuln_client import VulnClient
 
 __all__ = [
@@ -28,5 +29,6 @@ __all__ = [
     "VulnReportGenerator",
     "NucleiScanner",
     "WSTGScanner",
+    "ZAPScanner",
     "VulnClient",
 ]
