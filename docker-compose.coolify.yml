@@ -49,12 +49,17 @@ services:
     container_name: qa-beta-backend
     ports:
       - "8010:8000"
+    # config.py reads JWT_SECRET_KEY (not SECRET_KEY) for Settings.secret_key,
+    # so JWT_SECRET_KEY MUST be set here or production validation fails with
+    # "Missing JWT_SECRET_KEY". Coolify provides the value via ${JWT_SECRET_KEY}
+    # substitution from the project's root .env. SECRET_KEY is kept for ops parity.
     environment:
       - DATABASE_URL=postgresql://qa_user:${DB_PASSWORD:-changeme_production_password}@postgres:5432/qa_dashboard
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-changeme_redis_password}
       - SECRET_KEY=${JWT_SECRET_KEY:-changeme_jwt_secret_at_least_32_chars}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-changeme_jwt_secret_at_least_32_chars}
       - ENVIRONMENT=production
       - LOG_LEVEL=INFO
     depends_on:
