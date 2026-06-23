@@ -34,6 +34,14 @@ aiomysql = "0.2.0"
 aiosqlite = "0.19.0"
 redis = "5.0.1"
 psutil = "5.9.8"
+# RAG Evaluation (RAGAS) - stack langchain 0.3.x coherente y probado.
+# ragas 0.4.x / langchain-community 0.4.x (sunset) son incompatibles a dia de hoy.
+ragas = "0.2.15"
+langchain = "0.3.27"
+langchain-core = "0.3.86"
+langchain-community = "0.3.27"
+langchain-openai = "0.3.28"
+langchain-text-splitters = "0.3.11"
 
 [tool.poetry.group.dev.dependencies]
 black = "24.1.1"

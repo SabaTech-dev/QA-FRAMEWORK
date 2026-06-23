@@ -55,6 +55,15 @@ types-urllib3==1.26.25.14
 # LLM Observability
 langfuse>=2.0.0  # Langfuse tracing for LLM calls
 
+# RAG Evaluation (RAGAS) - stack langchain 0.3.x coherente y probado
+# Nota: ragas 0.4.x / langchain-community 0.4.x (sunset) son incompatibles a dia de hoy.
+ragas==0.2.15
+langchain==0.3.27
+langchain-core==0.3.86
+langchain-community==0.3.27
+langchain-openai==0.3.28
+langchain-text-splitters==0.3.11
+
 # Health Checks & Monitoring
 asyncpg==0.29.0  # PostgreSQL async driver
 aiomysql>=0.3.0  # MySQL async driver

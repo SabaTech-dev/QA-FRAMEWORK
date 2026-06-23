@@ -9,6 +9,32 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/sp
 
 ### Added
 
+- **Evaluador RAG con RAGAS** (`src/core/evaluation/ragas_evaluator.py`): integración
+  de RAGAS para evaluar pipelines RAG (Retrieval-Augmented Generation) en tres
+  dimensiones estandar.
+  - **Métodos públicos**: `evaluate_context_relevance`, `evaluate_faithfulness`,
+    `evaluate_answer_relevance` y `evaluate_full_pipeline` (este último devuelve un
+    dict con `context_relevance`, `faithfulness`, `answer_relevance` y
+    `aggregated_score` = media aritmética de las tres).
+  - **Seam `_run_metric`**: único punto de acoplamiento con ragas; los tests lo
+    mockean con `MagicMock` para ser deterministas y no requerir API keys de LLM.
+  - **Lazy imports**: ragas se importa dentro de los métodos; el módulo es importable
+    aunque ragas no esté instalado (solo lanza `RagasNotAvailableError` al evaluar).
+  - **Normalización defensiva**: `context` admite `str | list[str]`; todo score se
+    limita a `[0.0, 1.0]`; `None`/`NaN`/`inf` se tratan como `0.0`.
+  - Excepción de dominio `RagasNotAvailableError` y helpers `_normalize_context` /
+    `_clip01`.
+  - **19 tests** en `tests/evaluation/test_ragas_evaluator.py` con 97% de cobertura
+    sobre el nuevo módulo; smoke test de integración con skip condicional
+    (`pytest.importorskip`) para no romper cuando ragas no es importable.
+  - Documentación de diseño en
+    `docs/superpowers/specs/2026-06-23-ragas-integration-design.md`.
+  - **Nota de entorno**: ragas 0.4.x es incompatible con `langchain-community`
+    0.4.x (sunset, sin `chat_models.vertexai`). Stack coherente fijado en
+    `requirements.txt`: `ragas==0.2.15` + `langchain 0.3.x`. Conflictos conocidos
+    (fuera de alcance): `deepeval` requiere `click<8.4.0` e `instructor` requiere
+    `openai>=2.0.0`.
+
 - **SemanticFlow Testing** (`src/domain/semantic_flow/`): framework agentic avanzado
   para orquestar workflows de testing complejos mediante procesamiento semántico.
   - **Modelo de grafo dirigido (DAG)** con 6 tipos de nodo: `ACTION`, `DECISION`,
