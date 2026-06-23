@@ -17,6 +17,7 @@ from integration.qa_framework_client import get_qa_test_suites
 from middleware.apm import APMMiddleware, init_app_info
 from middleware.security_headers import SecurityHeadersMiddleware
 from middleware.rate_limit import RateLimitMiddleware
+from middleware.semantic_cache_middleware import SemanticCacheMiddleware
 from prometheus_client import make_asgi_app
 
 # Configure structured logging
@@ -54,6 +55,9 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 # Add Rate Limiting middleware
 app.add_middleware(RateLimitMiddleware)
+
+# Add Semantic Cache middleware (before APM so cached responses skip APM tracking)
+app.add_middleware(SemanticCacheMiddleware)
 
 # Add APM middleware
 app.add_middleware(APMMiddleware)

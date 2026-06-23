@@ -37,3 +37,4 @@ aiohttp>=3.13.3
 browser-use>=0.1.0
 langchain-groq>=0.1.0
 langfuse>=2.0.0  # Langfuse tracing for LLM observability
+sentence-transformers>=3.0.0  # Semantic embeddings for cache
