@@ -77,4 +77,5 @@ markers = [
     "e2e: End-to-end tests",
     "performance: Performance tests",
     "security: Security tests",
+    "pii_masking: PII masking and detection tests",
 ]
