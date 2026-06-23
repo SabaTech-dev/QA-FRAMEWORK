@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QA-FRAMEWORK — AI-Powered QA Automation Platform</title>
+  <meta name="description" content="Next-generation QA automation with AI-powered test generation, accuracy testing, and compliance reporting. Join the beta waitlist." />
+  <meta name="theme-color" content="#0f172a" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="QA-FRAMEWORK — AI-Powered QA Automation" />
+  <meta property="og:description" content="Next-generation QA automation platform. AI-powered test generation, accuracy testing, bias/fairness analysis, and AI Act compliance reporting." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://qa.sabatech.dev" />
+
+  <!-- Tailwind CSS (CDN for static hosting) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              200: '#bae6fd',
+              300: '#7dd3fc',
+              400: '#38bdf8',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+              800: '#075985',
+              900: '#0c4a6e',
+              950: '#082f49',
+            },
+            accent: {
+              400: '#a78bfa',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+            },
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+          },
+        },
+      },
+    }
+  </script>
+
+  <!-- Inter font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <style>
+    /* Custom animations */
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+    }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(14, 165, 233, 0.3); }
+      50% { box-shadow: 0 0 40px rgba(14, 165, 233, 0.6); }
+    }
+    @keyframes gradient-shift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .animate-float { animation: float 6s ease-in-out infinite; }
+    .animate-float-delayed { animation: float 6s ease-in-out 2s infinite; }
+    .animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+    .animate-gradient {
+      background-size: 200% 200%;
+      animation: gradient-shift 8s ease infinite;
+    }
+
+    /* Grid pattern background */
+    .bg-grid {
+      background-image:
+        linear-gradient(rgba(14, 165, 233, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(14, 165, 233, 0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    /* Noise texture overlay */
+    .bg-noise::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Glow orbs */
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.15;
+      pointer-events: none;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-brand-500/30 selection:text-brand-200">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       NAVBAR
+       ═══════════════════════════════════════════════════════════ -->
+  <nav class="fixed top-0 left-0 right-0 z-50 border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-xl">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div class="flex h-16 items-center justify-between">
+        <!-- Logo -->
+        <a href="#" class="flex items-center gap-2.5 group">
+          <div class="relative flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-accent-600 shadow-lg shadow-brand-500/20">
+            <svg class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <span class="text-lg font-bold tracking-tight">
+            <span class="text-white">QA</span><span class="text-brand-400">Framework</span>
+          </span>
+        </a>
+
+        <!-- Nav links (desktop) -->
+        <div class="hidden md:flex items-center gap-8">
+          <a href="#features" class="text-sm text-slate-400 hover:text-white transition-colors">Features</a>
+          <a href="#capabilities" class="text-sm text-slate-400 hover:text-white transition-colors">Capabilities</a>
+          <a href="#waitlist" class="text-sm text-slate-400 hover:text-white transition-colors">Join Waitlist</a>
+        </div>
+
+        <!-- CTA -->
+        <div class="flex items-center gap-3">
+          <a href="#waitlist" class="hidden sm:inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-brand-600/25 hover:bg-brand-500 transition-all hover:shadow-brand-500/30 hover:-translate-y-0.5">
+            Get Early Access
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </a>
+          <!-- Mobile menu button -->
+          <button id="mobile-menu-btn" class="md:hidden p-2 text-slate-400 hover:text-white">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="hidden md:hidden border-t border-slate-800/50 bg-slate-950/95 backdrop-blur-xl">
+      <div class="px-4 py-4 space-y-3">
+        <a href="#features" class="block text-sm text-slate-400 hover:text-white transition-colors py-2">Features</a>
+        <a href="#capabilities" class="block text-sm text-slate-400 hover:text-white transition-colors py-2">Capabilities</a>
+        <a href="#waitlist" class="block text-sm text-slate-400 hover:text-white transition-colors py-2">Join Waitlist</a>
+        <a href="#waitlist" class="block rounded-lg bg-brand-600 px-4 py-2.5 text-center text-sm font-semibold text-white">Get Early Access</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       HERO
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="relative min-h-screen flex items-center justify-center overflow-hidden bg-grid bg-noise pt-16">
+    <!-- Glow orbs -->
+    <div class="glow-orb -top-40 -left-40 h-96 w-96 bg-brand-500"></div>
+    <div class="glow-orb top-1/3 -right-40 h-96 w-96 bg-accent-500"></div>
+    <div class="glow-orb -bottom-40 left-1/3 h-96 w-96 bg-brand-700"></div>
+
+    <div class="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 sm:py-32">
+      <div class="text-center">
+        <!-- Badge -->
+        <div class="inline-flex items-center gap-2 rounded-full border border-brand-500/20 bg-brand-500/10 px-4 py-1.5 mb-8">
+          <span class="relative flex h-2 w-2">
+            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-400 opacity-75"></span>
+            <span class="relative inline-flex h-2 w-2 rounded-full bg-brand-500"></span>
+          </span>
+          <span class="text-sm font-medium text-brand-300">Beta Launch — Limited Spots Available</span>
+        </div>
+
+        <!-- Headline -->
+        <h1 class="mx-auto max-w-5xl text-4xl font-black tracking-tight sm:text-6xl lg:text-7xl xl:text-8xl">
+          <span class="block text-white">AI-Powered</span>
+          <span class="block bg-gradient-to-r from-brand-400 via-accent-400 to-brand-400 bg-clip-text text-transparent animate-gradient">
+            QA Automation
+          </span>
+          <span class="block text-white">Platform</span>
+        </h1>
+
+        <!-- Subheadline -->
+        <p class="mx-auto mt-6 max-w-2xl text-lg text-slate-400 sm:text-xl leading-relaxed">
+          Next-generation test automation with AI-powered generation, accuracy testing, bias analysis, and AI Act compliance reporting. Built for teams who ship quality.
+        </p>
+
+        <!-- CTA buttons -->
+        <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <a href="#waitlist" class="group relative inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 px-8 py-4 text-base font-bold text-white shadow-2xl shadow-brand-600/30 hover:shadow-brand-500/40 transition-all hover:-translate-y-1 animate-pulse-glow">
+            Join the Waitlist
+            <svg class="h-5 w-5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </a>
+          <a href="#features" class="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800/50 px-8 py-4 text-base font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-all hover:-translate-y-0.5">
+            Explore Features
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </a>
+        </div>
+
+        <!-- Social proof -->
+        <div class="mt-16 flex flex-col items-center gap-4">
+          <div class="flex -space-x-3">
+            <div class="h-10 w-10 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 ring-2 ring-slate-950 flex items-center justify-center text-xs font-bold">Q</div>
+            <div class="h-10 w-10 rounded-full bg-gradient-to-br from-accent-400 to-accent-600 ring-2 ring-slate-950 flex items-center justify-center text-xs font-bold">A</div>
+            <div class="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 ring-2 ring-slate-950 flex items-center justify-center text-xs font-bold">F</div>
+            <div class="h-10 w-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 ring-2 ring-slate-950 flex items-center justify-center text-xs font-bold">W</div>
+          </div>
+          <p class="text-sm text-slate-500">
+            <span class="text-brand-400 font-semibold" id="waitlist-count">200+</span> teams already on the waitlist
+          </p>
+        </div>
+
+        <!-- Floating code preview -->
+        <div class="mx-auto mt-20 max-w-3xl">
+          <div class="rounded-2xl border border-slate-800/80 bg-slate-900/80 shadow-2xl backdrop-blur-sm overflow-hidden">
+            <!-- Window chrome -->
+            <div class="flex items-center gap-2 border-b border-slate-800/80 px-4 py-3">
+              <div class="h-3 w-3 rounded-full bg-red-500/80"></div>
+              <div class="h-3 w-3 rounded-full bg-amber-500/80"></div>
+              <div class="h-3 w-3 rounded-full bg-emerald-500/80"></div>
+              <span class="ml-3 text-xs text-slate-500 font-mono">accuracy_test.py</span>
+            </div>
+            <!-- Code -->
+            <div class="p-6 text-left font-mono text-sm leading-relaxed">
+              <div><span class="text-accent-400">from</span> <span class="text-brand-300">qa_framework</span> <span class="text-accent-400">import</span> <span class="text-white">AccuracyTestSession</span></div>
+              <br />
+              <div><span class="text-slate-500"># AI-powered accuracy evaluation</span></div>
+              <div><span class="text-accent-400">session</span> <span class="text-white">=</span> <span class="text-yellow-300">AccuracyTestSession</span><span class="text-white">(</span></div>
+              <div>&nbsp;&nbsp;<span class="text-brand-300">provider</span><span class="text-white">=</span><span class="text-emerald-400">"openai"</span><span class="text-white">,</span></div>
+              <div>&nbsp;&nbsp;<span class="text-brand-300">benchmark</span><span class="text-white">=</span><span class="text-emerald-400">"bgh-vi-zr-67-24"</span></div>
+              <div><span class="text-white">)</span></div>
+              <br />
+              <div><span class="text-accent-400">result</span> <span class="text-white">=</span> <span class="text-white">session</span><span class="text-white">.</span><span class="text-yellow-300">run</span><span class="text-white">()</span></div>
+              <div><span class="text-white">result</span><span class="text-white">.</span><span class="text-yellow-300">export_sarif</span><span class="text-white">(</span><span class="text-emerald-400">"report.sarif"</span><span class="text-white">)</span></div>
+              <div><span class="text-white">result</span><span class="text-white">.</span><span class="text-yellow-300">export_annex_iv</span><span class="text-white">(</span><span class="text-emerald-400">"compliance.pdf"</span><span class="text-white">)</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       FEATURES
+       ═══════════════════════════════════════════════════════════ -->
+  <section id="features" class="relative py-24 sm:py-32 bg-slate-950">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <!-- Section header -->
+      <div class="text-center mb-16">
+        <span class="inline-block text-sm font-semibold uppercase tracking-widest text-brand-400 mb-4">Features</span>
+        <h2 class="text-3xl font-bold tracking-tight text-white sm:text-5xl">
+          Everything you need to ship quality
+        </h2>
+        <p class="mx-auto mt-4 max-w-2xl text-lg text-slate-400">
+          From AI-powered test generation to compliance reporting — a complete QA platform built for modern engineering teams.
+        </p>
+      </div>
+
+      <!-- Features grid -->
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+
+        <!-- Feature 1 -->
+        <div class="group relative rounded-2xl border border-slate-800/80 bg-slate-900/50 p-8 hover:border-brand-500/30 hover:bg-slate-900/80 transition-all duration-300 hover:-translate-y-1">
+          <div class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500/10 text-brand-400 group-hover:bg-brand-500/20 transition-colors">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">AI-Powered Test Generation</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Automatically generate comprehensive test suites from your codebase using AI. Supports Selenium, Playwright, Appium, and Cypress.</p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="group relative rounded-2xl border border-slate-800/80 bg-slate-900/50 p-8 hover:border-brand-500/30 hover:bg-slate-900/80 transition-all duration-300 hover:-translate-y-1">
+          <div class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-accent-500/10 text-accent-400 group-hover:bg-accent-500/20 transition-colors">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Accuracy Testing</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Evaluate AI model accuracy against legal benchmarks. Built-in support for BGH VI ZR 67/24 and custom benchmarks.</p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="group relative rounded-2xl border border-slate-800/80 bg-slate-900/50 p-8 hover:border-brand-500/30 hover:bg-slate-900/80 transition-all duration-300 hover:-translate-y-1">
+          <div class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/20 transition-colors">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Bias & Fairness Analysis</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Statistical fairness analysis with demographic parity, equal opportunity, and disparate impact metrics. Robustness testing included.</p>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="group relative rounded-2xl border border-slate-800/80 bg-slate-900/50 p-8 hover:border-brand-500/30 hover:bg-slate-900/80 transition-all duration-300 hover:-translate-y-1">
+          <div class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 group-hover:bg-amber-500/20 transition-colors">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">AI Act Compliance</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Generate Annex IV compliance reports and SARIF 2.1.0 output for CI/CD pipelines. Full evidence mapping for EU AI Act requirements.</p>
+        </div>
+
+        <!-- Feature 5 -->
+        <div class="group relative rounded-2xl border border-slate-800/80 bg-slate-900/50 p-8 hover:border-brand-500/30 hover:bg-slate-900/80 transition-all duration-300 hover:-translate-y-1">
+          <div class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-rose-500/10 text-rose-400 group-hover:bg-rose-500/20 transition-colors">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Integration Hub</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Connect with Jira, Zephyr, Azure DevOps, TestLink, and HP ALM. Sync test results and manage everything from one place.</p>
+        </div>
+
+        <!-- Feature 6 -->
+        <div class="group relative rounded-2xl border border-slate-800/80 bg-slate-900/50 p-8 hover:border-brand-500/30 hover:bg-slate-900/80 transition-all duration-300 hover:-translate-y-1">
+          <div class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500/20 transition-colors">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Real-Time Dashboard</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Modern React dashboard with live execution monitoring, trend analysis, and comprehensive reporting. Built for speed.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CAPABILITIES / STATS
+       ═══════════════════════════════════════════════════════════ -->
+  <section id="capabilities" class="relative py-24 sm:py-32 bg-slate-900/30 border-y border-slate-800/50">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <span class="inline-block text-sm font-semibold uppercase tracking-widest text-brand-400 mb-4">Platform</span>
+        <h2 class="text-3xl font-bold tracking-tight text-white sm:text-5xl">
+          Built for scale. Designed for quality.
+        </h2>
+      </div>
+
+      <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="text-center">
+          <div class="text-4xl font-black text-brand-400 sm:text-5xl">82%+</div>
+          <div class="mt-2 text-sm text-slate-400">Code Coverage</div>
+        </div>
+        <div class="text-center">
+          <div class="text-4xl font-black text-accent-400 sm:text-5xl">6</div>
+          <div class="mt-2 text-sm text-slate-400">Testing Frameworks</div>
+        </div>
+        <div class="text-center">
+          <div class="text-4xl font-black text-emerald-400 sm:text-5xl">5+</div>
+          <div class="mt-2 text-sm text-slate-400">Integrations</div>
+        </div>
+        <div class="text-center">
+          <div class="text-4xl font-black text-amber-400 sm:text-5xl">AI</div>
+          <div class="mt-2 text-sm text-slate-400">Act Compliant</div>
+        </div>
+      </div>
+
+      <!-- Tech stack badges -->
+      <div class="mt-16 flex flex-wrap items-center justify-center gap-3">
+        <span class="rounded-full border border-slate-700 bg-slate-800/50 px-4 py-1.5 text-xs font-medium text-slate-300">Python 3.11+</span>
+        <span class="rounded-full border border-slate-700 bg-slate-800/50 px-4 py-1.5 text-xs font-medium text-slate-300">FastAPI</span>
+        <span class="rounded-full border border-slate-700 bg-slate-800/50 px-4 py-1.5 text-xs font-medium text-slate-300">React + TypeScript</span>
+        <span class="rounded-full border border-slate-700 bg-slate-800/50 px-4 py-1.5 text-xs font-medium text-slate-300">PostgreSQL</span>
+        <span class="rounded-full border border-slate-700 bg-slate-800/50 px-4 py-1.5 text-xs font-medium text-slate-300">Redis</span>
+        <span class="rounded-full border border-slate-700 bg-slate-800/50 px-4 py-1.5 text-xs font-medium text-slate-300">Docker</span>
+        <span class="rounded-full border border-slate-700 bg-slate-800/50 px-4 py-1.5 text-xs font-medium text-slate-300">Playwright</span>
+        <span class="rounded-full border border-slate-700 bg-slate-800/50 px-4 py-1.5 text-xs font-medium text-slate-300">Selenium</span>
+        <span class="rounded-full border border-slate-700 bg-slate-800/50 px-4 py-1.5 text-xs font-medium text-slate-300">SARIF 2.1.0</span>
+        <span class="rounded-full border border-slate-700 bg-slate-800/50 px-4 py-1.5 text-xs font-medium text-slate-300">LangChain</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       WAITLIST FORM
+       ═══════════════════════════════════════════════════════════ -->
+  <section id="waitlist" class="relative py-24 sm:py-32 bg-slate-950 bg-grid bg-noise">
+    <div class="glow-orb top-0 left-1/4 h-96 w-96 bg-brand-500"></div>
+    <div class="glow-orb bottom-0 right-1/4 h-96 w-96 bg-accent-500"></div>
+
+    <div class="relative z-10 mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-12">
+        <span class="inline-block text-sm font-semibold uppercase tracking-widest text-brand-400 mb-4">Beta Access</span>
+        <h2 class="text-3xl font-bold tracking-tight text-white sm:text-5xl">
+          Get early access
+        </h2>
+        <p class="mx-auto mt-4 max-w-lg text-lg text-slate-400">
+          Join the waitlist and be among the first to experience the future of QA automation. No spam, ever.
+        </p>
+      </div>
+
+      <!-- Form card -->
+      <div class="rounded-2xl border border-slate-800/80 bg-slate-900/80 p-8 sm:p-10 shadow-2xl backdrop-blur-sm">
+        <form id="waitlist-form" class="space-y-5">
+          <!-- Name (optional) -->
+          <div>
+            <label for="name" class="block text-sm font-medium text-slate-300 mb-1.5">
+              Name <span class="text-slate-500">(optional)</span>
+            </label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              placeholder="Your name"
+              class="w-full rounded-xl border border-slate-700 bg-slate-800/50 px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-colors"
+            />
+          </div>
+
+          <!-- Email (required) -->
+          <div>
+            <label for="email" class="block text-sm font-medium text-slate-300 mb-1.5">
+              Email <span class="text-brand-400">*</span>
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              required
+              placeholder="you@company.com"
+              class="w-full rounded-xl border border-slate-700 bg-slate-800/50 px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-colors"
+            />
+          </div>
+
+          <!-- Source (hidden, auto-filled) -->
+          <input type="hidden" id="source" name="source" value="landing" />
+
+          <!-- Submit -->
+          <button
+            type="submit"
+            id="submit-btn"
+            class="group relative w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 px-8 py-4 text-base font-bold text-white shadow-2xl shadow-brand-600/30 hover:shadow-brand-500/40 transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+          >
+            <span id="btn-text">Join the Waitlist</span>
+            <svg id="btn-icon" class="h-5 w-5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+            <svg id="btn-spinner" class="hidden h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </button>
+        </form>
+
+        <!-- Success message -->
+        <div id="success-message" class="hidden text-center py-6">
+          <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
+            <svg class="h-8 w-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold text-white mb-2">You're on the list! 🎉</h3>
+          <p class="text-sm text-slate-400">We'll notify you when your spot is ready. Watch your inbox.</p>
+        </div>
+
+        <!-- Error message -->
+        <div id="error-message" class="hidden mt-4 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-center">
+          <p class="text-sm text-red-400" id="error-text">Something went wrong. Please try again.</p>
+        </div>
+
+        <p class="mt-5 text-center text-xs text-slate-500">
+          By joining, you agree to receive updates about QA-FRAMEWORK. Unsubscribe anytime.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       FOOTER
+       ═══════════════════════════════════════════════════════════ -->
+  <footer class="border-t border-slate-800/50 bg-slate-950 py-12">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col items-center justify-between gap-6 sm:flex-row">
+        <!-- Logo -->
+        <div class="flex items-center gap-2.5">
+          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-accent-600">
+            <svg class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <span class="text-sm font-bold">
+            <span class="text-white">QA</span><span class="text-brand-400">Framework</span>
+          </span>
+        </div>
+
+        <!-- Links -->
+        <div class="flex items-center gap-6">
+          <a href="#features" class="text-sm text-slate-500 hover:text-slate-300 transition-colors">Features</a>
+          <a href="#capabilities" class="text-sm text-slate-500 hover:text-slate-300 transition-colors">Platform</a>
+          <a href="#waitlist" class="text-sm text-slate-500 hover:text-slate-300 transition-colors">Waitlist</a>
+        </div>
+
+        <!-- Copyright -->
+        <p class="text-sm text-slate-600">
+          © 2026 <a href="https://sabatech.dev" class="hover:text-slate-400 transition-colors">SabaTech</a>. All rights reserved.
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       JAVASCRIPT
+       ═══════════════════════════════════════════════════════════ -->
+  <script>
+    // ── Mobile menu toggle ──
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+    if (mobileMenuBtn && mobileMenu) {
+      mobileMenuBtn.addEventListener('click', () => {
+        mobileMenu.classList.toggle('hidden');
+      });
+      // Close on link click
+      mobileMenu.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => mobileMenu.classList.add('hidden'));
+      });
+    }
+
+    // ── Waitlist form ──
+    const API_BASE = window.location.hostname === 'localhost'
+      ? 'http://localhost:8000/api/v1'
+      : '/api/v1';
+
+    const form = document.getElementById('waitlist-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const btnText = document.getElementById('btn-text');
+    const btnIcon = document.getElementById('btn-icon');
+    const btnSpinner = document.getElementById('btn-spinner');
+    const successMsg = document.getElementById('success-message');
+    const errorMsg = document.getElementById('error-message');
+    const errorText = document.getElementById('error-text');
+
+    function setLoading(loading) {
+      submitBtn.disabled = loading;
+      btnText.textContent = loading ? 'Joining...' : 'Join the Waitlist';
+      btnIcon.classList.toggle('hidden', loading);
+      btnSpinner.classList.toggle('hidden', !loading);
+    }
+
+    function showSuccess() {
+      form.classList.add('hidden');
+      successMsg.classList.remove('hidden');
+      errorMsg.classList.add('hidden');
+    }
+
+    function showError(message) {
+      errorText.textContent = message;
+      errorMsg.classList.remove('hidden');
+    }
+
+    async function handleSubmit(e) {
+      e.preventDefault();
+      errorMsg.classList.add('hidden');
+
+      const email = document.getElementById('email').value.trim();
+      const name = document.getElementById('name').value.trim();
+      const source = document.getElementById('source').value;
+
+      if (!email) {
+        showError('Please enter your email address.');
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const response = await fetch(`${API_BASE}/waitlist/join`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, name: name || undefined, source }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          showSuccess();
+          // Update waitlist count for social proof
+          const countEl = document.getElementById('waitlist-count');
+          if (countEl) countEl.textContent = '200+';
+        } else if (response.status === 409) {
+          showError('This email is already on the waitlist. We\'ll notify you soon!');
+        } else {
+          showError(data.detail || 'Something went wrong. Please try again.');
+        }
+      } catch (err) {
+        // If API is not available, show a friendly message
+        console.error('Waitlist API error:', err);
+        showError('The waitlist service is starting up. Please try again in a moment.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    form.addEventListener('submit', handleSubmit);
+
+    // ── Smooth scroll for anchor links ──
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
