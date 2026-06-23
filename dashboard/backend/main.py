@@ -30,9 +30,9 @@ app = FastAPI(
     title="QA-Framework Dashboard API",
     description="API para la dashboard unificada de QA-FRAMEWORK",
     version="0.1.0",
-    openapi_url="/api/v1/openapi.json",
-    docs_url="/api/v1/docs",
-    redoc_url="/api/v1/redoc",
+    openapi_url=None if environment == "production" else "/api/v1/openapi.json",
+    docs_url=None if environment == "production" else "/api/v1/docs",
+    redoc_url=None if environment == "production" else "/api/v1/redoc",
 )
 
 # CORS middleware
