@@ -60,6 +60,9 @@ logs/
 .env.production.*
 .env.staging
 .env.staging.*
+# Keep example templates committable (they contain no secrets)
+!.env.production.example
+!.env.staging.example
 
 # Documentation
 docs/_build/
