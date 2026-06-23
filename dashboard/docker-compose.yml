@@ -7,11 +7,14 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-qa_user}:${POSTGRES_PASSWORD:-qa_password}@db:5432/${POSTGRES_DB:-qa_framework_db}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+    # Production config (DB, Redis, JWT secret, ENVIRONMENT) is loaded from
+    # backend/.env.production. Variables here take precedence over env_file,
+    # so the previous inline DATABASE_URL/REDIS_*/SECRET_KEY entries were
+    # removed to avoid overriding the production values.
+    # IMPORTANT: config.py reads JWT_SECRET_KEY (not SECRET_KEY), which is why
+    # both names are present in the .env.production file.
+    env_file:
+      - backend/.env.production
     depends_on:
       - db
       - redis
