@@ -48,20 +48,14 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(
-            minutes=settings.access_token_expire_minutes
-        )
+        expire = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
 
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(
-        to_encode, settings.secret_key, algorithm=settings.algorithm
-    )
+    encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
     return encoded_jwt
 
 
-async def authenticate_user(
-    db: AsyncSession, username: str, password: str
-) -> Optional[User]:
+async def authenticate_user(db: AsyncSession, username: str, password: str) -> Optional[User]:
     """Authenticate a user"""
     logger.info("Authenticating user", username=username)
 
@@ -122,17 +116,37 @@ async def get_current_user(
     return user
 
 
-async def login_for_access_token(
-    auth_request: LoginRequest, db: AsyncSession
-) -> TokenResponse:
+async def require_superuser(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Authorize a superuser (admin).
+
+    Builds on ``get_current_user`` so authentication (401) is enforced first,
+    then enforces authorization (403) for non-admin accounts. Use this for
+    endpoints that expose cross-user data (e.g. listing all users) to prevent
+    Broken Access Control (OWASP A01:2021).
+    """
+    if not current_user.is_superuser:
+        logger.warning(
+            "Access denied - superuser privileges required",
+            user_id=current_user.id,
+            username=current_user.username,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions: superuser privileges required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return current_user
+
+
+async def login_for_access_token(auth_request: LoginRequest, db: AsyncSession) -> TokenResponse:
     """Login and return access token"""
     logger.info("Login attempt", username=auth_request.username)
 
     user = await authenticate_user(db, auth_request.username, auth_request.password)
     if not user:
-        logger.warning(
-            "Login failed - invalid credentials", username=auth_request.username
-        )
+        logger.warning("Login failed - invalid credentials", username=auth_request.username)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -141,14 +155,10 @@ async def login_for_access_token(
 
     access_token = create_access_token(data={"sub": user.username})
     refresh_token = create_refresh_token(data={"sub": user.username})
-    logger.info(
-        "Login successful - tokens generated", username=user.username, user_id=user.id
-    )
+    logger.info("Login successful - tokens generated", username=user.username, user_id=user.id)
 
     return TokenResponse(
-        access_token=access_token,
-        token_type="bearer",
-        refresh_token=refresh_token
+        access_token=access_token, token_type="bearer", refresh_token=refresh_token
     )
 
 
@@ -160,7 +170,7 @@ def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) 
     else:
         # Default refresh token expiry: 7 days
         expire = datetime.utcnow() + timedelta(days=7)
-    
+
     to_encode.update({"exp": expire, "type": "refresh"})
     encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
     logger.debug("Refresh token created", expiry=expire.isoformat())
@@ -170,14 +180,14 @@ def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) 
 async def refresh_access_token(refresh_token: str, db: AsyncSession) -> TokenResponse:
     """Refresh access token using refresh token"""
     logger.info("Refreshing access token")
-    
+
     try:
         payload = jwt.decode(
             refresh_token,
             settings.secret_key,
             algorithms=[settings.algorithm],
         )
-        
+
         # Verify it's a refresh token
         token_type = payload.get("type")
         if token_type != "refresh":
@@ -187,7 +197,7 @@ async def refresh_access_token(refresh_token: str, db: AsyncSession) -> TokenRes
                 detail="Invalid token type",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        
+
         username: str = payload.get("sub")
         if username is None:
             raise HTTPException(
@@ -195,11 +205,11 @@ async def refresh_access_token(refresh_token: str, db: AsyncSession) -> TokenRes
                 detail="Invalid refresh token",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        
+
         # Verify user exists and is active
         result = await db.execute(select(User).where(User.username == username))
         user = result.scalar_one_or_none()
-        
+
         if not user or not user.is_active:
             logger.warning("Refresh token - user not found or inactive", username=username)
             raise HTTPException(
@@ -207,13 +217,13 @@ async def refresh_access_token(refresh_token: str, db: AsyncSession) -> TokenRes
                 detail="User not found or inactive",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        
+
         # Create new access token
         access_token = create_access_token(data={"sub": user.username})
         logger.info("Access token refreshed successfully", username=username)
-        
+
         return TokenResponse(access_token=access_token, token_type="bearer")
-        
+
     except JWTError as e:
         logger.warning("Refresh token validation failed", error=str(e))
         raise HTTPException(
@@ -224,20 +234,18 @@ async def refresh_access_token(refresh_token: str, db: AsyncSession) -> TokenRes
 
 
 async def get_current_user_optional(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(
-        HTTPBearer(auto_error=False)
-    ),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
     db: AsyncSession = Depends(get_db_session),
 ) -> Optional[User]:
     """Get current user if authenticated, None otherwise.
-    
+
     This is useful for endpoints that work both for authenticated
     and anonymous users (e.g., feedback submission).
     """
     if credentials is None:
         logger.debug("No credentials provided - returning None for optional auth")
         return None
-    
+
     try:
         payload = jwt.decode(
             credentials.credentials,
@@ -247,16 +255,16 @@ async def get_current_user_optional(
         username: str = payload.get("sub")
         if username is None:
             return None
-        
+
         result = await db.execute(select(User).where(User.username == username))
         user = result.scalar_one_or_none()
-        
+
         if user is None or not user.is_active:
             return None
-        
+
         logger.debug("Optional auth - user found", username=username, user_id=user.id)
         return user
-        
+
     except JWTError:
         logger.debug("Optional auth - invalid token, returning None")
         return None

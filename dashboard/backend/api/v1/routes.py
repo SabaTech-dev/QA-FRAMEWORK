@@ -34,8 +34,20 @@ from schemas import (
     ApiKeyCreate,
     ApiKeyResponse,
 )
-from services.auth_service import get_current_user, login_for_access_token
-from api.v1 import auth_routes, billing_routes, feedback_routes, beta_routes, analytics_routes, email_routes, cron_routes, bulk_routes, browser_use_routes, onboarding_routes, waitlist_routes
+from services.auth_service import get_current_user, login_for_access_token, require_superuser
+from api.v1 import (
+    auth_routes,
+    billing_routes,
+    feedback_routes,
+    beta_routes,
+    analytics_routes,
+    email_routes,
+    cron_routes,
+    bulk_routes,
+    browser_use_routes,
+    onboarding_routes,
+    waitlist_routes,
+)
 from api.v1.scan import router as scan_routes
 from services.auth_service import get_current_user, login_for_access_token
 from services.suite_service import (
@@ -138,8 +150,7 @@ router.include_router(scan_routes)
 
 @router.get("/dashboard/stats", response_model=DashboardStats)
 async def get_dashboard_stats(
-    db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user)
+    db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)
 ):
     """
     Get dashboard statistics.
@@ -190,9 +201,7 @@ async def get_dashboard_stats(
 
 @router.get("/dashboard/trends")
 async def get_trends(
-    days: int = 30, 
-    db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user)
+    days: int = 30, db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)
 ):
     """
     Get execution trends over time.
@@ -245,9 +254,7 @@ async def get_trends(
 # ==================== Suite Routes ====================
 
 
-@router.post(
-    "/suites", response_model=TestSuiteResponse, status_code=status.HTTP_201_CREATED
-)
+@router.post("/suites", response_model=TestSuiteResponse, status_code=status.HTTP_201_CREATED)
 async def create_suite(
     suite_data: TestSuiteCreate,
     db: AsyncSession = Depends(get_db),
@@ -311,9 +318,7 @@ async def create_suite(
         )
         return suite
     except HTTPException as e:
-        logger.error(
-            "Failed to create test suite", error=e.detail, status_code=e.status_code
-        )
+        logger.error("Failed to create test suite", error=e.detail, status_code=e.status_code)
         raise
 
 
@@ -322,7 +327,7 @@ async def list_suites(
     skip: int = 0,
     limit: int = 100,
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
     """
     List all test suites with pagination.
@@ -367,9 +372,7 @@ async def list_suites(
 
 @router.get("/suites/{suite_id}", response_model=TestSuiteResponse)
 async def get_suite(
-    suite_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user)
+    suite_id: int, db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)
 ):
     """
     Get a test suite by ID.
@@ -460,9 +463,7 @@ async def update_suite(
             "updated_at": "2024-01-15T12:00:00.000000Z"
         }
     """
-    logger.info(
-        "Updating test suite via API", suite_id=suite_id, user_id=current_user.id
-    )
+    logger.info("Updating test suite via API", suite_id=suite_id, user_id=current_user.id)
     try:
         suite = await update_suite_service(suite_id, suite_update, db)
         logger.info("Test suite updated successfully via API", suite_id=suite_id)
@@ -503,9 +504,7 @@ async def delete_suite(
 
         Response: 204 No Content
     """
-    logger.info(
-        "Deleting test suite via API", suite_id=suite_id, user_id=current_user.id
-    )
+    logger.info("Deleting test suite via API", suite_id=suite_id, user_id=current_user.id)
     try:
         await delete_suite_service(suite_id, db)
         logger.info("Test suite deleted successfully via API", suite_id=suite_id)
@@ -517,9 +516,7 @@ async def delete_suite(
 # ==================== Case Routes ====================
 
 
-@router.post(
-    "/cases", response_model=TestCaseResponse, status_code=status.HTTP_201_CREATED
-)
+@router.post("/cases", response_model=TestCaseResponse, status_code=status.HTTP_201_CREATED)
 async def create_case(
     case_data: TestCaseCreate,
     db: AsyncSession = Depends(get_db),
@@ -579,14 +576,10 @@ async def create_case(
     )
     try:
         case = await create_case_service(case_data, db)
-        logger.info(
-            "Test case created successfully via API", case_id=case.id, name=case.name
-        )
+        logger.info("Test case created successfully via API", case_id=case.id, name=case.name)
         return case
     except HTTPException as e:
-        logger.error(
-            "Failed to create test case", error=e.detail, status_code=e.status_code
-        )
+        logger.error("Failed to create test case", error=e.detail, status_code=e.status_code)
         raise
 
 
@@ -596,7 +589,7 @@ async def list_cases(
     skip: int = 0,
     limit: int = 100,
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
     """
     List test cases with optional filtering.
@@ -644,9 +637,7 @@ async def list_cases(
 
 @router.get("/cases/{case_id}", response_model=TestCaseResponse)
 async def get_case(
-    case_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user)
+    case_id: int, db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)
 ):
     """
     Get a test case by ID.
@@ -866,9 +857,7 @@ async def create_execution(
         )
         return execution
     except HTTPException as e:
-        logger.error(
-            "Failed to create test execution", error=e.detail, status_code=e.status_code
-        )
+        logger.error("Failed to create test execution", error=e.detail, status_code=e.status_code)
         raise
 
 
@@ -879,7 +868,7 @@ async def list_executions(
     skip: int = 0,
     limit: int = 100,
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
     """
     List test executions with optional filtering.
@@ -929,12 +918,8 @@ async def list_executions(
         limit=limit,
     )
     try:
-        executions = await list_executions_service(
-            suite_id, status_filter, skip, limit, db
-        )
-        logger.info(
-            "Test executions listed successfully via API", count=len(executions)
-        )
+        executions = await list_executions_service(suite_id, status_filter, skip, limit, db)
+        logger.info("Test executions listed successfully via API", count=len(executions))
         return executions
     except Exception as e:
         logger.error("Failed to list test executions", error=str(e))
@@ -943,9 +928,7 @@ async def list_executions(
 
 @router.get("/executions/{execution_id}", response_model=TestExecutionResponse)
 async def get_execution(
-    execution_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user)
+    execution_id: int, db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)
 ):
     """
     Get a test execution by ID.
@@ -992,14 +975,10 @@ async def get_execution(
     logger.info("Getting test execution via API", execution_id=execution_id)
     try:
         execution = await get_execution_by_id(execution_id, db)
-        logger.info(
-            "Test execution retrieved successfully via API", execution_id=execution_id
-        )
+        logger.info("Test execution retrieved successfully via API", execution_id=execution_id)
         return execution
     except HTTPException as e:
-        logger.error(
-            "Failed to get test execution", execution_id=execution_id, error=e.detail
-        )
+        logger.error("Failed to get test execution", execution_id=execution_id, error=e.detail)
         raise
 
 
@@ -1048,14 +1027,10 @@ async def start_execution(
     )
     try:
         result = await start_execution_service(execution_id, db)
-        logger.info(
-            "Test execution started successfully via API", execution_id=execution_id
-        )
+        logger.info("Test execution started successfully via API", execution_id=execution_id)
         return result
     except HTTPException as e:
-        logger.error(
-            "Failed to start test execution", execution_id=execution_id, error=e.detail
-        )
+        logger.error("Failed to start test execution", execution_id=execution_id, error=e.detail)
         raise
 
 
@@ -1104,14 +1079,10 @@ async def stop_execution(
     )
     try:
         result = await stop_execution_service(execution_id, db)
-        logger.info(
-            "Test execution stopped successfully via API", execution_id=execution_id
-        )
+        logger.info("Test execution stopped successfully via API", execution_id=execution_id)
         return result
     except HTTPException as e:
-        logger.error(
-            "Failed to stop test execution", execution_id=execution_id, error=e.detail
-        )
+        logger.error("Failed to stop test execution", execution_id=execution_id, error=e.detail)
         raise
 
 
@@ -1157,14 +1128,10 @@ async def create_user(user_data: UserCreate, db: AsyncSession = Depends(get_db))
             "updated_at": "2024-01-15T10:50:00.123456Z"
         }
     """
-    logger.info(
-        "Creating user via API", username=user_data.username, email=user_data.email
-    )
+    logger.info("Creating user via API", username=user_data.username, email=user_data.email)
     try:
         user = await create_user_service(user_data, db)
-        logger.info(
-            "User created successfully via API", user_id=user.id, username=user.username
-        )
+        logger.info("User created successfully via API", user_id=user.id, username=user.username)
         return user
     except HTTPException as e:
         logger.error("Failed to create user", error=e.detail, status_code=e.status_code)
@@ -1176,24 +1143,26 @@ async def list_users(
     skip: int = 0,
     limit: int = 100,
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_superuser),
 ):
     """
     List all users with pagination.
 
-    Retrieves a paginated list of all user accounts. Requires authentication.
+    Retrieves a paginated list of all user accounts. Requires authentication
+    and superuser (admin) privileges (Broken Access Control, OWASP A01:2021).
 
     Args:
         skip: Number of items to skip (default: 0)
         limit: Maximum number of items to return (default: 100)
         db: Database session (injected)
-        current_user: Authenticated user (injected)
+        current_user: Authenticated superuser (injected)
 
     Returns:
         List[UserResponse] containing user details (excluding passwords)
 
     Raises:
         HTTPException 401: Authentication required
+        HTTPException 403: Superuser (admin) privileges required
 
     Example:
         GET /api/v1/users?skip=0&limit=10
@@ -1212,9 +1181,7 @@ async def list_users(
             }
         ]
     """
-    logger.info(
-        "Listing users via API", skip=skip, limit=limit, requesting_user=current_user.id
-    )
+    logger.info("Listing users via API", skip=skip, limit=limit, requesting_user=current_user.id)
     try:
         users = await list_users_service(skip, limit, db)
         logger.info("Users listed successfully via API", count=len(users))
@@ -1263,9 +1230,7 @@ async def get_user(
             "updated_at": "2024-01-15T09:00:00.123456Z"
         }
     """
-    logger.info(
-        "Getting user via API", user_id=user_id, requesting_user=current_user.id
-    )
+    logger.info("Getting user via API", user_id=user_id, requesting_user=current_user.id)
     try:
         user = await get_user_by_id(user_id, db)
         logger.info("User retrieved successfully via API", user_id=user_id)
@@ -1320,9 +1285,7 @@ async def update_user(
             "updated_at": "2024-01-15T12:00:00.000000Z"
         }
     """
-    logger.info(
-        "Updating user via API", user_id=user_id, requesting_user=current_user.id
-    )
+    logger.info("Updating user via API", user_id=user_id, requesting_user=current_user.id)
     try:
         user = await update_user_service(user_id, user_update, db)
         logger.info("User updated successfully via API", user_id=user_id)
@@ -1364,9 +1327,7 @@ async def delete_user(
 
         Response: 204 No Content
     """
-    logger.info(
-        "Deleting user via API", user_id=user_id, requesting_user=current_user.id
-    )
+    logger.info("Deleting user via API", user_id=user_id, requesting_user=current_user.id)
     try:
         await delete_user_service(user_id, db)
         logger.info("User deleted successfully via API", user_id=user_id)
