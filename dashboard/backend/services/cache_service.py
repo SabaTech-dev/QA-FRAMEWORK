@@ -23,6 +23,7 @@ import os
 from typing import Any, Callable, Optional, Dict
 from datetime import datetime, timedelta
 
+from config import settings
 from src.infrastructure.cache.test_cache import TestCache
 from src.infrastructure.cache.cache_stats import CacheStats
 
@@ -42,8 +43,12 @@ def get_redis_client():
         import redis.asyncio as aioredis
         redis_url = os.getenv("REDIS_URL")
         if not redis_url:
-            redis_host = os.getenv("REDIS_HOST", "localhost")
-            redis_port = os.getenv("REDIS_PORT", "6379")
+            # Use centralized settings (config.py) instead of raw os.getenv so
+            # the connection target is driven by the same Settings instance used
+            # across the app. Fallback to localhost keeps local dev working when
+            # the host is explicitly unset/empty.
+            redis_host = settings.redis_host or "localhost"
+            redis_port = settings.redis_port
             redis_password = os.getenv("REDIS_PASSWORD")
             if redis_password:
                 redis_url = f"redis://:{redis_password}@{redis_host}:{redis_port}/0"
