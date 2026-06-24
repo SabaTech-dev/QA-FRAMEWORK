@@ -10,10 +10,10 @@ services:
       dockerfile: Dockerfile
     container_name: qa-framework-backend
     ports:
-      - "8000:8000"
+      - "8010:8000"
     environment:
-      - DATABASE_URL=postgresql://qa_user:qa_pass@postgres:5432/qa_dashboard
-      - REDIS_HOST=redis
+      - DATABASE_URL=postgresql://qa_user:qa_pass@qa-framework-db:5432/qa_dashboard
+      - REDIS_HOST=qa-framework-cache
       - REDIS_PORT=6379
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
       - ENVIRONMENT=production
@@ -29,7 +29,7 @@ services:
     networks:
       - qa-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      test: ["CMD", "python3", "-c", "import urllib.request; r=urllib.request.urlopen('http://localhost:8000/health'); assert r.status == 200"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -42,7 +42,7 @@ services:
       dockerfile: Dockerfile
     container_name: qa-framework-frontend
     ports:
-      - "3000:3000"
+      - "3010:3000"
     environment:
       - VITE_API_URL=http://localhost:8000
     depends_on:
@@ -66,8 +66,6 @@ services:
       POSTGRES_PORT: 5432
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     networks:
       - qa-network
     healthcheck:
@@ -84,8 +82,6 @@ services:
     command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
     volumes:
       - redis-data:/data
-    ports:
-      - "6379:6379"
     networks:
       - qa-network
     healthcheck:
@@ -141,8 +137,6 @@ services:
     volumes:
       - ./dashboard/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
-    ports:
-      - "9090:9090"
     networks:
       - qa-network
     restart: unless-stopped
@@ -158,8 +152,6 @@ services:
     volumes:
       - ./dashboard/monitoring/grafana/provisioning:/etc/grafana/provisioning
       - grafana-data:/var/lib/grafana
-    ports:
-      - "3001:3000"
     networks:
       - qa-network
     depends_on:

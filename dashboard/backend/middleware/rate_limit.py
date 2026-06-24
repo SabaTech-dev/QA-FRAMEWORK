@@ -172,6 +172,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             "/metrics",
             "/health",
             "/api/v1/health",
+            "/api/v1/health/live",
+            "/api/v1/health/ready",
             "/docs",
             "/redoc",
             "/openapi.json"
@@ -180,8 +182,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request with rate limiting"""
         
-        # Skip rate limiting for certain paths
-        if request.url.path in self.skip_paths:
+        # Skip rate limiting for certain paths (exact match or health prefix)
+        path = request.url.path
+        if path in self.skip_paths or path.startswith("/api/v1/health"):
             return await call_next(request)
         
         # Get identifier (user_id or IP)
