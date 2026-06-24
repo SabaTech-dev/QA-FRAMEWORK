@@ -30,7 +30,7 @@ import {
   PlayArrow as PlayArrowIcon,
 } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
-import { suitesAPI, executionsAPI } from '../api/client'
+import { suitesAPI, executionsAPI, casesAPI } from '../api/client'
 import toast from 'react-hot-toast'
 import EmptyState from '../components/common/EmptyState'
 import LoadingButton from '../components/common/LoadingButton'
@@ -48,6 +48,13 @@ export default function TestSuites() {
   })
 
   const { data: suites, isLoading } = useQuery('suites', () => suitesAPI.getAll())
+
+  // Cuenta de casos reales por suite (una sola llamada, agrupada en cliente).
+  const { data: allCases } = useQuery('suites-case-counts', () => casesAPI.getAll())
+  const caseCountBySuite = new Map<number, number>()
+  ;(allCases?.data || []).forEach((c: any) => {
+    caseCountBySuite.set(c.suite_id, (caseCountBySuite.get(c.suite_id) || 0) + 1)
+  })
 
   const createMutation = useMutation(
     (data: any) => suitesAPI.create(data),
@@ -177,13 +184,18 @@ export default function TestSuites() {
           </TableHead>
           <TableBody>
             {suites?.data?.map((suite: any) => (
-              <TableRow key={suite.id}>
+              <TableRow
+                key={suite.id}
+                hover
+                sx={{ cursor: 'pointer' }}
+                onClick={() => navigate(`/suites/${suite.id}/cases`)}
+              >
                 <TableCell>{suite.name}</TableCell>
-                <TableCell>{suite.description}</TableCell>
+                <TableCell>{suite.description || '—'}</TableCell>
                 <TableCell>
                   <Chip label={suite.framework_type} size="small" />
                 </TableCell>
-                <TableCell>{suite.tests?.length || 0}</TableCell>
+                <TableCell>{caseCountBySuite.get(suite.id) || 0}</TableCell>
                 <TableCell>
                   <Chip
                     label={suite.is_active ? 'Active' : 'Inactive'}
@@ -191,12 +203,12 @@ export default function TestSuites() {
                     size="small"
                   />
                 </TableCell>
-                <TableCell>
-                  <Tooltip title="Add Test Cases">
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  <Tooltip title="View Test Cases">
                     <IconButton
                       size="small"
                       onClick={() => navigate(`/suites/${suite.id}/cases`)}
-                      aria-label="Add test cases to suite"
+                      aria-label="View test cases for suite"
                     >
                       <AddIcon />
                     </IconButton>

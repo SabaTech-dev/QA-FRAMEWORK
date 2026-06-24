@@ -25,22 +25,30 @@ async def get_stats_service(db: AsyncSession) -> Dict[str, Any]:
 
     # Total executions
     total_executions_result = await db.execute(select(func.count(TestExecution.id)))
-    total_executions = total_executions_result.scalar()
+    total_executions = total_executions_result.scalar() or 0
 
     # Executions last 24 hours
     yesterday = datetime.utcnow() - timedelta(days=1)
     recent_executions_result = await db.execute(
-        select(func.count(TestExecution.id)).where(
-            TestExecution.started_at >= yesterday
-        )
+        select(func.count(TestExecution.id)).where(TestExecution.started_at >= yesterday)
     )
-    recent_executions = recent_executions_result.scalar()
+    last_24h_executions = recent_executions_result.scalar() or 0
 
-    # Success rate
+    # Successful executions. The model uses status="passed" (never "completed"),
+    # so success_rate must be computed against "passed".
     passed_result = await db.execute(
-        select(func.count(TestExecution.id)).where(TestExecution.status == "completed")
+        select(func.count(TestExecution.id)).where(TestExecution.status == "passed")
     )
-    passed_executions = passed_result.scalar() if passed_result else 0
+    passed_executions = passed_result.scalar() or 0
+
+    # Active (currently running) and pending (queued) executions.
+    active_result = await db.execute(
+        select(func.count(TestExecution.id)).where(TestExecution.status == "running")
+    )
+    active_executions = active_result.scalar() or 0
+    # The model has no explicit "queued/pending" lifecycle state, so this is 0
+    # unless such a status is introduced.
+    pending_executions = 0
 
     # Total test cases
     total_cases_result = await db.execute(
@@ -54,24 +62,26 @@ async def get_stats_service(db: AsyncSession) -> Dict[str, Any]:
     )
     total_suites = total_suites_result.scalar()
 
-    # Average execution time
+    # Average execution time (over successful runs)
     avg_duration_result = await db.execute(
-        select(func.avg(TestExecution.duration)).where(
-            TestExecution.status == "completed"
-        )
+        select(func.avg(TestExecution.duration)).where(TestExecution.status == "passed")
     )
     avg_duration = avg_duration_result.scalar() or 0
 
     stats = {
+        # Field names MUST match the DashboardStats response schema, otherwise
+        # FastAPI raises a response validation error (HTTP 500).
+        "total_suites": total_suites,
+        "total_cases": total_cases,
         "total_executions": total_executions,
-        "recent_executions": recent_executions,
-        "total_test_cases": total_cases,
-        "total_test_suites": total_suites,
-        "average_duration": round(avg_duration, 2) if avg_duration else 0,
+        "active_executions": active_executions,
         "success_rate": round(
             (passed_executions / total_executions * 100) if total_executions > 0 else 0,
             2,
         ),
+        "avg_duration": round(avg_duration, 2) if avg_duration else 0,
+        "last_24h_executions": last_24h_executions,
+        "pending_executions": pending_executions,
     }
 
     # Cache the results with short TTL since stats change frequently
@@ -96,12 +106,8 @@ async def get_trends_service(db: AsyncSession, days: int = 30) -> List[Dict[str,
         select(
             func.date(TestExecution.started_at).label("date"),
             func.count(TestExecution.id).label("total"),
-            func.sum(case((TestExecution.status == "completed", 1), else_=0)).label(
-                "passed"
-            ),
-            func.sum(case((TestExecution.status == "failed", 1), else_=0)).label(
-                "failed"
-            ),
+            func.sum(case((TestExecution.status == "completed", 1), else_=0)).label("passed"),
+            func.sum(case((TestExecution.status == "failed", 1), else_=0)).label("failed"),
         )
         .where(TestExecution.started_at >= start_date)
         .group_by(func.date(TestExecution.started_at))
@@ -199,9 +205,7 @@ async def get_performance_metrics(db: AsyncSession) -> Dict[str, Any]:
 
     # Average test duration
     avg_duration_result = await db.execute(
-        select(func.avg(TestExecution.duration)).where(
-            TestExecution.status == "completed"
-        )
+        select(func.avg(TestExecution.duration)).where(TestExecution.status == "completed")
     )
     avg_duration = avg_duration_result.scalar() or 0
 
@@ -228,13 +232,17 @@ async def get_performance_metrics(db: AsyncSession) -> Dict[str, Any]:
         "fastest_execution": {
             "id": fastest.id if fastest else None,
             "duration": fastest.duration if fastest else 0,
-            "suite_name": fastest.suite.name if fastest and fastest.suite else None
-        } if fastest else None,
+            "suite_name": fastest.suite.name if fastest and fastest.suite else None,
+        }
+        if fastest
+        else None,
         "slowest_execution": {
             "id": slowest.id if slowest else None,
             "duration": slowest.duration if slowest else 0,
-            "suite_name": slowest.suite.name if slowest and slowest.suite else None
-        } if slowest else None
+            "suite_name": slowest.suite.name if slowest and slowest.suite else None,
+        }
+        if slowest
+        else None,
     }
 
     # Cache the results with short TTL

@@ -87,6 +87,7 @@ class SemanticCacheMiddleware(BaseHTTPMiddleware):
         # Try semantic cache
         try:
             from src.infrastructure.cache.semantic_cache import get_semantic_cache
+
             cache = get_semantic_cache()
 
             if cache.is_enabled:
@@ -104,28 +105,48 @@ class SemanticCacheMiddleware(BaseHTTPMiddleware):
         # Cache miss — execute endpoint
         response = await call_next(request)
 
-        # Cache successful responses
-        if _should_cache(request.method, path, response.status_code):
-            try:
-                body = b""
-                async for chunk in response.body_iterator:
-                    body += chunk
-                data = json.loads(body)
+        # Only touch the body for cacheable GET 200s; otherwise pass through
+        # the original streaming response untouched (reading body_iterator
+        # would consume it and break the response).
+        if not _should_cache(request.method, path, response.status_code):
+            return response
 
-                from src.infrastructure.cache.semantic_cache import get_semantic_cache
-                cache = get_semantic_cache()
-                if cache.is_enabled:
-                    cache.set(request.method, path, params, data)
-                    logger.debug("Semantic cache SET: %s %s", request.method, path)
+        # Consume the body once. body_iterator is exhausted after this, so we
+        # MUST reconstruct a fresh Response regardless of caching outcome —
+        # returning the original `response` here yields an empty body and a
+        # "Response content shorter than Content-Length" RuntimeError.
+        body = b""
+        try:
+            async for chunk in response.body_iterator:
+                body += chunk
+        except Exception as exc:
+            logger.warning("Semantic cache body read failed: %s", exc)
+            return response  # iterator not fully consumed; still safe to return
 
-                # Reconstruct response (body_iterator was consumed)
-                return Response(
-                    content=body,
-                    status_code=response.status_code,
-                    media_type=response.media_type,
-                    headers=dict(response.headers),
-                )
-            except Exception as exc:
-                logger.warning("Semantic cache store failed: %s", exc)
+        # Best-effort cache store; never let it break the response.
+        try:
+            data = json.loads(body)
+            from src.infrastructure.cache.semantic_cache import get_semantic_cache
 
-        return response
+            cache = get_semantic_cache()
+            if cache.is_enabled:
+                cache.set(request.method, path, params, data)
+                logger.debug("Semantic cache SET: %s %s", request.method, path)
+        except Exception as exc:
+            logger.warning("Semantic cache store failed: %s", exc)
+
+        # Reconstruct the response. Drop hop-by-hop / length headers so
+        # Starlette recomputes Content-Length from `content` — reusing the
+        # original content-length header causes truncated responses when the
+        # body passes back through the BaseHTTPMiddleware chain.
+        forwarded_headers = {
+            k: v
+            for k, v in response.headers.items()
+            if k.lower() not in ("content-length", "transfer-encoding", "content-encoding")
+        }
+        return Response(
+            content=body,
+            status_code=response.status_code,
+            media_type=response.media_type,
+            headers=forwarded_headers,
+        )

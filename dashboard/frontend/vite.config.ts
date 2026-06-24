@@ -16,7 +16,9 @@ export default defineConfig({
     allowedHosts: ['qa.sabatech.dev', 'qa-framework.sabatech.dev', 'localhost'],
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        // Inside Docker the backend is reachable at http://backend:8000 (service name).
+        // For local dev it runs on http://localhost:8000. Override via API_PROXY_TARGET.
+        target: process.env.API_PROXY_TARGET || 'http://localhost:8000',
         changeOrigin: true,
       },
     },

@@ -76,6 +76,13 @@ function App() {
             </Layout>
           </ProtectedRoute>
         } />
+        <Route path="/cases" element={
+          <ProtectedRoute>
+            <Layout sidebarOpen={sidebarOpen} onSidebarToggle={() => setSidebarOpen(!sidebarOpen)}>
+              <TestCases />
+            </Layout>
+          </ProtectedRoute>
+        } />
         <Route path="/executions" element={
           <ProtectedRoute>
             <Layout sidebarOpen={sidebarOpen} onSidebarToggle={() => setSidebarOpen(!sidebarOpen)}>

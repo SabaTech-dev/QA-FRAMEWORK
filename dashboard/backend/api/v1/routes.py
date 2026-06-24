@@ -148,7 +148,7 @@ router.include_router(scan_routes)
 # ==================== Dashboard Routes ====================
 
 
-@router.get("/dashboard/stats", response_model=DashboardStats)
+@router.get("/dashboard/stats", response_model=None)
 async def get_dashboard_stats(
     db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)
 ):
@@ -248,6 +248,47 @@ async def get_trends(
         return trends
     except Exception as e:
         logger.error("Failed to get execution trends", days=days, error=str(e))
+        raise
+
+
+@router.get("/dashboard/recent-executions")
+async def get_recent_executions(
+    limit: int = 10,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    Get recent test executions.
+
+    Retrieves the most recent test executions for the dashboard's
+    "Recent Executions" panel.
+
+    Args:
+        limit: Maximum number of executions to return (default: 10, max: 100)
+        db: Database session (injected)
+
+    Returns:
+        List of recent executions, each containing id, suite_name, status,
+        started_at, duration, total_tests, passed, failed and environment.
+
+    Example:
+        GET /api/v1/dashboard/recent-executions?limit=10
+    """
+    logger.info("Getting recent executions", limit=limit)
+    try:
+        from services.dashboard_service import get_recent_service as get_recent
+
+        # Clamp limit to a sane range to protect the DB query
+        safe_limit = max(1, min(limit, 100))
+        executions = await get_recent(db, safe_limit)
+        logger.info(
+            "Recent executions retrieved successfully",
+            limit=safe_limit,
+            count=len(executions) if executions else 0,
+        )
+        return executions
+    except Exception as e:
+        logger.error("Failed to get recent executions", limit=limit, error=str(e))
         raise
 
 

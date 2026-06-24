@@ -11,10 +11,22 @@ import {
   alpha,
 } from '@mui/material'
 import { useMutation } from 'react-query'
-import { authAPI } from '../api/client'
+import { authAPI, onboardingAPI } from '../api/client'
 import useAuthStore from '../stores/authStore'
 import toast from 'react-hot-toast'
 import LoadingButton from '../components/common/LoadingButton'
+
+// Decodifica el payload de un JWT sin verificar la firma (lectura cliente del `sub`).
+// Necesario porque el backend no expone un endpoint /me: el login solo devuelve tokens.
+function decodeJwtPayload(token: string): Record<string, any> {
+  try {
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=')
+    return JSON.parse(atob(padded))
+  } catch {
+    return {}
+  }
+}
 
 export default function Login() {
   const [username, setUsername] = useState('')
@@ -28,23 +40,39 @@ export default function Login() {
     {
       onSuccess: async (response) => {
         const { access_token } = response.data
-        // Save token first so getMe can use it
+        // Guarda el token primero para que las siguientes llamadas lo incluyan
         useAuthStore.getState().setToken(access_token)
-        
-        // Now get user info with the token in headers
+
         try {
-          const userResponse = await authAPI.getMe()
-          login(access_token, userResponse.data)
-          toast.success('Login successful!')
-          
-          // Redirect to onboarding or dashboard based on user state
-          if (!userResponse.data.onboarding_completed) {
-            navigate('/onboarding', { replace: true })
-          } else {
-            navigate('/dashboard', { replace: true })
+          // El login solo devuelve tokens. Obtenemos el username desde el JWT
+          // y el estado de onboarding desde la API de onboarding (no existe /me).
+          const payload = decodeJwtPayload(access_token)
+          const tokenUsername = payload.sub || username || 'user'
+
+          let onboardingCompleted = true
+          try {
+            const obResponse = await onboardingAPI.getState()
+            onboardingCompleted = !!obResponse.data?.completed
+          } catch {
+            // Si no podemos leer el estado, asumimos completado para no bloquear
+            onboardingCompleted = true
           }
+
+          const user = {
+            id: payload.user_id || 0,
+            username: tokenUsername,
+            email: payload.email || '',
+            is_active: true,
+            is_superuser: !!payload.is_superuser,
+            onboarding_completed: onboardingCompleted,
+          }
+
+          login(access_token, user)
+          toast.success('Login successful!')
+
+          navigate(onboardingCompleted ? '/dashboard' : '/onboarding', { replace: true })
         } catch (error) {
-          toast.error('Failed to get user info')
+          toast.error('Failed to complete login')
           useAuthStore.getState().logout()
         }
       },
@@ -146,7 +174,7 @@ export default function Login() {
 
           <Box sx={{ mt: 2, textAlign: 'center' }}>
             <Typography variant="caption" color="textSecondary">
-              Demo: admin / admin123
+              Demo: alfred / AlfredDemo2026!
             </Typography>
           </Box>
         </CardContent>

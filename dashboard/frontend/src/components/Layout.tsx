@@ -17,6 +17,7 @@ import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
   Folder as FolderIcon,
+  BugReport as BugReportIcon,
   PlayArrow as PlayArrowIcon,
   Payment as PaymentIcon,
   AutoFixHigh as AutoFixHighIcon,
@@ -78,8 +79,9 @@ export default function Layout({ children, sidebarOpen, onSidebarToggle }: Layou
   });
 
   const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
+    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'Test Suites', icon: <FolderIcon />, path: '/suites' },
+    { text: 'Test Cases', icon: <BugReportIcon />, path: '/cases' },
     { text: 'Executions', icon: <PlayArrowIcon />, path: '/executions' },
     { text: 'Integrations', icon: <ExtensionIcon />, path: '/integrations' },
     { text: 'Self-Healing', icon: <AutoFixHighIcon />, path: '/self-healing' },

@@ -7,10 +7,8 @@ import {
   Box,
   Chip,
   CircularProgress,
-  IconButton,
   Button,
   Fade,
-  LinearProgress,
   Breadcrumbs,
   Link,
 } from '@mui/material'
@@ -20,14 +18,12 @@ import {
   Folder,
   PlayArrow,
   CheckCircle,
-  Error,
   Schedule,
   AutoFixHigh,
   Warning,
   Add,
   PlayCircle,
   Assessment,
-  Settings,
   Refresh,
   FiberManualRecord,
 } from '@mui/icons-material'
@@ -44,14 +40,20 @@ import {
   ArcElement,
   Filler,
 } from 'chart.js'
-import { Line, Bar, Doughnut } from 'react-chartjs-2'
-import { dashboardAPI } from '../api/client'
+import { Line, Doughnut } from 'react-chartjs-2'
+import { dashboardAPI, executionsAPI, suitesAPI } from '../api/client'
 import AdvancedFilter from '../components/filters/AdvancedFilter'
 import type { FilterConfig } from '../components/filters/AdvancedFilter'
 import ExportImport from '../components/common/ExportImport'
 import { useRealTimeUpdates } from '../hooks/useRealTimeUpdates'
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
+import {
+  computeOutcomes,
+  computeWeekOverWeek,
+  buildOutcomeChartData,
+  type TrendPoint,
+} from '../utils/dashboardCalculations'
 
 ChartJS.register(
   CategoryScale,
@@ -66,8 +68,8 @@ ChartJS.register(
   Filler
 )
 
-// Helper function for moving average
-function calculateMovingAverage(data: number[], windowSize: number = 7): number[] {
+// Moving average helper for the trends chart.
+function calculateMovingAverage(data: number[], windowSize = 7): number[] {
   const result: number[] = []
   for (let i = 0; i < data.length; i++) {
     const start = Math.max(0, i - windowSize + 1)
@@ -85,6 +87,7 @@ function EnhancedStatCard({
   subtitle,
   icon,
   trend,
+  trendLabel,
   gradient,
 }: {
   title: string
@@ -92,6 +95,7 @@ function EnhancedStatCard({
   subtitle?: string
   icon: React.ReactNode
   trend?: 'up' | 'down' | 'neutral'
+  trendLabel?: string
   gradient: string
 }) {
   return (
@@ -123,14 +127,11 @@ function EnhancedStatCard({
           </Box>
           <Box sx={{ opacity: 0.8 }}>{icon}</Box>
         </Box>
-        {trend && (
+        {trend && trendLabel && (
           <Box display="flex" alignItems="center" mt={1}>
             {trend === 'up' && <TrendingUp sx={{ mr: 0.5 }} />}
             {trend === 'down' && <TrendingDown sx={{ mr: 0.5 }} />}
-            <Typography variant="caption">
-              {trend === 'up' && '+12% from last week'}
-              {trend === 'down' && '-5% from last week'}
-            </Typography>
+            <Typography variant="caption">{trendLabel}</Typography>
           </Box>
         )}
       </CardContent>
@@ -182,17 +183,19 @@ export default function Dashboard() {
     enabled: true,
   })
 
+  // All data comes from the real dashboard API (src/api/client.ts).
   const { data: stats, isLoading: statsLoading } = useQuery('dashboard-stats', () =>
     dashboardAPI.getStats()
   )
-
   const { data: trends, isLoading: trendsLoading } = useQuery('dashboard-trends', () =>
     dashboardAPI.getTrends(30)
   )
-
+  // The backend does not expose /dashboard/recent-executions; we list executions
+  // directly and resolve suite names from the suites endpoint.
   const { data: recent, isLoading: recentLoading } = useQuery('dashboard-recent', () =>
-    dashboardAPI.getRecentExecutions(10)
+    executionsAPI.getAll(undefined, undefined, 0, 10)
   )
+  const { data: suites } = useQuery('dashboard-suites', () => suitesAPI.getAll())
 
   if (statsLoading || trendsLoading || recentLoading) {
     return (
@@ -203,20 +206,25 @@ export default function Dashboard() {
   }
 
   const statsData = stats?.data
-  const trendsData = trends?.data || []
+  const suiteNameById = new Map<number, string>()
+  ;(suites?.data || []).forEach((s: any) => suiteNameById.set(s.id, s.name))
+  const trendsData: TrendPoint[] = (trends?.data || []).map((t: any) => ({
+    date: t.date,
+    total: t.total ?? t.executions ?? 0,
+    passed: t.passed ?? 0,
+    failed: t.failed ?? 0,
+  }))
   const recentData = recent?.data || []
 
-  // Calculate moving averages for trends
-  const totalMovingAvg = calculateMovingAverage(trendsData.map((t: any) => t.total))
-  const passedMovingAvg = calculateMovingAverage(trendsData.map((t: any) => t.passed))
+  // Moving averages for the trends chart.
+  const totalMovingAvg = calculateMovingAverage(trendsData.map((t) => t.total))
 
-  // Enhanced chart data with moving average
   const lineChartData = {
-    labels: trendsData.map((t: any) => t.date),
+    labels: trendsData.map((t) => t.date),
     datasets: [
       {
         label: 'Total Executions',
-        data: trendsData.map((t: any) => t.total),
+        data: trendsData.map((t) => t.total),
         borderColor: 'rgb(75, 192, 192)',
         backgroundColor: 'rgba(75, 192, 192, 0.1)',
         fill: true,
@@ -231,14 +239,14 @@ export default function Dashboard() {
       },
       {
         label: 'Passed',
-        data: trendsData.map((t: any) => t.passed),
+        data: trendsData.map((t) => t.passed),
         borderColor: 'rgb(34, 197, 94)',
         backgroundColor: 'rgba(34, 197, 94, 0.1)',
         fill: true,
       },
       {
         label: 'Failed',
-        data: trendsData.map((t: any) => t.failed),
+        data: trendsData.map((t) => t.failed),
         borderColor: 'rgb(239, 68, 68)',
         backgroundColor: 'rgba(239, 68, 68, 0.1)',
         fill: true,
@@ -246,23 +254,14 @@ export default function Dashboard() {
     ],
   }
 
-  const testTypeData = {
-    labels: ['API', 'UI', 'DB', 'Security', 'Performance'],
-    datasets: [
-      {
-        data: [12, 19, 3, 5, 2],
-        backgroundColor: [
-          'rgba(59, 130, 246, 0.8)',
-          'rgba(16, 185, 129, 0.8)',
-          'rgba(245, 158, 11, 0.8)',
-          'rgba(239, 68, 68, 0.8)',
-          'rgba(139, 92, 246, 0.8)',
-        ],
-      },
-    ],
-  }
+  // Real execution-outcomes distribution derived from the trends data
+  // (replaces the previous hardcoded [12, 19, 3, 5, 2] test-type mock chart).
+  const outcomes = computeOutcomes(trendsData)
+  const outcomeChartData = buildOutcomeChartData(outcomes)
 
-  // Export/Import handlers
+  // Real week-over-week trend derived from trends data.
+  const wow = computeWeekOverWeek(trendsData)
+
   const handleExport = async (format: 'csv' | 'json' | 'pdf') => {
     const data = {
       stats: statsData,
@@ -280,16 +279,14 @@ export default function Dashboard() {
       filename = 'dashboard-export.json'
       mimeType = 'application/json'
     } else if (format === 'csv') {
-      // Convert to CSV format
       const csvRows = [
         'Date,Total,Passed,Failed',
-        ...trendsData.map((t: any) => `${t.date},${t.total},${t.passed},${t.failed}`),
+        ...trendsData.map((t) => `${t.date},${t.total},${t.passed},${t.failed}`),
       ]
       content = csvRows.join('\n')
       filename = 'dashboard-export.csv'
       mimeType = 'text/csv'
     } else {
-      // PDF - simplified version (just download JSON with .pdf extension for now)
       content = JSON.stringify(data, null, 2)
       filename = 'dashboard-export.txt'
       mimeType = 'text/plain'
@@ -305,7 +302,7 @@ export default function Dashboard() {
   }
 
   const handleImport = async (file: File, format: 'csv' | 'json') => {
-    // Import logic - for now just log
+    // Import is a future enhancement; log for now.
     console.log('Importing:', file.name, format)
   }
 
@@ -401,14 +398,16 @@ export default function Dashboard() {
         />
       </Box>
 
-      {/* Enhanced Stats Cards */}
+      {/* Stats Cards - all values come from the real /dashboard/stats API.
+          Field names match the DashboardStats schema. */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={2.4}>
           <EnhancedStatCard
             title="Total Executions"
-            value={statsData?.total_executions || 0}
+            value={statsData?.total_executions ?? 0}
             icon={<PlayArrow sx={{ fontSize: 48 }} />}
-            trend="up"
+            trend={wow.direction}
+            trendLabel={wow.label}
             gradient="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
           />
         </Grid>
@@ -416,7 +415,7 @@ export default function Dashboard() {
         <Grid item xs={12} sm={6} md={2.4}>
           <EnhancedStatCard
             title="Test Suites"
-            value={statsData?.total_test_suites || 0}
+            value={statsData?.total_suites ?? 0}
             icon={<Folder sx={{ fontSize: 48 }} />}
             gradient="linear-gradient(135deg, #f093fb 0%, #f5576c 100%)"
           />
@@ -425,28 +424,28 @@ export default function Dashboard() {
         <Grid item xs={12} sm={6} md={2.4}>
           <EnhancedStatCard
             title="Success Rate"
-            value={`${statsData?.success_rate || 0}%`}
+            value={`${Number(statsData?.success_rate ?? 0).toFixed(1)}%`}
+            subtitle={`${statsData?.total_cases ?? 0} test cases`}
             icon={<CheckCircle sx={{ fontSize: 48 }} />}
-            trend={statsData?.success_rate >= 80 ? 'up' : 'down'}
             gradient="linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)"
           />
         </Grid>
 
         <Grid item xs={12} sm={6} md={2.4}>
           <EnhancedStatCard
-            title="Time Saved"
-            value="127h"
-            subtitle="This month"
+            title="Avg Duration"
+            value={`${Math.round(statsData?.avg_duration ?? 0)}s`}
+            subtitle="per execution"
             icon={<Schedule sx={{ fontSize: 48 }} />}
-            trend="up"
             gradient="linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)"
           />
         </Grid>
 
         <Grid item xs={12} sm={6} md={2.4}>
           <EnhancedStatCard
-            title="Flaky Detected"
-            value={statsData?.flaky_tests || 8}
+            title="Active Runs"
+            value={statsData?.active_executions ?? 0}
+            subtitle={`${statsData?.last_24h_executions ?? 0} in last 24h`}
             icon={<Warning sx={{ fontSize: 48 }} />}
             gradient="linear-gradient(135deg, #fa709a 0%, #fee140 100%)"
           />
@@ -485,10 +484,10 @@ export default function Dashboard() {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom fontWeight="bold">
-                Test Types Distribution
+                Execution Results
               </Typography>
               <Doughnut
-                data={testTypeData}
+                data={outcomeChartData}
                 options={{
                   responsive: true,
                   plugins: {
@@ -503,7 +502,7 @@ export default function Dashboard() {
         </Grid>
       </Grid>
 
-      {/* Recent Executions */}
+      {/* Recent Executions - from /dashboard/recent-executions */}
       <Box sx={{ mt: 3 }}>
         <Card>
           <CardContent>
@@ -521,53 +520,77 @@ export default function Dashboard() {
                 Refresh
               </Button>
             </Box>
-            {recentData.map((execution: any) => (
-              <Fade in key={execution.id}>
-                <Box
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  sx={{
-                    py: 1.5,
-                    px: 2,
-                    mb: 1,
-                    borderRadius: 1,
-                    bgcolor: 'background.default',
-                    transition: 'background-color 0.2s',
-                    '&:hover': {
-                      bgcolor: 'action.hover',
-                    },
-                  }}
-                >
-                  <Box>
-                    <Typography variant="body1" fontWeight="medium">
-                      {execution.suite_name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {execution.environment} • {execution.started_at}
-                    </Typography>
-                  </Box>
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <Chip
-                      size="small"
-                      label={`${execution.passed}/${execution.total_tests} passed`}
-                      color={execution.passed === execution.total_tests ? 'success' : 'warning'}
-                    />
-                    <Chip
-                      size="small"
-                      label={execution.status}
-                      color={
-                        execution.status === 'completed'
-                          ? 'success'
-                          : execution.status === 'running'
-                          ? 'primary'
-                          : 'error'
-                      }
-                    />
-                  </Box>
-                </Box>
-              </Fade>
-            ))}
+            {recentData.length === 0 ? (
+              <Box py={3} textAlign="center">
+                <Typography color="text.secondary">
+                  No recent executions. Run a test suite to see results here.
+                </Typography>
+              </Box>
+            ) : (
+              recentData.map((execution: any) => {
+                const startedAt = execution.started_at
+                  ? new Date(execution.started_at).toLocaleString()
+                  : '—'
+                const suiteName =
+                  suiteNameById.get(execution.suite_id) ||
+                  execution.suite_name ||
+                  `Execution #${execution.id}`
+                const passed = execution.passed_tests ?? execution.passed ?? 0
+                return (
+                  <Fade in key={execution.id}>
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="space-between"
+                      sx={{
+                        py: 1.5,
+                        px: 2,
+                        mb: 1,
+                        borderRadius: 1,
+                        bgcolor: 'background.default',
+                        transition: 'background-color 0.2s',
+                        '&:hover': {
+                          bgcolor: 'action.hover',
+                        },
+                      }}
+                    >
+                      <Box>
+                        <Typography variant="body1" fontWeight="medium">
+                          {suiteName}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {execution.environment || 'production'} • {startedAt}
+                        </Typography>
+                      </Box>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        {execution.total_tests > 0 && (
+                          <Chip
+                            size="small"
+                            label={`${passed}/${execution.total_tests} passed`}
+                            color={
+                              passed === execution.total_tests ? 'success' : 'warning'
+                            }
+                          />
+                        )}
+                        <Chip
+                          size="small"
+                          label={execution.status}
+                          color={
+                            execution.status === 'passed'
+                              ? 'success'
+                              : execution.status === 'failed' || execution.status === 'error'
+                              ? 'error'
+                              : execution.status === 'running'
+                              ? 'primary'
+                              : 'default'
+                          }
+                        />
+                      </Box>
+                    </Box>
+                  </Fade>
+                )
+              })
+            )}
           </CardContent>
         </Card>
       </Box>

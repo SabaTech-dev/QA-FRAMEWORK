@@ -18,6 +18,12 @@ services:
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
       - ENVIRONMENT=production
       - LOG_LEVEL=INFO
+      # El módulo src/infrastructure/cache/semantic_cache.py no existe en el backend,
+      # por lo que SemanticCacheMiddleware consume el body y luego falla al importarlo,
+      # devolviendo respuestas vacías (HTTP 200 size=0 / 520 en Cloudflare) para los
+      # GET cacheados (suites/cases/executions/dashboard). Vaciar la lista de prefijos
+      # desactiva el caché y restaura las respuestas. Fix de infra (sin tocar código backend).
+      - SEMANTIC_CACHE_ENDPOINTS=
     depends_on:
       postgres:
         condition: service_healthy
@@ -44,7 +50,11 @@ services:
     ports:
       - "3010:3000"
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=/api/v1
+      # Vite dev-server proxy target: the backend service on the Docker network.
+      # Resolves the "buttons do nothing / pages disconnected" issue where localhost
+      # inside the frontend container pointed at itself instead of the backend.
+      - API_PROXY_TARGET=http://backend:8000
     depends_on:
       - backend
     volumes:

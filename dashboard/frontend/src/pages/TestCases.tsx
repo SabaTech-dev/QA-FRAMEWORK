@@ -3,8 +3,6 @@ import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Box,
-  Card,
-  CardContent,
   Typography,
   Button,
   Table,
@@ -30,43 +28,54 @@ import {
 } from '@mui/material'
 import {
   Add as AddIcon,
-  Edit as EditIcon,
   Delete as DeleteIcon,
   ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material'
-import { casesAPI } from '../api/client'
+import { casesAPI, suitesAPI } from '../api/client'
 import toast from 'react-hot-toast'
+import EmptyState from '../components/common/EmptyState'
 import LoadingButton from '../components/common/LoadingButton'
-import SkeletonLoader, { TableSkeleton } from '../components/common/SkeletonLoader'
+import { TableSkeleton } from '../components/common/SkeletonLoader'
+
+const EMPTY_FORM = {
+  name: '',
+  description: '',
+  test_code: '',
+  test_type: 'api',
+  priority: 'medium',
+  tags: '',
+  suite_id: '',
+}
 
 export default function TestCases() {
   const { suiteId } = useParams<{ suiteId: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [openDialog, setOpenDialog] = useState(false)
-  const [editingCase, setEditingCase] = useState<any>(null)
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    test_code: '',
-    test_type: 'api',
-    priority: 'medium',
-    tags: '',
-  })
+  const [formData, setFormData] = useState({ ...EMPTY_FORM })
 
   const { data: cases, isLoading } = useQuery(['cases', suiteId], () =>
     casesAPI.getAll(suiteId ? parseInt(suiteId) : undefined)
   )
 
+  const { data: suites } = useQuery('cases-suites', () => suitesAPI.getAll())
+
+  const suitesList = suites?.data || []
+  const suiteNameById = new Map<number, string>()
+  suitesList.forEach((s: any) => suiteNameById.set(s.id, s.name))
+
   const createMutation = useMutation(
-    (data: any) => casesAPI.create({ ...data, suite_id: parseInt(suiteId!) }),
+    (data: any) => casesAPI.create(data),
     {
       onSuccess: () => {
         queryClient.invalidateQueries(['cases', suiteId])
+        queryClient.invalidateQueries('dashboard-stats')
         toast.success('Test case created successfully')
         handleCloseDialog()
       },
-      onError: () => { toast.error('Failed to create test case') },
+      onError: (error: any) => {
+        toast.error(error.response?.data?.detail || 'Failed to create test case')
+      },
     }
   )
 
@@ -75,64 +84,69 @@ export default function TestCases() {
     {
       onSuccess: () => {
         queryClient.invalidateQueries(['cases', suiteId])
+        queryClient.invalidateQueries('dashboard-stats')
         toast.success('Test case deleted successfully')
       },
-      onError: () => { toast.error('Failed to delete test case') },
+      onError: (error: any) => {
+        toast.error(error.response?.data?.detail || 'Failed to delete test case')
+      },
     }
   )
 
-  const handleOpenDialog = (testCase?: any) => {
-    if (testCase) {
-      setEditingCase(testCase)
-      setFormData({
-        name: testCase.name,
-        description: testCase.description || '',
-        test_code: testCase.test_code,
-        test_type: testCase.test_type,
-        priority: testCase.priority,
-        tags: testCase.tags?.join(', ') || '',
-      })
-    } else {
-      setEditingCase(null)
-      setFormData({
-        name: '',
-        description: '',
-        test_code: '',
-        test_type: 'api',
-        priority: 'medium',
-        tags: '',
-      })
-    }
+  const handleOpenDialog = () => {
+    setFormData({
+      ...EMPTY_FORM,
+      suite_id: suiteId ? String(suiteId) : (suitesList[0]?.id ? String(suitesList[0].id) : ''),
+    })
     setOpenDialog(true)
   }
 
   const handleCloseDialog = () => {
     setOpenDialog(false)
-    setEditingCase(null)
   }
 
   const handleSubmit = () => {
-    if (!formData.name || !formData.test_code) {
-      toast.error('Name and test code are required')
+    if (!formData.name) {
+      toast.error('Name is required')
       return
     }
-    
-    const data = {
-      ...formData,
-      tags: formData.tags.split(',').map(t => t.trim()).filter(t => t),
+    if (!formData.test_code || formData.test_code.length < 10) {
+      toast.error('Test code is required (min 10 characters)')
+      return
     }
-    
-    createMutation.mutate(data)
+    const suiteIdValue = formData.suite_id || (suiteId ?? '')
+    if (!suiteIdValue) {
+      toast.error('Please select a test suite')
+      return
+    }
+
+    const payload = {
+      suite_id: parseInt(suiteIdValue),
+      name: formData.name,
+      description: formData.description || undefined,
+      test_code: formData.test_code,
+      test_type: formData.test_type,
+      priority: formData.priority,
+      tags: formData.tags
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean),
+    }
+    createMutation.mutate(payload)
   }
+
+  const casesList = cases?.data || []
 
   if (isLoading) {
     return (
       <Box>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Box display="flex" alignItems="center" gap={2}>
-            <IconButton disabled>
-              <ArrowBackIcon />
-            </IconButton>
+            {suiteId && (
+              <IconButton disabled>
+                <ArrowBackIcon />
+              </IconButton>
+            )}
             <Typography variant="h4">Test Cases</Typography>
           </Box>
           <Button variant="contained" disabled>
@@ -148,104 +162,138 @@ export default function TestCases() {
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Box display="flex" alignItems="center" gap={2}>
-          <Tooltip title="Back to Suites">
-            <IconButton 
-              onClick={() => navigate('/suites')}
-              aria-label="Go back to test suites"
-            >
-              <ArrowBackIcon />
-            </IconButton>
-          </Tooltip>
-          <Typography variant="h4">Test Cases</Typography>
+          {suiteId && (
+            <Tooltip title="Back to Suites">
+              <IconButton onClick={() => navigate('/suites')} aria-label="Go back to test suites">
+                <ArrowBackIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+          <Typography variant="h4">
+            Test Cases{suiteId && suiteNameById.has(parseInt(suiteId)) ? ` — ${suiteNameById.get(parseInt(suiteId))}` : ''}
+          </Typography>
         </Box>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
+          onClick={handleOpenDialog}
           aria-label="Create new test case"
         >
           New Test Case
         </Button>
       </Box>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Priority</TableCell>
-              <TableCell>Tags</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {cases?.data?.map((testCase: any) => (
-              <TableRow key={testCase.id}>
-                <TableCell>{testCase.name}</TableCell>
-                <TableCell>
-                  <Chip label={testCase.test_type} size="small" />
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={testCase.priority}
-                    color={
-                      testCase.priority === 'critical'
-                        ? 'error'
-                        : testCase.priority === 'high'
-                        ? 'warning'
-                        : 'default'
-                    }
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  {testCase.tags?.map((tag: string) => (
-                    <Chip key={tag} label={tag} size="small" sx={{ mr: 0.5 }} />
-                  ))}
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={testCase.is_active ? 'Active' : 'Inactive'}
-                    color={testCase.is_active ? 'success' : 'default'}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Tooltip title="Edit Test Case">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleOpenDialog(testCase)}
-                      aria-label="Edit test case"
-                    >
-                      <EditIcon />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Delete Test Case">
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => deleteMutation.mutate(testCase.id)}
-                      disabled={deleteMutation.isLoading}
-                      aria-label="Delete test case"
-                    >
-                      {deleteMutation.isLoading ? <CircularProgress size={20} /> : <DeleteIcon />}
-                    </IconButton>
-                  </Tooltip>
-                </TableCell>
+      {casesList.length === 0 ? (
+        <EmptyState
+          illustration="/illustrations/empty-cases.svg"
+          title="No Test Cases Yet"
+          description="Create your first test case to start automating your QA process. Test cases contain the code that gets executed within a suite."
+          actionLabel="Create First Test Case"
+          onAction={handleOpenDialog}
+        />
+      ) : (
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Name</TableCell>
+                {!suiteId && <TableCell>Suite</TableCell>}
+                <TableCell>Type</TableCell>
+                <TableCell>Priority</TableCell>
+                <TableCell>Tags</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Actions</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {casesList.map((testCase: any) => (
+                <TableRow key={testCase.id} hover>
+                  <TableCell>{testCase.name}</TableCell>
+                  {!suiteId && (
+                    <TableCell>
+                      {suiteNameById.get(testCase.suite_id) || `Suite #${testCase.suite_id}`}
+                    </TableCell>
+                  )}
+                  <TableCell>
+                    <Chip label={testCase.test_type} size="small" />
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={testCase.priority}
+                      color={
+                        testCase.priority === 'critical'
+                          ? 'error'
+                          : testCase.priority === 'high'
+                          ? 'warning'
+                          : testCase.priority === 'medium'
+                          ? 'default'
+                          : 'success'
+                      }
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    {testCase.tags?.length ? (
+                      testCase.tags.map((tag: string) => (
+                        <Chip key={tag} label={tag} size="small" sx={{ mr: 0.5 }} />
+                      ))
+                    ) : (
+                      '—'
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={testCase.is_active ? 'Active' : 'Inactive'}
+                      color={testCase.is_active ? 'success' : 'default'}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Tooltip title="Delete Test Case">
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => deleteMutation.mutate(testCase.id)}
+                        disabled={deleteMutation.isLoading}
+                        aria-label="Delete test case"
+                      >
+                        {deleteMutation.isLoading ? <CircularProgress size={20} /> : <DeleteIcon />}
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
-      {/* Create/Edit Dialog */}
+      {/* Create Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-        <DialogTitle>
-          {editingCase ? 'Edit Test Case' : 'Create Test Case'}
-        </DialogTitle>
+        <DialogTitle>Create Test Case</DialogTitle>
         <DialogContent>
+          {!suiteId && (
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Test Suite</InputLabel>
+              <Select
+                value={formData.suite_id}
+                label="Test Suite"
+                onChange={(e) => setFormData({ ...formData, suite_id: e.target.value })}
+              >
+                {suitesList.length === 0 ? (
+                  <MenuItem value="" disabled>
+                    No suites available — create one first
+                  </MenuItem>
+                ) : (
+                  suitesList.map((s: any) => (
+                    <MenuItem key={s.id} value={s.id}>
+                      {s.name}
+                    </MenuItem>
+                  ))
+                )}
+              </Select>
+            </FormControl>
+          )}
           <TextField
             fullWidth
             label="Name"
@@ -270,13 +318,15 @@ export default function TestCases() {
             value={formData.test_code}
             onChange={(e) => setFormData({ ...formData, test_code: e.target.value })}
             margin="normal"
-            placeholder="def test_example():&#10;    assert True"
+            placeholder={'def test_example():\n    assert True'}
+            helperText="Minimum 10 characters"
           />
           <Box display="flex" gap={2} mt={2}>
             <FormControl fullWidth>
               <InputLabel>Test Type</InputLabel>
               <Select
                 value={formData.test_type}
+                label="Test Type"
                 onChange={(e) => setFormData({ ...formData, test_type: e.target.value })}
               >
                 <MenuItem value="api">API Testing</MenuItem>
@@ -291,6 +341,7 @@ export default function TestCases() {
               <InputLabel>Priority</InputLabel>
               <Select
                 value={formData.priority}
+                label="Priority"
                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
               >
                 <MenuItem value="low">Low</MenuItem>
@@ -315,8 +366,9 @@ export default function TestCases() {
             loading={createMutation.isLoading}
             onClick={handleSubmit}
             variant="contained"
+            disabled={!suiteId && suitesList.length === 0}
           >
-            {editingCase ? 'Update' : 'Create'}
+            Create
           </LoadingButton>
         </DialogActions>
       </Dialog>
