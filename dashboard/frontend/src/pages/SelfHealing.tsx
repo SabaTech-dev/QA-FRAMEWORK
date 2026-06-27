@@ -30,6 +30,7 @@ import {
   Warning as WarningIcon,
   CheckCircle as CheckCircleIcon,
   History as HistoryIcon,
+  Delete as DeleteIcon,
   Error as ErrorIcon,
 } from '@mui/icons-material';
 import EmptyState from '../components/common/EmptyState';
@@ -96,6 +97,19 @@ const SelfHealingDashboard: React.FC = () => {
       setHealing(false);
     }
   }, []);
+
+  const handleDeleteSelector = useCallback(async (selector: HealingSelector) => {
+    try {
+      await healingAPI.deleteSelector(selector.id);
+      await fetchData();
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.detail ||
+        err?.message ||
+        'Failed to delete selector';
+      setError(typeof msg === 'string' ? msg : 'Failed to delete selector');
+    }
+  }, [fetchData]);
 
   // Derived stats computed from live data.
   const stats = React.useMemo(() => {
@@ -316,6 +330,15 @@ const SelfHealingDashboard: React.FC = () => {
                           color="primary"
                         >
                           <AutoFixHighIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete Selector">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeleteSelector(selector)}
+                          color="error"
+                        >
+                          <DeleteIcon />
                         </IconButton>
                       </Tooltip>
                     </TableCell>
