@@ -33,59 +33,24 @@ import {
   Error as ErrorIcon,
 } from '@mui/icons-material';
 import EmptyState from '../components/common/EmptyState';
-import { healingAPI } from '../api/client';
-
-interface Selector {
-  id: number | string;
-  value: string;
-  selector_type: string;
-  description?: string;
-  confidence_score: number;
-  confidence_level: string;
-  is_active: boolean;
-  usage_count: number;
-  success_rate: number;
-}
-
-interface HealingSession {
-  id: number | string;
-  status: string;
-  total_selectors: number;
-  successful_heals: number;
-  failed_heals: number;
-  success_rate: number;
-  average_confidence: number;
-  started_at: string;
-  completed_at?: string;
-}
-
-interface HealingResult {
-  id: number | string;
-  original_selector_value: string;
-  healed_selector_value?: string;
-  status: string;
-  confidence_score: number;
-  confidence_level: string;
-  healing_time_ms: number;
-  attempts: number;
-  created_at: string;
-}
+import {
+  healingAPI,
+  type HealingSelector,
+  type HealingSession,
+  type HealingResult,
+} from '../api/client';
 
 const SelfHealingDashboard: React.FC = () => {
-  const [selectors, setSelectors] = useState<Selector[]>([]);
+  const [selectors, setSelectors] = useState<HealingSelector[]>([]);
   const [sessions, setSessions] = useState<HealingSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   const [healDialogOpen, setHealDialogOpen] = useState(false);
+  const [selectedSelector, setSelectedSelector] = useState<HealingSelector | null>(null);
   const [healing, setHealing] = useState(false);
-  const [selectedSelector, setSelectedSelector] = useState<Selector | null>(null);
-  const [healResults, setHealResults] = useState<HealingResult[]>([]);
-  const [stats, setStats] = useState({
-    totalSelectors: 0,
-    lowConfidence: 0,
-    avgConfidence: 0,
-    healSuccessRate: 0,
-  });
+  const [healResult, setHealResult] = useState<HealingResult | null>(null);
+  const [healError, setHealError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -95,29 +60,14 @@ const SelfHealingDashboard: React.FC = () => {
         healingAPI.getSelectors(),
         healingAPI.getSessions(),
       ]);
-
-      const selectorsData: Selector[] = selectorsRes.data || [];
-      const sessionsData: HealingSession[] = sessionsRes.data || [];
-
-      setSelectors(selectorsData);
-      setSessions(sessionsData);
-
-      const lowConf = selectorsData.filter(s => s.confidence_score < 0.5).length;
-      const avgConf = selectorsData.length > 0
-        ? selectorsData.reduce((sum, s) => sum + s.confidence_score, 0) / selectorsData.length
-        : 0;
-
-      setStats({
-        totalSelectors: selectorsData.length,
-        lowConfidence: lowConf,
-        avgConfidence: avgConf,
-        healSuccessRate: sessionsData.length > 0
-          ? sessionsData.reduce((sum, s) => sum + s.success_rate, 0) / sessionsData.length
-          : 0,
-      });
+      setSelectors(selectorsRes.data ?? []);
+      setSessions(sessionsRes.data ?? []);
     } catch (err: any) {
-      console.error('Error fetching healing data:', err);
-      setError(err.response?.data?.detail || 'Failed to load healing data. Please try again.');
+      const msg =
+        err?.response?.data?.detail ||
+        err?.message ||
+        'Failed to load self-healing data';
+      setError(typeof msg === 'string' ? msg : 'Failed to load self-healing data');
     } finally {
       setLoading(false);
     }
@@ -127,39 +77,64 @@ const SelfHealingDashboard: React.FC = () => {
     fetchData();
   }, [fetchData]);
 
-  const handleHealSelector = async (selector: Selector) => {
+  const handleHealSelector = useCallback(async (selector: HealingSelector) => {
     setSelectedSelector(selector);
-    setHealDialogOpen(true);
+    setHealResult(null);
+    setHealError(null);
     setHealing(true);
-    setHealResults([]);
-
+    setHealDialogOpen(true);
     try {
-      const response = await healingAPI.healSelector(Number(selector.id));
-      const result: HealingResult = response.data;
-      setHealResults([result]);
+      const { data } = await healingAPI.healSelector(selector.id);
+      setHealResult(data);
     } catch (err: any) {
-      console.error('Healing failed:', err);
-      setError(err.response?.data?.detail || 'Healing failed. Please try again.');
+      const msg =
+        err?.response?.data?.detail ||
+        err?.message ||
+        'Healing request failed';
+      setHealError(typeof msg === 'string' ? msg : 'Healing request failed');
     } finally {
       setHealing(false);
     }
-  };
+  }, []);
+
+  // Derived stats computed from live data.
+  const stats = React.useMemo(() => {
+    const total = selectors.length;
+    const lowConf = selectors.filter((s) => s.confidence_score < 0.5).length;
+    const avgConf =
+      total > 0
+        ? selectors.reduce((sum, s) => sum + (s.confidence_score || 0), 0) / total
+        : 0;
+    const healSuccessRate =
+      sessions.length > 0
+        ? sessions.reduce((sum, s) => sum + (s.success_rate || 0), 0) / sessions.length
+        : 0;
+    return { total, lowConf, avgConf, healSuccessRate };
+  }, [selectors, sessions]);
 
   const getConfidenceColor = (level: string) => {
     switch (level) {
-      case 'high': return 'success';
-      case 'medium': return 'warning';
-      case 'low': return 'error';
-      default: return 'default';
+      case 'high':
+        return 'success';
+      case 'medium':
+        return 'warning';
+      case 'low':
+        return 'error';
+      default:
+        return 'default';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'success': return <CheckCircleIcon color="success" />;
-      case 'failed': return <WarningIcon color="error" />;
-      case 'partial': return <TrendingUpIcon color="warning" />;
-      default: return <HistoryIcon color="action" />;
+      case 'success':
+        return <CheckCircleIcon color="success" />;
+      case 'failed':
+        return <WarningIcon color="error" />;
+      case 'partial':
+        return <TrendingUpIcon color="warning" />;
+      default:
+        return <HistoryIcon color="action" />;
     }
   };
 
@@ -171,7 +146,7 @@ const SelfHealingDashboard: React.FC = () => {
     );
   }
 
-  // Show empty state if no selectors
+  // Show empty state if no selectors and no error.
   if (selectors.length === 0 && !error) {
     return (
       <Box sx={{ p: 3 }}>
@@ -183,10 +158,8 @@ const SelfHealingDashboard: React.FC = () => {
           illustration="/illustrations/empty-selectors.svg"
           title="No Selectors Found"
           description="Self-healing selectors will appear here after your tests run. The system automatically detects and heals flaky selectors to improve test stability."
-          actionLabel="Learn More"
-          onAction={() => {
-            window.open('https://docs.example.com/self-healing', '_blank');
-          }}
+          actionLabel="Refresh"
+          onAction={fetchData}
         />
       </Box>
     );
@@ -200,7 +173,15 @@ const SelfHealingDashboard: React.FC = () => {
       </Typography>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+        <Alert
+          severity="error"
+          sx={{ mb: 3 }}
+          action={
+            <Button color="inherit" size="small" onClick={fetchData}>
+              Retry
+            </Button>
+          }
+        >
           {error}
         </Alert>
       )}
@@ -213,7 +194,7 @@ const SelfHealingDashboard: React.FC = () => {
               <Typography color="textSecondary" gutterBottom>
                 Total Selectors
               </Typography>
-              <Typography variant="h4">{stats.totalSelectors}</Typography>
+              <Typography variant="h4">{stats.total}</Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -224,7 +205,7 @@ const SelfHealingDashboard: React.FC = () => {
                 Low Confidence
               </Typography>
               <Typography variant="h4" color="error.main">
-                {stats.lowConfidence}
+                {stats.lowConf}
               </Typography>
             </CardContent>
           </Card>
@@ -236,11 +217,11 @@ const SelfHealingDashboard: React.FC = () => {
                 Avg Confidence
               </Typography>
               <Typography variant="h4">
-                {(stats.avgConfidence * 100).toFixed(1)}%
+                {(stats.avgConf * 100).toFixed(1)}%
               </Typography>
               <LinearProgress
                 variant="determinate"
-                value={stats.avgConfidence * 100}
+                value={stats.avgConf * 100}
                 sx={{ mt: 1 }}
               />
             </CardContent>
@@ -261,16 +242,23 @@ const SelfHealingDashboard: React.FC = () => {
       </Grid>
 
       {/* Low Confidence Alert */}
-      {stats.lowConfidence > 0 && (
+      {stats.lowConf > 0 && (
         <Alert severity="warning" sx={{ mb: 3 }}>
-          {stats.lowConfidence} selector(s) have low confidence and may need healing
+          {stats.lowConf} selector(s) have low confidence and may need healing
         </Alert>
       )}
 
       {/* Selectors Table */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mb: 2,
+            }}
+          >
             <Typography variant="h6">Selectors</Typography>
             <Button
               variant="outlined"
@@ -346,12 +334,9 @@ const SelfHealingDashboard: React.FC = () => {
             Recent Healing Sessions
           </Typography>
           {sessions.length === 0 ? (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <HistoryIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
-              <Typography color="textSecondary">
-                No healing sessions yet. Run a heal operation to see results here.
-              </Typography>
-            </Box>
+            <Typography variant="body2" color="textSecondary" sx={{ py: 2 }}>
+              No healing sessions yet. Run a heal action to see results here.
+            </Typography>
           ) : (
             <TableContainer component={Paper} variant="outlined">
               <Table>
@@ -372,13 +357,16 @@ const SelfHealingDashboard: React.FC = () => {
                     <TableRow key={session.id}>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                          {session.id}
+                          #{session.id}
                         </Typography>
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           {getStatusIcon(session.status)}
-                          <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
+                          <Typography
+                            variant="body2"
+                            sx={{ textTransform: 'capitalize' }}
+                          >
                             {session.status}
                           </Typography>
                         </Box>
@@ -386,14 +374,14 @@ const SelfHealingDashboard: React.FC = () => {
                       <TableCell>{session.total_selectors}</TableCell>
                       <TableCell>{session.successful_heals}</TableCell>
                       <TableCell>{session.failed_heals}</TableCell>
-                      <TableCell>
-                        {(session.success_rate * 100).toFixed(1)}%
-                      </TableCell>
+                      <TableCell>{(session.success_rate * 100).toFixed(1)}%</TableCell>
                       <TableCell>
                         {(session.average_confidence * 100).toFixed(1)}%
                       </TableCell>
                       <TableCell>
-                        {new Date(session.started_at).toLocaleString()}
+                        {session.started_at
+                          ? new Date(session.started_at).toLocaleString()
+                          : '—'}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -405,7 +393,11 @@ const SelfHealingDashboard: React.FC = () => {
       </Card>
 
       {/* Heal Dialog */}
-      <Dialog open={healDialogOpen} onClose={() => setHealDialogOpen(false)} maxWidth="md">
+      <Dialog
+        open={healDialogOpen}
+        onClose={() => setHealDialogOpen(false)}
+        maxWidth="md"
+      >
         <DialogTitle>Heal Selector</DialogTitle>
         <DialogContent>
           {selectedSelector && (
@@ -417,42 +409,57 @@ const SelfHealingDashboard: React.FC = () => {
                 {selectedSelector.value}
               </Typography>
 
-              {healing ? (
+              {healing && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <LinearProgress sx={{ flex: 1 }} />
                   <Typography>Analyzing selector...</Typography>
                 </Box>
-              ) : healResults.length > 0 ? (
+              )}
+
+              {healError && !healing && (
+                <Alert severity="error" sx={{ mb: 2 }} icon={<ErrorIcon />}>
+                  {healError}
+                </Alert>
+              )}
+
+              {healResult && !healing && (
                 <Box>
-                  <Alert severity={healResults[0].status === 'success' ? 'success' : 'info'} sx={{ mb: 2 }}>
-                    Healing {healResults[0].status === 'success' ? 'completed successfully' : 'skipped (confidence OK)'}
+                  <Alert
+                    severity={healResult.status === 'success' ? 'success' : 'info'}
+                    sx={{ mb: 2 }}
+                  >
+                    Healing{' '}
+                    {healResult.status === 'success'
+                      ? 'completed successfully'
+                      : 'skipped (confidence OK)'}
                   </Alert>
 
-                  {healResults[0].healed_selector_value && (
+                  {healResult.healed_selector_value && (
                     <Box>
                       <Typography variant="body2" color="textSecondary">
                         Healed Selector:
                       </Typography>
-                      <Typography variant="body1" sx={{ fontFamily: 'monospace', color: 'success.main' }}>
-                        {healResults[0].healed_selector_value}
+                      <Typography
+                        variant="body1"
+                        sx={{ fontFamily: 'monospace', color: 'success.main' }}
+                      >
+                        {healResult.healed_selector_value}
                       </Typography>
                     </Box>
                   )}
 
                   <Box sx={{ mt: 2 }}>
                     <Typography variant="body2">
-                      Confidence: {(healResults[0].confidence_score * 100).toFixed(1)}%
+                      Confidence: {(healResult.confidence_score * 100).toFixed(1)}%
                     </Typography>
                     <Typography variant="body2">
-                      Healing Time: {healResults[0].healing_time_ms}ms
+                      Healing Time: {healResult.healing_time_ms}ms
                     </Typography>
                     <Typography variant="body2">
-                      Attempts: {healResults[0].attempts}
+                      Attempts: {healResult.attempts}
                     </Typography>
                   </Box>
                 </Box>
-              ) : (
-                <Typography color="textSecondary">No results available.</Typography>
               )}
             </Box>
           )}

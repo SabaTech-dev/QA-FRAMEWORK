@@ -285,35 +285,6 @@ export const waitlistAPI = {
     apiClient.get('/waitlist/stats'),
 }
 
-export const healingAPI = {
-  getSelectors: (skip = 0, limit = 100) =>
-    apiClient.get('/healing/selectors', { params: { skip, limit } }),
-
-  getSelectorById: (id: number) =>
-    apiClient.get(`/healing/selectors/${id}`),
-
-  createSelector: (data: any) =>
-    apiClient.post('/healing/selectors', data),
-
-  updateSelector: (id: number, data: any) =>
-    apiClient.put(`/healing/selectors/${id}`, data),
-
-  deleteSelector: (id: number) =>
-    apiClient.delete(`/healing/selectors/${id}`),
-
-  healSelector: (id: number) =>
-    apiClient.post(`/healing/selectors/${id}/heal`),
-
-  getSessions: (skip = 0, limit = 100) =>
-    apiClient.get('/healing/sessions', { params: { skip, limit } }),
-
-  getSessionById: (id: number) =>
-    apiClient.get(`/healing/sessions/${id}`),
-
-  getResults: (sessionId?: number) =>
-    apiClient.get('/healing/results', { params: { session_id: sessionId } }),
-}
-
 export const onboardingAPI = {
   getState: () =>
     apiClient.get('/onboarding'),
@@ -328,50 +299,83 @@ export const onboardingAPI = {
     apiClient.post('/onboarding/skip'),
 }
 
+// ─── Self-Healing ────────────────────────────────────────────────
+export interface HealingSelector {
+  id: number
+  value: string
+  selector_type: string
+  description?: string | null
+  confidence_score: number
+  confidence_level: string
+  is_active: boolean
+  usage_count: number
+  success_rate: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface HealingSession {
+  id: number
+  status: string
+  total_selectors: number
+  successful_heals: number
+  failed_heals: number
+  success_rate: number
+  average_confidence: number
+  started_at: string
+  completed_at?: string | null
+}
+
+export interface HealingResult {
+  id: number
+  session_id?: number | null
+  selector_id?: number | null
+  original_selector_value: string
+  healed_selector_value?: string | null
+  status: string
+  confidence_score: number
+  confidence_level: string
+  healing_time_ms: number
+  attempts: number
+  created_at?: string
+}
+
+export interface HealingSelectorInput {
+  value: string
+  selector_type?: string
+  description?: string
+  confidence_score?: number
+  is_active?: boolean
+}
+
 export const healingAPI = {
-  // Selectors CRUD
+  // Selectors
   getSelectors: (skip = 0, limit = 100) =>
-    apiClient.get('/healing/selectors', { params: { skip, limit } }),
+    apiClient.get<HealingSelector[]>('/healing/selectors', { params: { skip, limit } }),
 
-  getSelector: (id: number) =>
-    apiClient.get(`/healing/selectors/${id}`),
+  createSelector: (data: HealingSelectorInput) =>
+    apiClient.post<HealingSelector>('/healing/selectors', data),
 
-  createSelector: (data: {
-    value: string
-    selector_type?: string
-    description?: string
-    confidence_score?: number
-    confidence_level?: string
-    is_active?: boolean
-    usage_count?: number
-    success_rate?: number
-  }) => apiClient.post('/healing/selectors', data),
+  getSelectorById: (id: number) =>
+    apiClient.get<HealingSelector>(`/healing/selectors/${id}`),
 
-  updateSelector: (id: number, data: {
-    value?: string
-    selector_type?: string
-    description?: string
-    confidence_score?: number
-    confidence_level?: string
-    is_active?: boolean
-    success_rate?: number
-  }) => apiClient.put(`/healing/selectors/${id}`, data),
+  updateSelector: (id: number, data: Partial<HealingSelectorInput>) =>
+    apiClient.put<HealingSelector>(`/healing/selectors/${id}`, data),
 
   deleteSelector: (id: number) =>
     apiClient.delete(`/healing/selectors/${id}`),
 
   // Heal action
   healSelector: (id: number) =>
-    apiClient.post(`/healing/selectors/${id}/heal`),
+    apiClient.post<HealingResult>(`/healing/selectors/${id}/heal`),
 
   // Sessions
   getSessions: (skip = 0, limit = 50) =>
-    apiClient.get('/healing/sessions', { params: { skip, limit } }),
+    apiClient.get<HealingSession[]>('/healing/sessions', { params: { skip, limit } }),
 
-  getSession: (id: number) =>
-    apiClient.get(`/healing/sessions/${id}`),
-
-  // Results
+  // Results (optionally filtered by selector_id)
   getResults: (selectorId?: number, skip = 0, limit = 100) =>
-    apiClient.get('/healing/results', { params: { selector_id: selectorId, skip, limit } }),
+    apiClient.get<HealingResult[]>('/healing/results', {
+      params: { selector_id: selectorId, skip, limit },
+    }),
 }
