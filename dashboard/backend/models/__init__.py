@@ -12,9 +12,21 @@ Base = declarative_base()
 
 # Export relationship for use in models
 __all__ = [
-    'Base', 'Column', 'Integer', 'String', 'DateTime', 'Boolean',
-    'Text', 'ForeignKey', 'JSON', 'Optional', 'func', 'relationship',
-    'datetime', 'CronJob', 'CronExecution'
+    "Base",
+    "Column",
+    "Integer",
+    "String",
+    "DateTime",
+    "Boolean",
+    "Text",
+    "ForeignKey",
+    "JSON",
+    "Optional",
+    "func",
+    "relationship",
+    "datetime",
+    "CronJob",
+    "CronExecution",
 ]
 
 
@@ -28,14 +40,14 @@ class User(Base):
     full_name = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
-    
+
     # Multi-tenant
     tenant_id = Column(String, ForeignKey("tenants.id"), nullable=True)
-    
+
     # OAuth
     oauth_provider = Column(String, nullable=True)
     oauth_provider_id = Column(String, nullable=True)
-    
+
     # Subscription & Billing
     stripe_customer_id = Column(String, nullable=True, index=True)
     stripe_subscription_id = Column(String, nullable=True)
@@ -43,12 +55,14 @@ class User(Base):
     subscription_status = Column(String, default="active")  # active, past_due, canceled, canceling
     subscription_current_period_start = Column(DateTime, nullable=True)
     subscription_current_period_end = Column(DateTime, nullable=True)
-    
+
     # Onboarding
     onboarding_completed = Column(Boolean, default=False)
-    onboarding_state = Column(JSON, default=dict)  # {"current_step": 0, "steps": {"welcome": true, ...}}
+    onboarding_state = Column(
+        JSON, default=dict
+    )  # {"current_step": 0, "steps": {"welcome": true, ...}}
     onboarding_completed_at = Column(DateTime, nullable=True)
-    
+
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
@@ -190,6 +204,7 @@ class Schedule(Base):
 
 class TenantModel(Base):
     """SQLAlchemy model for Tenant entity (multi-tenancy support)"""
+
     __tablename__ = "tenants"
 
     id = Column(String, primary_key=True, index=True)  # UUID as string
@@ -204,35 +219,36 @@ class TenantModel(Base):
 
 class Feedback(Base):
     """Model for user feedback collection"""
+
     __tablename__ = "feedback"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Optional for anonymous
     tenant_id = Column(String, ForeignKey("tenants.id"), nullable=True)
-    
+
     # Feedback content
     feedback_type = Column(String, nullable=False)  # bug, feature, general, improvement
     category = Column(String, nullable=True)  # ui, ux, performance, documentation, etc.
     title = Column(String(200), nullable=False)
     description = Column(Text, nullable=False)
     priority = Column(String, default="medium")  # low, medium, high, critical
-    
+
     # Context
     page_url = Column(String(500), nullable=True)  # URL where feedback was submitted
     user_agent = Column(String, nullable=True)
     browser_info = Column(JSON, nullable=True)  # Browser, OS, screen size, etc.
-    
+
     # Status tracking
     status = Column(String, default="new")  # new, in_progress, resolved, closed
     assigned_to = Column(Integer, ForeignKey("users.id"), nullable=True)
-    
+
     # Rating (optional)
     rating = Column(Integer, nullable=True)  # 1-5 stars
-    
+
     # Metadata
     tags = Column(JSON, default=list)  # ["ui", "dashboard", "critical"]
     attachments = Column(JSON, default=list)  # List of attachment URLs/paths
-    
+
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     resolved_at = Column(DateTime, nullable=True)
@@ -244,6 +260,7 @@ class Feedback(Base):
 
 class BetaSignup(Base):
     """Model for beta tester signups"""
+
     __tablename__ = "beta_signups"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -251,26 +268,28 @@ class BetaSignup(Base):
     company = Column(String(200), nullable=True)
     use_case = Column(Text, nullable=True)
     team_size = Column(String, nullable=True)  # 1-5, 6-20, 21-50, 50+
-    
+
     # Status
     status = Column(String, default="pending")  # pending, approved, rejected, onboarded
     invite_sent_at = Column(DateTime, nullable=True)
     onboarded_at = Column(DateTime, nullable=True)
-    
+
     # Tracking
     source = Column(String, nullable=True)  # landing_page, referral, social, etc.
     utm_campaign = Column(String, nullable=True)
     utm_source = Column(String, nullable=True)
-    
+
     # Metadata
     notes = Column(Text, nullable=True)
     feedback_score = Column(Integer, nullable=True)  # NPS score 0-10
-    
+
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
+
 class WaitlistEntry(Base):
     """Model for waitlist signups — simplified beta signup with just email + name."""
+
     __tablename__ = "waitlist_entries"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -285,8 +304,9 @@ class WaitlistEntry(Base):
 
 class Project(Base):
     """Project model for organizing test suites."""
+
     __tablename__ = "projects"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True, nullable=False)
     description = Column(Text, nullable=True)
@@ -298,8 +318,9 @@ class Project(Base):
 
 class Subscription(Base):
     """Subscription model for billing analytics."""
+
     __tablename__ = "subscriptions"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     plan_type = Column(String, default="free")  # free, pro, enterprise
@@ -308,23 +329,27 @@ class Subscription(Base):
     current_period_start = Column(DateTime, nullable=True)
     current_period_end = Column(DateTime, nullable=True)
     cancel_at_period_end = Column(Boolean, default=False)
-    
+
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
 
 class UsageRecord(Base):
     """Usage tracking for feature analytics."""
+
     __tablename__ = "usage_records"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     feature_name = Column(String, nullable=False)  # ai_test_generation, self_healing, etc.
     usage_count = Column(Integer, default=1)
     extra_data = Column(JSON, nullable=True)  # Changed from 'metadata' (reserved word)
-    
+
     created_at = Column(DateTime, default=func.now())
 
 
 # Browser-Use Task Model
 from models.browser_use_task import BrowserUseTask, TaskStatus
+
+# Self-Healing Models
+from models.self_healing import HealingSelector, HealingSession, HealingResult

@@ -47,6 +47,7 @@ from api.v1 import (
     browser_use_routes,
     onboarding_routes,
     waitlist_routes,
+    healing_routes,
 )
 from api.v1.scan import router as scan_routes
 from services.auth_service import get_current_user, login_for_access_token
@@ -97,6 +98,7 @@ router.include_router(browser_use_routes.router)
 router.include_router(onboarding_routes.router)
 router.include_router(waitlist_routes.router)
 router.include_router(scan_routes)
+router.include_router(healing_routes.router)
 
 
 # @router.middleware("http")

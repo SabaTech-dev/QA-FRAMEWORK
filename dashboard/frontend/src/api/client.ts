@@ -285,6 +285,35 @@ export const waitlistAPI = {
     apiClient.get('/waitlist/stats'),
 }
 
+export const healingAPI = {
+  getSelectors: (skip = 0, limit = 100) =>
+    apiClient.get('/healing/selectors', { params: { skip, limit } }),
+
+  getSelectorById: (id: number) =>
+    apiClient.get(`/healing/selectors/${id}`),
+
+  createSelector: (data: any) =>
+    apiClient.post('/healing/selectors', data),
+
+  updateSelector: (id: number, data: any) =>
+    apiClient.put(`/healing/selectors/${id}`, data),
+
+  deleteSelector: (id: number) =>
+    apiClient.delete(`/healing/selectors/${id}`),
+
+  healSelector: (id: number) =>
+    apiClient.post(`/healing/selectors/${id}/heal`),
+
+  getSessions: (skip = 0, limit = 100) =>
+    apiClient.get('/healing/sessions', { params: { skip, limit } }),
+
+  getSessionById: (id: number) =>
+    apiClient.get(`/healing/sessions/${id}`),
+
+  getResults: (sessionId?: number) =>
+    apiClient.get('/healing/results', { params: { session_id: sessionId } }),
+}
+
 export const onboardingAPI = {
   getState: () =>
     apiClient.get('/onboarding'),
@@ -297,4 +326,52 @@ export const onboardingAPI = {
 
   skip: () =>
     apiClient.post('/onboarding/skip'),
+}
+
+export const healingAPI = {
+  // Selectors CRUD
+  getSelectors: (skip = 0, limit = 100) =>
+    apiClient.get('/healing/selectors', { params: { skip, limit } }),
+
+  getSelector: (id: number) =>
+    apiClient.get(`/healing/selectors/${id}`),
+
+  createSelector: (data: {
+    value: string
+    selector_type?: string
+    description?: string
+    confidence_score?: number
+    confidence_level?: string
+    is_active?: boolean
+    usage_count?: number
+    success_rate?: number
+  }) => apiClient.post('/healing/selectors', data),
+
+  updateSelector: (id: number, data: {
+    value?: string
+    selector_type?: string
+    description?: string
+    confidence_score?: number
+    confidence_level?: string
+    is_active?: boolean
+    success_rate?: number
+  }) => apiClient.put(`/healing/selectors/${id}`, data),
+
+  deleteSelector: (id: number) =>
+    apiClient.delete(`/healing/selectors/${id}`),
+
+  // Heal action
+  healSelector: (id: number) =>
+    apiClient.post(`/healing/selectors/${id}/heal`),
+
+  // Sessions
+  getSessions: (skip = 0, limit = 50) =>
+    apiClient.get('/healing/sessions', { params: { skip, limit } }),
+
+  getSession: (id: number) =>
+    apiClient.get(`/healing/sessions/${id}`),
+
+  // Results
+  getResults: (selectorId?: number, skip = 0, limit = 100) =>
+    apiClient.get('/healing/results', { params: { selector_id: selectorId, skip, limit } }),
 }

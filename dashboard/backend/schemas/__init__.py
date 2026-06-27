@@ -586,6 +586,21 @@ from schemas.browser_use import (
 )
 
 
+# Self-Healing Schemas
+from schemas.self_healing import (
+    SelectorType,
+    ConfidenceLevel,
+    HealingStatus,
+    HealingSelectorBase,
+    HealingSelectorCreate,
+    HealingSelectorUpdate,
+    HealingSelectorResponse,
+    HealingSessionResponse,
+    HealingResultResponse,
+    HealResponse,
+)
+
+
 # ─── Waitlist Schemas ─────────────────────────────────────────
 
 from enum import Enum
