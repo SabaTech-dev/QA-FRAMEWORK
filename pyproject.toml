@@ -2,7 +2,8 @@
 name = "qa-framework"
 version = "1.0.0"
 description = "Modern QA Automation Framework with Clean Architecture"
-authors = ["Joker <joker@example.com>"]
+authors = ["Jose Manuel Sabarís García <jmsabaris@sabatech.dev>"]
+license = "MIT"
 readme = "README.md"
 packages = [{include = "src"}]
 
