@@ -7,6 +7,14 @@ import sys
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from unittest.mock import MagicMock
+
+# Mock Redis to avoid connection errors during import
+_mock_redis = MagicMock()
+_mock_redis.Redis = MagicMock(return_value=MagicMock(ping=MagicMock(return_value=True)))
+_mock_redis.from_url = MagicMock(return_value=MagicMock(ping=MagicMock(return_value=True)))
+sys.modules.setdefault("redis", _mock_redis)
+sys.modules.setdefault("redis.asyncio", MagicMock())
 
 # Add the backend directory to Python path
 backend_dir = Path(__file__).parent.parent
