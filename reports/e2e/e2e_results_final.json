@@ -1,0 +1,206 @@
+{
+  "timestamp": "2026-06-29T09:06:04.304417",
+  "url": "https://qa.sabatech.dev",
+  "checks": [
+    {
+      "check": "1a. Login Page",
+      "status": "pass",
+      "detail": "Login form visible",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/01_login_page.png"
+    },
+    {
+      "check": "1b. Credentials",
+      "status": "pass",
+      "detail": "Filled: e2e_v2",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/01_credentials_filled.png"
+    },
+    {
+      "check": "1c. Login Redirect",
+      "status": "warn",
+      "detail": "URL is https://qa.sabatech.dev/login (may need onboarding skip)",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/01_after_login.png"
+    },
+    {
+      "check": "2. Dashboard",
+      "status": "warn",
+      "detail": "Dashboard loaded but minimal: 74 words",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/02_dashboard.png"
+    },
+    {
+      "check": "3. Create Test Suite",
+      "status": "warn",
+      "detail": "No create button found. Page: Welcome to QA-FRAMEWORK 🚀\nWelcome\nConnect Repo\nCreate Suite\nRun Test\nNotifications\nLet's get you started! 🎯\n\nIn just a few steps, you'll have your fir",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/03_suites_page.png"
+    },
+    {
+      "check": "4. CRUD",
+      "status": "warn",
+      "detail": "No data visible on suites page",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/04_crud.png"
+    },
+    {
+      "check": "5. Execute",
+      "status": "warn",
+      "detail": "No run button found",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/05_execute.png"
+    },
+    {
+      "check": "6. Reports",
+      "status": "pass",
+      "detail": "Reports loaded: 74 words, keywords: result, test, suite",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/06_reports.png"
+    },
+    {
+      "check": "7. Navigation",
+      "status": "pass",
+      "detail": "All 6 routes accessible",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/07_navigation.png"
+    },
+    {
+      "check": "8. Console",
+      "status": "warn",
+      "detail": "0 real errors. 9 Vite HMR, 0 null, 24 warnings",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/08_final.png"
+    }
+  ],
+  "console_errors": [
+    {
+      "type": "error",
+      "text": "[vite] failed to connect to websocket.\nyour current setup:\n  (browser) qa.sabatech.dev/ <--[HTTP]--> localhost:3000/ (server)\n  (browser) qa.sabatech.dev:/ <--[WebSocket (failing)]--> localhost:3000/ (server)\nCheck out your Vite / network configuration and https://vite.dev/config/server-options.html"
+    },
+    {
+      "type": "error",
+      "text": "[vite] failed to connect to websocket.\nyour current setup:\n  (browser) qa.sabatech.dev/ <--[HTTP]--> localhost:3000/ (server)\n  (browser) qa.sabatech.dev:/ <--[WebSocket (failing)]--> localhost:3000/ (server)\nCheck out your Vite / network configuration and https://vite.dev/config/server-options.html"
+    },
+    {
+      "type": "error",
+      "text": "[vite] failed to connect to websocket.\nyour current setup:\n  (browser) qa.sabatech.dev/ <--[HTTP]--> localhost:3000/ (server)\n  (browser) qa.sabatech.dev:/ <--[WebSocket (failing)]--> localhost:3000/ (server)\nCheck out your Vite / network configuration and https://vite.dev/config/server-options.html"
+    },
+    {
+      "type": "error",
+      "text": "[vite] failed to connect to websocket.\nyour current setup:\n  (browser) qa.sabatech.dev/ <--[HTTP]--> localhost:3000/ (server)\n  (browser) qa.sabatech.dev:/ <--[WebSocket (failing)]--> localhost:3000/ (server)\nCheck out your Vite / network configuration and https://vite.dev/config/server-options.html"
+    },
+    {
+      "type": "error",
+      "text": "[vite] failed to connect to websocket.\nyour current setup:\n  (browser) qa.sabatech.dev/ <--[HTTP]--> localhost:3000/ (server)\n  (browser) qa.sabatech.dev:/ <--[WebSocket (failing)]--> localhost:3000/ (server)\nCheck out your Vite / network configuration and https://vite.dev/config/server-options.html"
+    },
+    {
+      "type": "error",
+      "text": "[vite] failed to connect to websocket.\nyour current setup:\n  (browser) qa.sabatech.dev/ <--[HTTP]--> localhost:3000/ (server)\n  (browser) qa.sabatech.dev:/ <--[WebSocket (failing)]--> localhost:3000/ (server)\nCheck out your Vite / network configuration and https://vite.dev/config/server-options.html"
+    },
+    {
+      "type": "error",
+      "text": "[vite] failed to connect to websocket.\nyour current setup:\n  (browser) qa.sabatech.dev/ <--[HTTP]--> localhost:3000/ (server)\n  (browser) qa.sabatech.dev:/ <--[WebSocket (failing)]--> localhost:3000/ (server)\nCheck out your Vite / network configuration and https://vite.dev/config/server-options.html"
+    },
+    {
+      "type": "error",
+      "text": "[vite] failed to connect to websocket.\nyour current setup:\n  (browser) qa.sabatech.dev/ <--[HTTP]--> localhost:3000/ (server)\n  (browser) qa.sabatech.dev:/ <--[WebSocket (failing)]--> localhost:3000/ (server)\nCheck out your Vite / network configuration and https://vite.dev/config/server-options.html"
+    },
+    {
+      "type": "error",
+      "text": "[vite] failed to connect to websocket.\nyour current setup:\n  (browser) qa.sabatech.dev/ <--[HTTP]--> localhost:3000/ (server)\n  (browser) qa.sabatech.dev:/ <--[WebSocket (failing)]--> localhost:3000/ (server)\nCheck out your Vite / network configuration and https://vite.dev/config/server-options.html"
+    }
+  ],
+  "console_warnings": [
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    }
+  ],
+  "network_errors": [],
+  "total_pass": 4,
+  "total_fail": 0,
+  "total_warn": 6
+}

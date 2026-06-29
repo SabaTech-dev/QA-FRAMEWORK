@@ -3,6 +3,10 @@ import warnings
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 from functools import lru_cache
+from dotenv import load_dotenv
+
+# Load .env from project root BEFORE class definition (os.getenv runs at class-def time)
+load_dotenv(os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".env")))
 
 
 class Settings(BaseSettings):
@@ -60,7 +64,7 @@ class Settings(BaseSettings):
     GROQ_API_KEY: Optional[str] = os.getenv("GROQ_API_KEY")
     BROWSER_USE_MODEL: str = os.getenv("BROWSER_USE_MODEL", "llama-3.3-70b-versatile")
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file="../.env", extra="ignore")
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

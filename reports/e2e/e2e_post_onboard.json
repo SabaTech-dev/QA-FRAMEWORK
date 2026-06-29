@@ -1,0 +1,274 @@
+{
+  "timestamp": "2026-06-29T09:08:00.428227",
+  "checks": [
+    {
+      "check": "1a. Login Page",
+      "status": "pass",
+      "detail": "Login form visible",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/v2_01_login.png"
+    },
+    {
+      "check": "1b. Login \u2192 Dashboard",
+      "status": "fail",
+      "detail": "Unexpected URL: https://qa.sabatech.dev/login",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/v2_01_after.png"
+    },
+    {
+      "check": "2. Dashboard",
+      "status": "pass",
+      "detail": "Dashboard loaded: 94 words, 16 cards",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/v2_02_dashboard.png"
+    },
+    {
+      "check": "3. Create Suite",
+      "status": "pass",
+      "detail": "Suite 'E2E Suite 090822' created & visible",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/v2_03_created.png"
+    },
+    {
+      "check": "4. CRUD",
+      "status": "pass",
+      "detail": "10 rows, 18 edit/delete actions",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/v2_04_crud.png"
+    },
+    {
+      "check": "5. Execute",
+      "status": "warn",
+      "detail": "No run button found",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/v2_05_execute.png"
+    },
+    {
+      "check": "6. Reports",
+      "status": "pass",
+      "detail": "Reports loaded: 49 words",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/v2_06_reports.png"
+    },
+    {
+      "check": "7. Navigation",
+      "status": "pass",
+      "detail": "All 6 routes accessible",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/v2_07_nav.png"
+    },
+    {
+      "check": "8. Console",
+      "status": "fail",
+      "detail": "211 real errors, 32 Vite HMR",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/v2_08_console.png"
+    }
+  ],
+  "console_errors": [],
+  "console_warnings": [],
+  "network_errors": [
+    {
+      "url": "https://qa.sabatech.dev/api/v1/notifications?unread_only=false",
+      "status": 404
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/notifications?unread_only=false",
+      "status": 404
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/notifications?unread_only=false",
+      "status": 404
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/notifications?unread_only=false",
+      "status": 404
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/notifications?unread_only=false",
+      "status": 404
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/notifications?unread_only=false",
+      "status": 404
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/notifications?unread_only=false",
+      "status": 404
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/notifications?unread_only=false",
+      "status": 404
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/notifications?unread_only=false",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/suites?skip=0&limit=100",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/notifications?unread_only=false",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/executions?skip=0&limit=100",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/suites?skip=0&limit=100",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/executions?skip=0&limit=100",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/notifications?unread_only=false",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/dashboard/stats",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/suites?skip=0&limit=100",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/notifications?unread_only=false",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/dashboard/trends?days=30",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/executions?skip=0&limit=10",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/dashboard/stats",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/dashboard/trends?days=30",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/executions?skip=0&limit=10",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/suites?skip=0&limit=100",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/suites?skip=0&limit=100",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/notifications?unread_only=false",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/notifications?unread_only=false",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/cases?skip=0&limit=100",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/suites?skip=0&limit=100",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/cases?skip=0&limit=100",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/notifications?unread_only=false",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/notifications?unread_only=false",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/suites?skip=0&limit=100",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/executions?skip=0&limit=100",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/suites?skip=0&limit=100",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/executions?skip=0&limit=100",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/notifications?unread_only=false",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/notifications?unread_only=false",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/notifications?unread_only=false",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/notifications?unread_only=false",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/integrations/providers",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/integrations/providers",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/notifications?unread_only=false",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/billing/plans",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/billing/subscription",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/billing/invoices",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/billing/payment-methods",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/notifications?unread_only=false",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/billing/plans",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/billing/subscription",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/billing/invoices",
+      "status": 429
+    },
+    {
+      "url": "https://qa.sabatech.dev/api/v1/billing/payment-methods",
+      "status": 429
+    }
+  ],
+  "total_pass": 6,
+  "total_fail": 2,
+  "total_warn": 1
+}

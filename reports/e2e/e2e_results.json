@@ -1,0 +1,195 @@
+{
+  "timestamp": "2026-06-29T08:53:10.522273",
+  "url": "https://qa.sabatech.dev",
+  "checks": [
+    {
+      "check": "1. Page Load",
+      "status": "pass",
+      "detail": "HTTP 200, title='QA Framework Dashboard'",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/01_initial_load.png"
+    },
+    {
+      "check": "1. Login Form",
+      "status": "warn",
+      "detail": "No login form, no nav. Body: AI-Powered Testing That Heals Itself\nReduce test maintenance by 70% with intelligent self-healing tests, AI-generated test cases, and automatic flaky ",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/01_no_login.png"
+    },
+    {
+      "check": "2. Dashboard",
+      "status": "pass",
+      "detail": "Loaded: h1(1)",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/02_dashboard.png"
+    },
+    {
+      "check": "3. Create Test Suite",
+      "status": "warn",
+      "detail": "Submitted but success unconfirmed",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/03_after_submit.png"
+    },
+    {
+      "check": "4. CRUD Actions",
+      "status": "warn",
+      "detail": "No edit/delete UI visible",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/04_crud.png"
+    },
+    {
+      "check": "5. Execute Test Suite",
+      "status": "warn",
+      "detail": "No run/execute button found",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/05_no_run.png"
+    },
+    {
+      "check": "6. View Reports",
+      "status": "warn",
+      "detail": "Reports may be empty. Words: 18",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/06_reports.png"
+    },
+    {
+      "check": "7. Navigation",
+      "status": "fail",
+      "detail": "No navigation links found",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/07_navigation.png"
+    },
+    {
+      "check": "8. Console",
+      "status": "fail",
+      "detail": "6 errors, 12 warnings",
+      "screenshot": "/home/joker/repos/QA-FRAMEWORK/reports/e2e/08_final_state.png"
+    }
+  ],
+  "console_errors": [
+    {
+      "type": "error",
+      "text": "[vite] failed to connect to websocket.\nyour current setup:\n  (browser) qa.sabatech.dev/ <--[HTTP]--> localhost:3000/ (server)\n  (browser) qa.sabatech.dev:/ <--[WebSocket (failing)]--> localhost:3000/ (server)\nCheck out your Vite / network configuration and https://vite.dev/config/server-options.html#server-hmr ."
+    },
+    {
+      "type": "error",
+      "text": "[vite] failed to connect to websocket.\nyour current setup:\n  (browser) qa.sabatech.dev/ <--[HTTP]--> localhost:3000/ (server)\n  (browser) qa.sabatech.dev:/ <--[WebSocket (failing)]--> localhost:3000/ (server)\nCheck out your Vite / network configuration and https://vite.dev/config/server-options.html#server-hmr ."
+    },
+    {
+      "type": "error",
+      "text": "[vite] failed to connect to websocket.\nyour current setup:\n  (browser) qa.sabatech.dev/ <--[HTTP]--> localhost:3000/ (server)\n  (browser) qa.sabatech.dev:/ <--[WebSocket (failing)]--> localhost:3000/ (server)\nCheck out your Vite / network configuration and https://vite.dev/config/server-options.html#server-hmr ."
+    },
+    {
+      "type": "error",
+      "text": "[vite] failed to connect to websocket.\nyour current setup:\n  (browser) qa.sabatech.dev/ <--[HTTP]--> localhost:3000/ (server)\n  (browser) qa.sabatech.dev:/ <--[WebSocket (failing)]--> localhost:3000/ (server)\nCheck out your Vite / network configuration and https://vite.dev/config/server-options.html#server-hmr ."
+    },
+    {
+      "type": "error",
+      "text": "[vite] failed to connect to websocket.\nyour current setup:\n  (browser) qa.sabatech.dev/ <--[HTTP]--> localhost:3000/ (server)\n  (browser) qa.sabatech.dev:/ <--[WebSocket (failing)]--> localhost:3000/ (server)\nCheck out your Vite / network configuration and https://vite.dev/config/server-options.html#server-hmr ."
+    },
+    {
+      "type": "error",
+      "text": "[vite] failed to connect to websocket.\nyour current setup:\n  (browser) qa.sabatech.dev/ <--[HTTP]--> localhost:3000/ (server)\n  (browser) qa.sabatech.dev:/ <--[WebSocket (failing)]--> localhost:3000/ (server)\nCheck out your Vite / network configuration and https://vite.dev/config/server-options.html#server-hmr ."
+    }
+  ],
+  "console_warnings": [
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition."
+    },
+    {
+      "type": "warning",
+      "text": "⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath."
+    }
+  ],
+  "network_errors": [
+    {
+      "url": "https://qa.sabatech.dev/?token=s9fmqEjEmHjM",
+      "status": 502
+    },
+    {
+      "url": "https://localhost:3000/?token=s9fmqEjEmHjM",
+      "status": "failed",
+      "failure": "NS_ERROR_NET_RESET"
+    },
+    {
+      "url": "https://qa.sabatech.dev/?token=s9fmqEjEmHjM",
+      "status": 502
+    },
+    {
+      "url": "https://localhost:3000/?token=s9fmqEjEmHjM",
+      "status": "failed",
+      "failure": "NS_ERROR_NET_RESET"
+    },
+    {
+      "url": "https://qa.sabatech.dev/?token=s9fmqEjEmHjM",
+      "status": 502
+    },
+    {
+      "url": "https://localhost:3000/?token=s9fmqEjEmHjM",
+      "status": "failed",
+      "failure": "NS_ERROR_NET_RESET"
+    },
+    {
+      "url": "https://qa.sabatech.dev/?token=s9fmqEjEmHjM",
+      "status": 502
+    },
+    {
+      "url": "https://localhost:3000/?token=s9fmqEjEmHjM",
+      "status": "failed",
+      "failure": "NS_ERROR_NET_RESET"
+    },
+    {
+      "url": "https://qa.sabatech.dev/?token=s9fmqEjEmHjM",
+      "status": 502
+    },
+    {
+      "url": "https://localhost:3000/?token=s9fmqEjEmHjM",
+      "status": "failed",
+      "failure": "NS_ERROR_NET_RESET"
+    },
+    {
+      "url": "https://qa.sabatech.dev/?token=s9fmqEjEmHjM",
+      "status": 502
+    },
+    {
+      "url": "https://localhost:3000/?token=s9fmqEjEmHjM",
+      "status": "failed",
+      "failure": "NS_ERROR_NET_RESET"
+    }
+  ],
+  "total_pass": 2,
+  "total_fail": 2,
+  "total_warn": 5
+}
