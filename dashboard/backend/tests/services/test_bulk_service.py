@@ -43,14 +43,12 @@ class TestBulkDeleteSuites:
         mock_suite2.name = "Test Suite 2"
         mock_suite2.is_active = True
 
-        # Setup execute to return suites based on actual query params
+        # Setup execute to return suites
         async def mock_execute_side_effect(query):
-            result = MagicMock()
-            compiled = query.compile()
-            suite_id = compiled.params.get("id_1")
-            if suite_id == 1:
+            result = AsyncMock()
+            if "1" in str(query):
                 result.scalar_one_or_none.return_value = mock_suite1
-            elif suite_id == 2:
+            elif "2" in str(query):
                 result.scalar_one_or_none.return_value = mock_suite2
             return result
 
@@ -129,15 +127,13 @@ class TestBulkDeleteSuites:
         mock_suite3.is_active = False
 
         async def mock_execute_side_effect(query):
-            result = MagicMock()
-            # Get actual parameter values from the compiled query
-            compiled = query.compile()
-            suite_id = compiled.params.get("id_1")
-            if suite_id == 1:
+            result = AsyncMock()
+            suite_id_str = str(query)
+            if "1" in suite_id_str:
                 result.scalar_one_or_none.return_value = mock_suite1
-            elif suite_id == 2:
+            elif "2" in suite_id_str:
                 result.scalar_one_or_none.return_value = None
-            elif suite_id == 3:
+            elif "3" in suite_id_str:
                 result.scalar_one_or_none.return_value = mock_suite3
             return result
 
@@ -170,7 +166,7 @@ class TestBulkExecuteSuites:
         mock_suite.is_active = True
 
         async def mock_execute_side_effect(query):
-            result = MagicMock()
+            result = AsyncMock()
             result.scalar_one_or_none.return_value = mock_suite
             return result
 
@@ -252,9 +248,7 @@ class TestBulkExecuteSuites:
         from services.bulk_service import bulk_execute_suites
 
         mock_db = AsyncMock()
-        _mock_result = MagicMock()
-        _mock_result.scalar_one_or_none.return_value = None
-        mock_db.execute = AsyncMock(return_value=_mock_result)
+        mock_db.execute.return_value.scalar_one_or_none.return_value = None
 
         result = await bulk_execute_suites([999], mock_db, user_id=1)
 
@@ -281,10 +275,8 @@ class TestBulkArchiveSuites:
         mock_suite.is_active = True
         mock_suite.config = {}
 
-        _mock_result = MagicMock()
-        _mock_result.scalar_one_or_none.return_value = mock_suite
-        _mock_result.scalars.return_value.all.return_value = []
-        mock_db.execute = AsyncMock(return_value=_mock_result)
+        mock_db.execute.return_value.scalar_one_or_none.return_value = mock_suite
+        mock_db.execute.return_value.scalars.return_value.all.return_value = []  # No active executions
 
         result = await bulk_archive_suites([1], mock_db, user_id=1)
 
@@ -352,7 +344,7 @@ class TestBulkArchiveSuites:
         mock_execution = MagicMock()
 
         async def mock_execute_side_effect(query):
-            result = MagicMock()
+            result = AsyncMock()
             if "executions" in str(query):  # Active executions query
                 result.scalars.return_value.all.return_value = [mock_execution]
             else:  # Suite query
@@ -381,9 +373,7 @@ class TestBulkArchiveSuites:
         mock_suite.name = "Old Suite"
         mock_suite.is_active = False
 
-        _mock_result = MagicMock()
-        _mock_result.scalar_one_or_none.return_value = mock_suite
-        mock_db.execute = AsyncMock(return_value=_mock_result)
+        mock_db.execute.return_value.scalar_one_or_none.return_value = mock_suite
 
         result = await bulk_archive_suites([1], mock_db, user_id=1)
 
