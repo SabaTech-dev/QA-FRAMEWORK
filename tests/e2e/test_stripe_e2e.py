@@ -21,6 +21,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
+
+# Skip all tests in this file if stripe is not installed
+pytest.importorskip("stripe", reason="stripe not installed. Install with: pip install stripe")
+
 import stripe
 
 # Stripe test cards

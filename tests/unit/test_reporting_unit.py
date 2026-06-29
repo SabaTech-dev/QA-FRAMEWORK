@@ -6,6 +6,10 @@ import pytest
 import tempfile
 import os
 from pathlib import Path
+
+# Skip all tests in this file if allure module is not available
+pytest.importorskip("allure", reason="allure not installed. Install with: pip install allure-pytest")
+
 from src.core.entities.test_result import TestResult, TestStatus
 from src.adapters.reporting.allure_reporter import AllureReporter
 from src.adapters.reporting.html_reporter import HTMLReporter

@@ -7,6 +7,10 @@ import pytest
 import asyncio
 import tempfile
 from pathlib import Path
+
+# Skip all tests in this file if allure is not installed
+pytest.importorskip("allure", reason="allure-pytest not installed. Install with: pip install allure-pytest")
+
 from src.adapters.http.httpx_client import HTTPXClient
 from src.core.entities.test_result import TestResult, TestStatus
 from src.adapters.reporting.allure_reporter import AllureReporter
