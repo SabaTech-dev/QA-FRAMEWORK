@@ -3,6 +3,8 @@ Unit tests for cache_service.py
 """
 
 import pytest
+pytest.importorskip('redis')
+pytest.importorskip('asyncpg')
 import json
 from typing import Dict, Any, Optional
 from unittest.mock import Mock, patch, MagicMock

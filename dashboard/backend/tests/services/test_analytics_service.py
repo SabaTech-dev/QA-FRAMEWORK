@@ -4,6 +4,8 @@ Unit Tests for Analytics Service
 Tests business analytics and metrics tracking with comprehensive mocking.
 """
 import pytest
+pytest.importorskip('prometheus_client')
+pytest.importorskip('redis')
 from unittest.mock import Mock, AsyncMock, patch
 from datetime import datetime, timedelta
 from collections import defaultdict

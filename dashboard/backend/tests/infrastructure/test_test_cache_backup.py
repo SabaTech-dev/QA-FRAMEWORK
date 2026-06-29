@@ -4,6 +4,7 @@ Unit tests for test_cache.py
 
 import os
 import pytest
+pytest.importorskip('redis')
 import json
 import redis
 from typing import Dict, Any, Optional

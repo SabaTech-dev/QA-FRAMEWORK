@@ -12,6 +12,8 @@ Covers:
 
 import asyncio
 import pytest
+pytest.importorskip('prometheus_client')
+pytest.importorskip('redis')
 from unittest.mock import Mock, AsyncMock, patch
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient

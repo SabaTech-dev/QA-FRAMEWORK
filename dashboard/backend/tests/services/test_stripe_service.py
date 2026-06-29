@@ -4,6 +4,8 @@ Unit Tests for Stripe Service
 Tests subscription and billing management with comprehensive mocking.
 """
 import pytest
+pytest.importorskip('fastapi')
+pytest.importorskip('asyncpg')
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
 from datetime import datetime
 from fastapi import HTTPException

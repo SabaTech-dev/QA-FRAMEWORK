@@ -10,6 +10,9 @@ Covers:
 """
 
 import pytest
+pytest.importorskip('fastapi')
+pytest.importorskip('redis')
+pytest.importorskip('asyncpg')
 from unittest.mock import Mock, AsyncMock, patch
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient

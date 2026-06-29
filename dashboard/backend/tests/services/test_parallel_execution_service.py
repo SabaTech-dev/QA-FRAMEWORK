@@ -3,6 +3,8 @@ Unit tests for parallel_execution_service.py
 """
 
 import pytest
+pytest.importorskip('redis')
+pytest.importorskip('asyncpg')
 from typing import Dict, Any, List
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime

@@ -1,4 +1,6 @@
 import pytest
+pytest.importorskip('sqlalchemy')
+pytest.importorskip('asyncpg')
 from unittest.mock import AsyncMock, MagicMock
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta

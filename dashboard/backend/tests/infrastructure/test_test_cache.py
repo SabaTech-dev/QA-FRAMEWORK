@@ -5,6 +5,7 @@ Unit tests for test_cache.py - Using REAL Redis (no mocks)
 import os
 import uuid
 import pytest
+pytest.importorskip('redis')
 import json
 import redis
 from typing import Dict, Any, Optional

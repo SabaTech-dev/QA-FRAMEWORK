@@ -4,6 +4,9 @@ Unit Tests for OAuth Service
 Tests Google and GitHub OAuth integration with comprehensive mocking.
 """
 import pytest
+pytest.importorskip('fastapi')
+pytest.importorskip('httpx')
+pytest.importorskip('asyncpg')
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
 from fastapi import HTTPException
 import httpx

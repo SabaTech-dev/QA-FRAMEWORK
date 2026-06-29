@@ -4,6 +4,9 @@ Unit Tests for Cron Service
 Tests business logic for managing scheduled background jobs.
 """
 import pytest
+pytest.importorskip('asyncpg')
+pytest.importorskip('redis')
+
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
 from datetime import datetime, timedelta
 

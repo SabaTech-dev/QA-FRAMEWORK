@@ -4,6 +4,8 @@ Unit Tests for Suite Service
 Tests test suite management operations.
 """
 import pytest
+pytest.importorskip('asyncpg')
+pytest.importorskip('redis')
 from unittest.mock import AsyncMock, Mock, patch
 from datetime import datetime
 

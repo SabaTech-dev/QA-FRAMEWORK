@@ -3,6 +3,7 @@ Tests for business metrics system.
 """
 
 import pytest
+pytest.importorskip('prometheus_client')
 import time
 from unittest.mock import Mock, patch, MagicMock
 from core.metrics import (

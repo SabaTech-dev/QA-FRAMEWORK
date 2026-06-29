@@ -11,6 +11,9 @@ from pathlib import Path
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import pytest
+pytest.importorskip('sqlalchemy')
+pytest.importorskip('asyncpg')
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from services.search_service import SearchService

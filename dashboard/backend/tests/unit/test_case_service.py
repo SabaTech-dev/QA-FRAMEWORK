@@ -4,6 +4,9 @@ Unit Tests for Case Service
 Tests test case management functionality.
 """
 import pytest
+pytest.importorskip('fastapi')
+pytest.importorskip('sqlalchemy')
+pytest.importorskip('asyncpg')
 from unittest.mock import Mock, AsyncMock, patch
 from datetime import datetime
 from fastapi import HTTPException

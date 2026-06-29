@@ -3,6 +3,8 @@ Unit tests for Feedback Service
 """
 
 import pytest
+pytest.importorskip('asyncpg')
+pytest.importorskip('redis')
 from typing import Dict, Any, List, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime

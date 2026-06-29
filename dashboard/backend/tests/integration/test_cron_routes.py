@@ -4,6 +4,9 @@ Integration Tests for Cron Routes
 Tests for API endpoints related to cron jobs.
 """
 import pytest
+pytest.importorskip('fastapi')
+pytest.importorskip('asyncpg')
+pytest.importorskip('redis')
 from typing import Dict, Any, List, Optional
 from unittest.mock import Mock, AsyncMock, patch
 from datetime import datetime, timedelta

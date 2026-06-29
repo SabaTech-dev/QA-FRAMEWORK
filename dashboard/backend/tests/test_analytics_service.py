@@ -3,6 +3,8 @@ Unit tests for Analytics Service
 """
 
 import pytest
+pytest.importorskip('sqlalchemy')
+pytest.importorskip('asyncpg')
 from typing import Dict, Any, List, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime, timedelta

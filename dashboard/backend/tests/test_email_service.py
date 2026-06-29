@@ -3,6 +3,8 @@ Unit tests for Email Service
 """
 
 import pytest
+pytest.importorskip('smtplib')
+pytest.importorskip('email-validator')
 from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime
 

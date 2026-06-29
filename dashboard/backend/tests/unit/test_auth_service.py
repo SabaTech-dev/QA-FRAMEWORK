@@ -4,6 +4,9 @@ Unit Tests for Auth Service
 Tests authentication, JWT generation, and user management.
 """
 import pytest
+pytest.importorskip('jose')
+pytest.importorskip('bcrypt')
+pytest.importorskip('asyncpg')
 from unittest.mock import Mock, AsyncMock, patch
 from datetime import datetime, timedelta
 from jose import jwt

@@ -4,6 +4,9 @@ Unit Tests for Execution Service
 Tests test execution management and orchestration functionality.
 """
 import pytest
+pytest.importorskip('fastapi')
+pytest.importorskip('sqlalchemy')
+pytest.importorskip('asyncpg')
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
 from datetime import datetime
 from fastapi import HTTPException

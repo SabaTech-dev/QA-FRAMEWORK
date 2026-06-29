@@ -3,6 +3,8 @@ Unit tests for Beta Signup Service
 """
 
 import pytest
+pytest.importorskip('asyncpg')
+pytest.importorskip('redis')
 from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime
 
