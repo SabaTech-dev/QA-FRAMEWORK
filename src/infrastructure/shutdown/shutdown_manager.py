@@ -430,17 +430,63 @@ class ShutdownManager:
             logger.error(f"Error closing resource: name={resource_info.name}, error={str(e)}")
             raise
     
+    async def flush_buffers(self) -> int:
+        """
+        Flush buffers/queues on registered resources exposing a flush() method.
+
+        Iterates registered resources in priority order and invokes flush() when
+        the resource exposes a callable flush method. Resources without flush()
+        are skipped. Both sync and async flush() methods are supported.
+
+        Errors during flush are caught, logged and recorded as warnings on the
+        shutdown progress; they never stop the flush process or the shutdown.
+
+        Returns:
+            Number of resources whose flush() was invoked successfully.
+        """
+        flushed_count = 0
+
+        for resource_name in self._resources_by_priority:
+            resource_info = self._resources[resource_name]
+            instance = resource_info.instance
+
+            flush_method = getattr(instance, "flush", None)
+            if not callable(flush_method):
+                continue
+
+            try:
+                result = flush_method()
+                if asyncio.iscoroutine(result):
+                    await asyncio.wait_for(
+                        result,
+                        timeout=self.config.resource_close_timeout
+                    )
+                flushed_count += 1
+                logger.info(
+                    f"Buffer flushed: name={resource_name}, "
+                    f"type={resource_info.resource_type.value}"
+                )
+            except asyncio.TimeoutError:
+                error_msg = (
+                    f"Buffer flush timeout: name={resource_name}, "
+                    f"timeout={self.config.resource_close_timeout}"
+                )
+                self._progress.warnings.append(error_msg)
+                logger.error(error_msg)
+            except Exception as e:
+                warning_msg = f"Failed to flush {resource_name}: {str(e)}"
+                self._progress.warnings.append(warning_msg)
+                logger.error(f"Error flushing buffer: name={resource_name}, error={str(e)}")
+
+        return flushed_count
+
     async def _phase_flush_buffers(self) -> None:
         """Phase 4: Flush any pending buffers/queues"""
         self._progress.phase = ShutdownPhase.FLUSHING_BUFFERS
         logger.info("Phase: Flushing buffers")
-        
-        # TODO: Implement buffer flushing if needed
-        # This could include:
-        # - Flushing log buffers
-        # - Flushing metric buffers
-        # - Flushing any queued messages
-        pass
+
+        flushed = await self.flush_buffers()
+        logger.info(f"Phase complete: Flushed buffers, count={flushed}")
     
     async def _force_close_all(self) -> None:
         """Force close all connections and resources"""
