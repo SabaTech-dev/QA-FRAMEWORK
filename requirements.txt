@@ -67,3 +67,9 @@ python-multipart>=0.0.27
 
 # Payment Processing
 stripe==8.4.0  # Stripe Python SDK
+
+# Authentication & Security (runtime deps used by src/infrastructure/auth and src/api)
+bcrypt==4.3.0  # Password hashing (src/infrastructure/auth/password_hasher.py)
+python-jose[cryptography]==3.5.0  # JWT encode/decode (src/infrastructure/auth/token_generator.py)
+PyJWT==2.8.0  # JWT exception types referenced by auth security tests
+fastapi==0.110.3  # API framework (src/api/middleware, src/infrastructure/health, shutdown)

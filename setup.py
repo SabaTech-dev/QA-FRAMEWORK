@@ -40,6 +40,9 @@ setup(
         "pyyaml>=6.0.0",
         "allure-pytest>=2.13.0",
         "faker>=23.0.0",
+        "bcrypt>=4.1.0",
+        "python-jose[cryptography]>=3.3.0",
+        "fastapi>=0.109.0",
     ],
     extras_require={
         "dev": [
@@ -47,6 +50,7 @@ setup(
             "ruff>=0.2.0",
             "mypy>=1.8.0",
             "pre-commit>=3.6.0",
+            "PyJWT>=2.8.0",
         ],
         "ui": [
             "selenium>=4.16.0",
