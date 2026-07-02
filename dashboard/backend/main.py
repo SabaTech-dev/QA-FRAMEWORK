@@ -34,19 +34,13 @@ app = FastAPI(
     redoc_url="/api/v1/redoc",
 )
 
-# CORS middleware
+# CORS middleware — explicit allowlist only. No wildcards when credentials are enabled.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        settings.frontend_url,
-        "http://localhost:3000",
-        "http://localhost:8080",
-        "https://frontend-phi-three-52.vercel.app",  # Production frontend
-    ],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    # expose_headers=["Access-Control-Allow-Origin"]
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
 )
 
 # Add Security Headers middleware (before other middleware)
@@ -76,13 +70,10 @@ async def startup_event():
     logger.info("Initializing QA-Framework Dashboard...")
     await init_db()
     set_startup_complete()
-    
+
     # Initialize APM
-    init_app_info(
-        version="0.1.0",
-        environment=settings.ENVIRONMENT
-    )
-    
+    init_app_info(version="0.1.0", environment=settings.ENVIRONMENT)
+
     logger.info("QA-Framework Dashboard initialized successfully")
 
 
@@ -109,13 +100,12 @@ async def get_qa_framework_suites(current_user: User = Depends(get_current_user)
         return {"suites": suites}
     except Exception as e:
         logger.error(f"Error getting QA-FRAMEWORK suites: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Error connecting to QA-FRAMEWORK: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error connecting to QA-FRAMEWORK: {str(e)}")
 
 
 # Only run uvicorn directly when executed as script, not when imported
 if __name__ == "__main__":
     import os
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "8000")))
