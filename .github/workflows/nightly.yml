@@ -212,9 +212,9 @@ jobs:
           found_xml=false
           for file in *.xml; do
             found_xml=true
-            TESTS=$(grep -o 'tests="[0-9]*"' "$file" | head -1 | grep -o '[0-9]*')
-            FAILURES=$(grep -o 'failures="[0-9]*"' "$file" | head -1 | grep -o '[0-9]*')
-            ERRORS=$(grep -o 'errors="[0-9]*"' "$file" | head -1 | grep -o '[0-9]*')
+            TESTS=$(grep -o 'tests="[0-9]*"' "$file" | head -1 | grep -o '[0-9]*' || echo 0)
+            FAILURES=$(grep -o 'failures="[0-9]*"' "$file" | head -1 | grep -o '[0-9]*' || echo 0)
+            ERRORS=$(grep -o 'errors="[0-9]*"' "$file" | head -1 | grep -o '[0-9]*' || echo 0)
             echo "- $(basename $file .xml): $TESTS tests, $FAILURES failures, $ERRORS errors" >> nightly-report.md
           done
           shopt -u nullglob

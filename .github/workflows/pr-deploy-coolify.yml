@@ -375,7 +375,7 @@ jobs:
           script: |
             const message = `## 🧹 Preview Cleanup
             
-            **PR #${{ github.event.pull_request.number }}** - **${{ github.event.pull_request.merged ? 'Merged' : 'Closed' }}**
+            **PR #${{ github.event.pull_request.number }}** - **${{ github.event.pull_request.merged && 'Merged' || 'Closed' }}**
             
             ✅ Preview deployments have been cleaned up
             
