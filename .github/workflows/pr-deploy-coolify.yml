@@ -35,7 +35,7 @@ jobs:
           password: ${{ secrets.COOLIFY_REGISTRY_PASSWORD }}
 
       - name: Build and push Backend Docker image
-        uses: docker/build-push-action@v6 # v6.18.0
+        uses: docker/build-push-action@v7 # v6.18.0
         with:
           context: .
           file: ./dashboard/backend/Dockerfile
@@ -164,7 +164,7 @@ jobs:
           password: ${{ secrets.COOLIFY_REGISTRY_PASSWORD }}
 
       - name: Build and push Frontend Docker image
-        uses: docker/build-push-action@v6 # v6.18.0
+        uses: docker/build-push-action@v7 # v6.18.0
         with:
           context: ./dashboard/frontend
           file: ./dashboard/frontend/Dockerfile
