@@ -81,7 +81,7 @@ class TestingMethodology:
     environment: str = ""
 
     def __post_init__(self):
-        if not 0.0 <= self.passing_threshold <= 1.0:
+        if self.passing_threshold is not None and not 0.0 <= self.passing_threshold <= 1.0:
             raise ValueError(
                 f"passing_threshold must be in [0.0, 1.0], got {self.passing_threshold}"
             )
@@ -326,6 +326,46 @@ class SARIFReport:
             },
         }
 
-    def to_json(self, indent: int = 2) -> str:
-        """Serialize to SARIF JSON string."""
+    def validate(self) -> tuple[bool, Optional[str]]:
+        """
+        Validate this SARIF report against the SARIF 2.1.0 schema.
+
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        try:
+            from src.infrastructure.compliance.sarif_schema_validator import validate_sarif_report
+            return validate_sarif_report(self.to_dict())
+        except ImportError:
+            # jsonschema not available - do basic validation
+            from src.infrastructure.compliance.sarif_schema_validator import _basic_sarif_validation
+            return _basic_sarif_validation(self.to_dict())
+
+    def validate_or_raise(self) -> None:
+        """
+        Validate this SARIF report and raise exception if invalid.
+
+        Raises:
+            SARIFValidationError: If report is invalid
+        """
+        is_valid, error_message = self.validate()
+        if not is_valid:
+            from src.infrastructure.compliance.sarif_schema_validator import SARIFValidationError
+            raise SARIFValidationError(error_message, self.to_dict())
+
+    def to_json(self, indent: int = 2, validate: bool = True) -> str:
+        """Serialize to SARIF JSON string.
+
+        Args:
+            indent: JSON indentation level
+            validate: If True, validate against SARIF 2.1.0 schema before returning
+
+        Returns:
+            JSON string of the SARIF report
+
+        Raises:
+            SARIFValidationError: If validate=True and report is invalid
+        """
+        if validate:
+            self.validate_or_raise()
         return json.dumps(self.to_dict(), indent=indent, ensure_ascii=False)

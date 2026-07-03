@@ -269,9 +269,8 @@ class TestAnnexIVExporterEdgeCases:
             name="empty",
             total_benchmarks=4,
         )
-        report = exporter.export(system_description, methodology, empty_session)
-        assert report.total_evaluations == 0
-        assert len(report.evidence) == 0
+        with pytest.raises(ValueError, match="at least one evaluation"):
+            exporter.export(system_description, methodology, empty_session)
 
     def test_partial_session(self, system_description, methodology, evaluator, benchmarks):
         """Session with only 1 of 4 benchmarks evaluated."""
@@ -294,13 +293,20 @@ class TestAnnexIVExporterEdgeCases:
             description="Sistema de IA para asesoría legal",
         )
         exporter = AnnexIVExporter()
-        empty_session = AccuracyTestSession()
+        empty_session = AccuracyTestSession(
+            evaluations=[AccuracyEvaluation(
+                benchmark_id="bench-1",
+                overall_score=0.8,
+                verdict=ResponseVerdict.ACCURATE,
+                passed=True,
+            )],
+        )
         report = exporter.export(
             system,
             TestingMethodology(methodology_name="T", description="T"),
             empty_session,
         )
-        assert "España" in report.system.provider_name
+        assert report.system.provider_name == "SabaTech España"
 
 
 # ========================================================================
@@ -488,9 +494,8 @@ class TestSARIFExporterEdgeCases:
     def test_empty_session(self):
         exporter = SARIFExporter()
         empty = AccuracyTestSession()
-        report = exporter.export(empty)
-        assert len(report.runs) == 1
-        assert len(report.runs[0].results) == 0
+        with pytest.raises(ValueError, match="at least one evaluation"):
+            exporter.export(empty)
 
     def test_session_with_no_completions(self):
         """Session that started but has 0 completed evaluations."""
@@ -499,9 +504,8 @@ class TestSARIFExporterEdgeCases:
             status=EvaluationStatus.RUNNING,
             total_benchmarks=4,
         )
-        report = exporter.export(session)
-        inv = report.runs[0].invocations[0]
-        assert inv["executionSuccessful"] is False
+        with pytest.raises(ValueError, match="at least one evaluation"):
+            exporter.export(session)
 
     def test_no_tenant_id_in_json(self, completed_session):
         exporter = SARIFExporter()

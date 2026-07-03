@@ -254,14 +254,14 @@ class AccuracyTestSession:
 
     @property
     def average_score(self) -> float:
-        completed = [e for e in self.evaluations if e.overall_score > 0]
+        completed = [e for e in self.evaluations if e is not None and e.overall_score > 0]
         if not completed:
             return 0.0
         return sum(e.overall_score for e in completed) / len(completed)
 
     @property
     def hallucination_count(self) -> int:
-        return sum(1 for e in self.evaluations if e.has_hallucinations)
+        return sum(1 for e in self.evaluations if e is not None and e.has_hallucinations)
 
     @property
     def overall_level(self) -> AccuracyLevel:
@@ -347,7 +347,7 @@ class AccuracyTestSession:
             "started_at": self.started_at.isoformat(),
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
             "total_time_ms": self.total_time_ms,
-            "evaluations": [e.to_dict() for e in self.evaluations],
+            "evaluations": [e.to_dict() for e in self.evaluations if e is not None],
             # F-ACC-004: tenant_id excluded from public output
         }
 

@@ -30,6 +30,8 @@ from src.domain.compliance.entities import (
 from src.domain.compliance.value_objects import (
     AnnexIVSection,
     ComplianceStatus,
+    validate_system_id,
+    validate_provider_name,
 )
 from .annex_iv_requirements import create_default_requirements
 
@@ -64,7 +66,28 @@ class AnnexIVExporter:
 
         Returns:
             AnnexIVReport with evidence mapped to Annex IV sections
+
+        Raises:
+            ValueError: If any required input is None or test_session has no evaluations
         """
+        if system_description is None:
+            raise ValueError("system_description is required for Annex IV export")
+
+        if testing_methodology is None:
+            raise ValueError("testing_methodology is required for Annex IV export")
+
+        if test_session is None:
+            raise ValueError("test_session is required for Annex IV export")
+
+        if test_session.evaluations is None or not test_session.evaluations:
+            raise ValueError(
+                "test_session must have at least one evaluation for Annex IV export"
+            )
+
+        if system_description.system_id:
+            validate_system_id(system_description.system_id)
+        if system_description.provider_name:
+            validate_provider_name(system_description.provider_name)
         report = AnnexIVReport(
             system=system_description,
             methodology=testing_methodology,
@@ -75,10 +98,13 @@ class AnnexIVExporter:
         self._populate_aggregate_metrics(report, test_session)
 
         # Generate evidence items for each evaluation
-        for evaluation in test_session.evaluations:
-            evidence_items = self._create_evidence_from_evaluation(evaluation, test_session.id)
-            for evidence in evidence_items:
-                report.add_evidence(evidence)
+        if test_session.evaluations is not None:
+            for evaluation in test_session.evaluations:
+                if evaluation is None:
+                    continue  # Skip None evaluations
+                evidence_items = self._create_evidence_from_evaluation(evaluation, test_session.id)
+                for evidence in evidence_items:
+                    report.add_evidence(evidence)
 
         # Mark requirements as satisfied based on available evidence
         self._evaluate_requirements(report)
@@ -93,7 +119,29 @@ class AnnexIVExporter:
         report: AnnexIVReport,
         session: AccuracyTestSession,
     ) -> None:
-        """Populate report-level aggregate metrics from session."""
+        """Populate report-level aggregate metrics from session.
+        
+        Raises:
+            ValueError: If session is None or required session fields are None
+        """
+        if session is None:
+            raise ValueError("session is required for metrics population")
+            
+        if session.average_score is None:
+            raise ValueError("session.average_score is required for metrics population")
+            
+        if session.pass_rate is None:
+            raise ValueError("session.pass_rate is required for metrics population")
+            
+        if session.evaluations_completed is None:
+            raise ValueError("session.evaluations_completed is required for metrics population")
+            
+        if session.evaluations_passed is None:
+            raise ValueError("session.evaluations_passed is required for metrics population")
+            
+        if session.hallucination_count is None:
+            raise ValueError("session.hallucination_count is required for metrics population")
+            
         report.overall_accuracy_score = round(session.average_score, 4)
         report.overall_pass_rate = round(session.pass_rate, 4)
         report.total_evaluations = session.evaluations_completed
@@ -113,6 +161,8 @@ class AnnexIVExporter:
         - §6 (Metrics): per-criterion scores
         - §12 (Cybersecurity): hallucinations and safety findings
         """
+        if evaluation is None:
+            return []
         evidence_items: list[ComplianceEvidence] = []
 
         # §11 — Accuracy evidence
@@ -162,23 +212,30 @@ class AnnexIVExporter:
             evidence_items.append(criterion_evidence)
 
         # §12 — Cybersecurity / safety evidence (hallucinations)
-        if evaluation.has_hallucinations:
-            safety_evidence = ComplianceEvidence(
-                annex_section=AnnexIVSection.CYBERSECURITY,
-                evidence_type="safety_finding",
-                title=f"Safety finding: {len(evaluation.hallucinations)} hallucination(s)",
-                description=(
-                    f"Detected {len(evaluation.hallucinations)} potentially "
-                    f"harmful or hallucinated claims: "
-                    f"{'; '.join(evaluation.hallucinations[:5])}"
-                ),
+        if (
+            evaluation.has_hallucinations
+            and evaluation.hallucinations is not None
+            and len(evaluation.hallucinations) > 0
+        ):
+            # Filter out None hallucinations
+            valid_hallucinations = [h for h in evaluation.hallucinations if h]
+            if valid_hallucinations:
+                safety_evidence = ComplianceEvidence(
+                    annex_section=AnnexIVSection.CYBERSECURITY,
+                    evidence_type="safety_finding",
+                    title=f"Safety finding: {len(valid_hallucinations)} hallucination(s)",
+                    description=(
+                        f"Detected {len(valid_hallucinations)} potentially "
+                        f"harmful or hallucinated claims: "
+                        f"{'; '.join(valid_hallucinations[:5])}"
+                    ),
                 source_session_id=session_id,
                 metric_name="hallucination_count",
                 metric_value=float(len(evaluation.hallucinations)),
                 metric_target=0.0,
                 passed=False,
                 artifact_data={
-                    "hallucinations": evaluation.hallucinations,
+                    "hallucinations": valid_hallucinations,
                     "benchmark_id": evaluation.benchmark_id,
                 },
             )
@@ -195,7 +252,15 @@ class AnnexIVExporter:
         - §6 (Metrics): per-criterion evidence exists
         - §7 (Methodology): methodology description provided
         - §12 (Cybersecurity): no unaddressed safety findings (or documented)
+        
+        Raises:
+            ValueError: If report or report.methodology is None
         """
+        if report is None:
+            raise ValueError("report cannot be None")
+            
+        if report.methodology is None:
+            raise ValueError("report.methodology cannot be None")
         # Gather evidence by section
         evidence_by_section: dict[str, list[ComplianceEvidence]] = {}
         for e in report.evidence:

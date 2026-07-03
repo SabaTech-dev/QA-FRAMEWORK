@@ -35,7 +35,10 @@ from src.domain.compliance.entities import (
 from src.domain.compliance.value_objects import (
     SARIFLevel,
     SARIFResultKind,
+    validate_system_id,
+    validate_provider_name,
 )
+from .sarif_sanitizer import sanitize_message_text, sanitize_dict_strings
 
 
 # SARIF taxonomy rules for evaluation criteria
@@ -103,7 +106,23 @@ class SARIFExporter:
 
         Returns:
             SARIFReport with one run containing all evaluation results
+
+        Raises:
+            ValueError: If test_session is None or evaluations are None/empty
         """
+        if test_session is None:
+            raise ValueError("test_session is required for SARIF export")
+
+        if test_session.evaluations is None or not test_session.evaluations:
+            raise ValueError(
+                "test_session must have at least one evaluation for SARIF export"
+            )
+
+        if system_description is not None:
+            if system_description.system_id:
+                validate_system_id(system_description.system_id)
+            if system_description.provider_name:
+                validate_provider_name(system_description.provider_name)
         # Build tool driver info
         tool_name = "qa-framework"
         tool_version = "1.0.0"
@@ -136,6 +155,8 @@ class SARIFExporter:
 
         # Add results for each evaluation
         for evaluation in test_session.evaluations:
+            if evaluation is None:
+                continue  # Skip None evaluations
             self._add_evaluation_results(run, evaluation, system_description)
 
         # Build the report
@@ -202,6 +223,8 @@ class SARIFExporter:
         system: Optional[SystemDescription],
     ) -> None:
         """Add SARIF result entries for a single evaluation."""
+        if evaluation is None:
+            return
 
         # Build location reference
         locations = self._build_locations(evaluation, system)
@@ -210,25 +233,29 @@ class SARIFExporter:
         overall_level = self._score_to_sarif_level(evaluation.overall_score)
         overall_kind = SARIFResultKind.PASS if evaluation.passed else SARIFResultKind.FAIL
 
+        message_text = (
+            f"Benchmark {evaluation.benchmark_id}: verdict={evaluation.verdict.value}, "
+            f"score={evaluation.overall_score:.1%}, "
+            f"model={evaluation.ai_model or 'unknown'}"
+        )
+        
+        properties_dict = {
+            "benchmark_id": evaluation.benchmark_id,
+            "overall_score": round(evaluation.overall_score, 4),
+            "verdict": evaluation.verdict.value,
+            "accuracy_level": evaluation.accuracy_level.value,
+            "ai_model": evaluation.ai_model,
+            "evaluation_time_ms": evaluation.evaluation_time_ms,
+            "has_hallucinations": evaluation.has_hallucinations,
+        }
+        
         run.add_result(
             rule_id="QA-OVERALL",
             level=overall_level,
             kind=overall_kind,
-            message=(
-                f"Benchmark {evaluation.benchmark_id}: verdict={evaluation.verdict.value}, "
-                f"score={evaluation.overall_score:.1%}, "
-                f"model={evaluation.ai_model or 'unknown'}"
-            ),
+            message=sanitize_message_text(message_text),
             locations=locations,
-            properties={
-                "benchmark_id": evaluation.benchmark_id,
-                "overall_score": round(evaluation.overall_score, 4),
-                "verdict": evaluation.verdict.value,
-                "accuracy_level": evaluation.accuracy_level.value,
-                "ai_model": evaluation.ai_model,
-                "evaluation_time_ms": evaluation.evaluation_time_ms,
-                "has_hallucinations": evaluation.has_hallucinations,
-            },
+            properties=sanitize_dict_strings(properties_dict),
         )
 
         # Per-criterion results
@@ -268,22 +295,24 @@ class SARIFExporter:
             )
 
         # Hallucinations as separate findings (safety)
-        if evaluation.has_hallucinations:
+        if evaluation.has_hallucinations and evaluation.hallucinations:
             for idx, hallucination in enumerate(evaluation.hallucinations):
+                if not hallucination:
+                    continue  # Skip None hallucinations
                 run.add_result(
                     rule_id="QA-SAFETY-001",
                     level=SARIFLevel.ERROR,
                     kind=SARIFResultKind.FAIL,
-                    message=(
+                    message=sanitize_message_text(
                         f"Hallucination/safety finding #{idx + 1}: "
                         f"'{hallucination[:200]}'"
                     ),
                     locations=locations,
-                    properties={
+                    properties=sanitize_dict_strings({
                         "finding_type": "hallucination",
                         "benchmark_id": evaluation.benchmark_id,
                         "hallucination_index": idx,
-                    },
+                    }),
                 )
 
     def _build_locations(
@@ -296,7 +325,12 @@ class SARIFExporter:
 
         References the AI system and benchmark as logical locations
         (no physical file/line needed for compliance testing).
+        
+        Raises:
+            ValueError: If evaluation is None
         """
+        if evaluation is None:
+            raise ValueError("evaluation cannot be None")
         locations = [
             {
                 "logicalLocations": [
