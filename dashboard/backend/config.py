@@ -34,6 +34,17 @@ class Settings(BaseSettings):
     # Frontend
     frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
+    # CORS — comma-separated list of allowed origins (env: CORS_ORIGINS)
+    cors_origins_raw: str = os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:3000,http://localhost:8080,https://qa.sabatech.dev",
+    )
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """Parse comma-separated CORS origins into a list."""
+        return [o.strip() for o in self.cors_origins_raw.split(",") if o.strip()]
+
     # Stripe - REQUIRED for billing
     STRIPE_API_KEY: Optional[str] = os.getenv("STRIPE_API_KEY")
     STRIPE_WEBHOOK_SECRET: Optional[str] = os.getenv("STRIPE_WEBHOOK_SECRET")

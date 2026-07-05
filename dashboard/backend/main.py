@@ -34,19 +34,20 @@ app = FastAPI(
     redoc_url="/api/v1/redoc",
 )
 
-# CORS middleware
+# CORS middleware — origins from config (env-configurable, no wildcards)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        settings.frontend_url,
-        "http://localhost:3000",
-        "http://localhost:8080",
-        "https://frontend-phi-three-52.vercel.app",  # Production frontend
-    ],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    # expose_headers=["Access-Control-Allow-Origin"]
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-Requested-With",
+        "X-Request-ID",
+        "Accept",
+        "Origin",
+    ],
 )
 
 # Add Security Headers middleware (before other middleware)
