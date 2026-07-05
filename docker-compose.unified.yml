@@ -10,7 +10,7 @@ services:
       dockerfile: Dockerfile
     container_name: qa-framework-backend
     ports:
-      - "8000:8000"
+      - "8010:8000"
     environment:
       - DATABASE_URL=postgresql://qa_user:qa_pass@postgres:5432/qa_dashboard
       - REDIS_HOST=redis
@@ -42,7 +42,7 @@ services:
       dockerfile: Dockerfile
     container_name: qa-framework-frontend
     ports:
-      - "3000:3000"
+      - "3010:3000"
     environment:
       - VITE_API_URL=http://localhost:8000
     depends_on:
@@ -67,7 +67,7 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5434:5432"
     networks:
       - qa-network
     healthcheck:
@@ -85,7 +85,7 @@ services:
     volumes:
       - redis-data:/data
     ports:
-      - "6379:6379"
+      - "6381:6379"
     networks:
       - qa-network
     healthcheck:
@@ -142,7 +142,7 @@ services:
       - ./dashboard/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
     ports:
-      - "9090:9090"
+      - "9091:9090"
     networks:
       - qa-network
     restart: unless-stopped
@@ -159,7 +159,7 @@ services:
       - ./dashboard/monitoring/grafana/provisioning:/etc/grafana/provisioning
       - grafana-data:/var/lib/grafana
     ports:
-      - "3001:3000"
+      - "3005:3000"
     networks:
       - qa-network
     depends_on:
