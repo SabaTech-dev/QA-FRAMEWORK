@@ -10,7 +10,7 @@ pytest-html==4.1.1
 
 # HTTP Clients
 httpx==0.26.0
-requests==2.31.0
+requests==2.33.0
 
 # UI Testing
 playwright==1.41.0
@@ -47,7 +47,7 @@ isort==5.13.2
 
 # Type Checking
 types-PyYAML==6.0.12.12
-types-requests==2.31.0.20240106
+types-requests==2.33.0.20260518
 types-urllib3==1.26.25.14
 
 # Health Checks & Monitoring
