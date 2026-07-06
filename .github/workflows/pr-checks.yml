@@ -82,7 +82,7 @@ jobs:
       - name: Comment PR with results
         if: always()
         continue-on-error: true  # Gracefully handle permission errors (e.g., dependabot PRs)
-        uses: actions/github-script@v7 # v7.1.0
+        uses: actions/github-script@v9 # v7.1.0
         with:
           script: |
             const outputs = {

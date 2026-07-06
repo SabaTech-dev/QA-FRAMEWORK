@@ -232,7 +232,7 @@ jobs:
 
       - name: Create issue on significant failures
         if: failure()
-        uses: actions/github-script@v7 # v7.1.0
+        uses: actions/github-script@v9 # v7.1.0
         with:
           script: |
             const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
