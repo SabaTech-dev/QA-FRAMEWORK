@@ -605,7 +605,7 @@ jobs:
 
       - name: Notify Slack on Failure
         if: failure() && github.ref == 'refs/heads/main'
-        uses: slackapi/slack-github-action@v2 # v2.1.1
+        uses: slackapi/slack-github-action@v3 # v2.1.1
         with:
           payload: |
             {
@@ -659,7 +659,7 @@ jobs:
 
       - name: Notify Slack on Success
         if: success() && github.ref == 'refs/heads/main'
-        uses: slackapi/slack-github-action@v2 # v2.1.1
+        uses: slackapi/slack-github-action@v3 # v2.1.1
         continue-on-error: true
         with:
           payload: |
