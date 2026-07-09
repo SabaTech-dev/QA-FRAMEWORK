@@ -37,6 +37,7 @@ import {
   History as HistoryIcon,
 } from '@mui/icons-material';
 import EmptyState from '../components/common/EmptyState';
+import DisclosureBanner from '../components/common/DisclosureBanner';
 
 interface Selector {
   id: string;
@@ -244,6 +245,8 @@ const SelfHealingDashboard: React.FC = () => {
           <AutoFixHighIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
           Self-Healing Dashboard
         </Typography>
+        {/* EU AI Act Art. 50(1) — esta pagina usa analisis IA (self-healing) */}
+        <DisclosureBanner />
         <EmptyState
           illustration="/illustrations/empty-selectors.svg"
           title="No Selectors Found"
@@ -264,6 +267,9 @@ const SelfHealingDashboard: React.FC = () => {
         <AutoFixHighIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
         Self-Healing Dashboard
       </Typography>
+
+      {/* EU AI Act Art. 50(1) — esta pagina usa analisis IA (self-healing) */}
+      <DisclosureBanner />
 
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
