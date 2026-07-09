@@ -49,6 +49,7 @@ import { dashboardAPI } from '../api/client'
 import AdvancedFilter from '../components/filters/AdvancedFilter'
 import type { FilterConfig } from '../components/filters/AdvancedFilter'
 import ExportImport from '../components/common/ExportImport'
+import DisclosureBanner from '../components/common/DisclosureBanner'
 import { useRealTimeUpdates } from '../hooks/useRealTimeUpdates'
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
@@ -322,6 +323,9 @@ export default function Dashboard() {
         </Link>
         <Typography color="text.primary">Dashboard</Typography>
       </Breadcrumbs>
+
+      {/* EU AI Act Art. 50(1) — divulgacion de uso de IA en este dashboard */}
+      <DisclosureBanner />
 
       {/* Header with Actions */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
