@@ -8,6 +8,7 @@ import Executions from './pages/Executions'
 import Integrations from './pages/Integrations'
 import Billing from './pages/Billing'
 import SelfHealing from './pages/SelfHealing'
+import Compliance from './pages/Compliance'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -108,6 +109,14 @@ function App() {
           <ProtectedRoute>
             <Layout sidebarOpen={sidebarOpen} onSidebarToggle={() => setSidebarOpen(!sidebarOpen)}>
               <Settings />
+            </Layout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/compliance" element={
+          <ProtectedRoute>
+            <Layout sidebarOpen={sidebarOpen} onSidebarToggle={() => setSidebarOpen(!sidebarOpen)}>
+              <Compliance />
             </Layout>
           </ProtectedRoute>
         } />

@@ -21,6 +21,7 @@ import {
   Payment as PaymentIcon,
   AutoFixHigh as AutoFixHighIcon,
   Extension as ExtensionIcon,
+  Gavel as GavelIcon,
   Settings as SettingsIcon,
   Logout as LogoutIcon,
   Help as HelpIcon,
@@ -83,6 +84,7 @@ export default function Layout({ children, sidebarOpen, onSidebarToggle }: Layou
     { text: 'Executions', icon: <PlayArrowIcon />, path: '/executions' },
     { text: 'Integrations', icon: <ExtensionIcon />, path: '/integrations' },
     { text: 'Self-Healing', icon: <AutoFixHighIcon />, path: '/self-healing' },
+    { text: 'Compliance', icon: <GavelIcon />, path: '/compliance' },
     { text: 'Billing', icon: <PaymentIcon />, path: '/billing' },
   ]
 
