@@ -31,12 +31,13 @@ export default function Compliance() {
       href: 'https://github.com/SabaTech-dev/QA-FRAMEWORK/blob/main/docs/compliance/ai-systems-register.md',
     },
     {
-      title: 'AI Systems Inventory (QA-FRAMEWORK)',
-      description: 'Product-specific GPAI model inventory for QA-FRAMEWORK. Llama 3.3 70B via Groq.',
+      title: 'GPAI Inventory (QA-FRAMEWORK)',
+      description:
+        'Authoritative QA-FRAMEWORK-scoped GPAI model inventory (Art. 53-55). Consolidates and supersedes the legacy AI_SYSTEMS_INVENTORY.md.',
       icon: <DescriptionIcon />,
       chip: 'G3 — Product',
       chipColor: 'success' as const,
-      href: 'https://github.com/SabaTech-dev/QA-FRAMEWORK/blob/main/docs/compliance/AI_SYSTEMS_INVENTORY.md',
+      href: 'https://github.com/SabaTech-dev/QA-FRAMEWORK/blob/main/docs/compliance/GPAI-Inventory.md',
     },
     {
       title: 'AI Literacy Policy',
