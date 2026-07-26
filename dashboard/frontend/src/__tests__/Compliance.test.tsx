@@ -37,4 +37,24 @@ describe('Compliance page', () => {
 
     expect(legacyLinks).toHaveLength(0)
   })
+
+  it('exposes a link to the AI Literacy Plan document (Art. 4 operational plan)', () => {
+    render(<Compliance />)
+
+    const literacyLink = screen
+      .getAllByRole('link')
+      .find((link) => (link.getAttribute('href') || '').endsWith('docs/compliance/AI-Literacy-Plan.md'))
+
+    expect(literacyLink).toBeDefined()
+    expect(literacyLink?.textContent ?? '').toMatch(/AI Literacy/i)
+  })
+
+  it('shows an "AI-assisted testing" badge on the AI Literacy card', () => {
+    render(<Compliance />)
+
+    // El indicador operacional "AI-assisted testing" debe estar visible
+    // como chip/badge dentro de la card de AI Literacy.
+    const aiAssistedBadge = screen.getByText(/AI-assisted testing/i)
+    expect(aiAssistedBadge).toBeInTheDocument()
+  })
 })

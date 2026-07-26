@@ -48,6 +48,15 @@ export default function Compliance() {
       href: 'https://github.com/SabaTech-dev/QA-FRAMEWORK/blob/main/docs/compliance/AI_LITERACY_POLICY.md',
     },
     {
+      title: 'AI Literacy Plan',
+      description:
+        'Operational AI literacy plan (EU AI Act Art. 4) for QA-FRAMEWORK. Training schedule, role-based competencies, and evaluation cadence for QA workflows using GPAI models.',
+      icon: <SchoolIcon />,
+      chip: 'AI-assisted testing',
+      chipColor: 'info' as const,
+      href: 'https://github.com/SabaTech-dev/QA-FRAMEWORK/blob/main/docs/compliance/AI-Literacy-Plan.md',
+    },
+    {
       title: 'Art. 50(1) Transparency Assessment',
       description: 'Assessment of whether QA-FRAMEWORK interacts directly with persons. Conclusion: not applicable, but best-practice disclosure implemented.',
       icon: <GavelIcon />,
