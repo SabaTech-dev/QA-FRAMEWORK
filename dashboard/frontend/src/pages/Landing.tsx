@@ -19,6 +19,7 @@ import {
   Check as CheckIcon,
   PlayArrow as PlayIcon,
 } from '@mui/icons-material';
+import DisclosureBanner from '../components/common/DisclosureBanner';
 
 const Landing: React.FC = () => {
   const theme = useTheme();
@@ -113,6 +114,9 @@ const Landing: React.FC = () => {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+      {/* EU AI Act Art. 50(1) — divulgacion de uso de IA en esta pagina publica */}
+      <DisclosureBanner />
+
       {/* Hero Section */}
       <Box
         sx={{
