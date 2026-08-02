@@ -45,15 +45,32 @@ RISK_TO_LEVEL: dict[str, str] = {
 }
 DEFAULT_LEVEL = "warning"
 
+# CVSS-like severity (0.0-10.0) for the GitHub Security tab, derived from
+# the ZAP riskcode. Drives the severity badge shown next to each finding.
+# https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/sarif-support-for-code-scanning
+RISK_TO_SEVERITY: dict[str, str] = {
+    "3": "9.0",  # High
+    "2": "6.0",  # Medium
+    "1": "3.0",  # Low
+    "0": "0.0",  # Informational
+}
+DEFAULT_SEVERITY = "0.0"
+
 SARIF_SCHEMA = (
     "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/Schemata/sarif-schema-2.1.0.json"
 )
 ZAP_INFO_URI = "https://www.zaproxy.org/"
+ZAP_ALERT_DOCS = "https://www.zaproxy.org/docs/alerts/"
 
 
 def _level_for(riskcode: Any) -> str:
     """Return the SARIF level for a ZAP riskcode, defaulting to warning."""
     return RISK_TO_LEVEL.get(str(riskcode), DEFAULT_LEVEL)
+
+
+def _severity_for(riskcode: Any) -> str:
+    """Return a CVSS-like severity string for the GitHub Security tab."""
+    return RISK_TO_SEVERITY.get(str(riskcode), DEFAULT_SEVERITY)
 
 
 def _build_rules(alerts: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -72,14 +89,19 @@ def _build_rules(alerts: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "name": name,
                 "shortDescription": {"text": name},
                 "fullDescription": {"text": alert.get("desc", name)[:5000] or name},
-                "helpUri": alert.get("reference") or ZAP_INFO_URI,
+                # Stable, single-URI help link. ZAP's "reference" field holds
+                # free-form multi-line text with several URLs, which is not a
+                # valid single helpUri; the docs index is authoritative.
+                "helpUri": f"{ZAP_ALERT_DOCS}#{pluginid}",
                 # NOTE: defaultConfiguration.level is intentionally omitted.
                 # Each result carries its own level (derived from riskcode),
-                # which keeps the CI gate's grep-based counting accurate.
+                # which keeps the CI gate's level-based counting accurate.
                 "properties": {
                     "zap_pluginid": pluginid,
                     "zap_riskdesc": alert.get("riskdesc", ""),
                     "zap_wascid": alert.get("wascid", ""),
+                    "security-severity": _severity_for(alert.get("riskcode")),
+                    "tags": ["security", "DAST", "owasp-zap"],
                 },
             }
         )

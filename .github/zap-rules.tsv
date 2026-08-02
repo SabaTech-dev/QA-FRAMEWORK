@@ -1,1 +1,26 @@
+# =============================================================================
+# OWASP ZAP Baseline — rule configuration file
+# =============================================================================
+# Format (TSV):  <pluginid>\t<LEVEL>\t<(descriptive name)>
+#
+# LEVEL values:
+#   IGNORE     — report the alert but never fail the build
+#   WARN       — report the alert (default behaviour for unlisted rules)
+#   FAIL       — treat the alert as a build-breaking failure
+#   OUTOFSCOPE — do not scan the matching URL/rule at all
+#
+# Gate policy: the CI gate (job `zap-gate`) fails the build on any finding with
+# SARIF level "error", i.e. ZAP riskcode 3 (High). This file controls
+# EXCLUSIONS only — see docs/security/dast-pipeline.md for the full policy and
+# the justification of every line below.
+#
+# Adding an exclusion REQUIRES a documented justification (see the doc above)
+# and a quarterly review.
+# =============================================================================
+
+# 10202 — Absence of Anti-CSRF Tokens
+#   QA-FRAMEWORK authenticates via JWT Bearer in the Authorization header
+#   (stateless, no session cookie). CSRF is not applicable when the browser
+#   does not automatically attach credentials, so this passive rule is a
+#   permanent false positive on this target.
 10202	OUTOFSCOPE	(Absence of Anti-CSRF Tokens)

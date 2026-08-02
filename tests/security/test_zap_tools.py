@@ -81,6 +81,27 @@ class TestConvertSchema:
         assert sarif["$schema"].endswith("sarif-schema-2.1.0.json")
 
 
+class TestConvertRules:
+    """SARIF rules must carry metadata the GitHub Security tab relies on."""
+
+    def test_rules_have_stable_help_uri(self, zap_module, sample_report):
+        sarif = zap_module.convert(sample_report)
+        for rule in sarif["runs"][0]["tool"]["driver"]["rules"]:
+            # Must be a single, valid URL pointing at the ZAP alert docs.
+            assert rule["helpUri"].startswith("https://www.zaproxy.org/docs/alerts/#"), rule[
+                "helpUri"
+            ]
+            assert " " not in rule["helpUri"], "helpUri must be a single URL, not free text"
+
+    def test_rules_have_security_severity(self, zap_module, sample_report):
+        # GitHub uses this CVSS-like float (0-10) to badge severity.
+        sarif = zap_module.convert(sample_report)
+        for rule in sarif["runs"][0]["tool"]["driver"]["rules"]:
+            sev = rule["properties"].get("security-severity")
+            assert sev is not None, f"rule {rule['id']} missing security-severity"
+            assert 0.0 <= float(sev) <= 10.0, f"severity {sev} out of [0,10]"
+
+
 class TestConvertResults:
     """Each ZAP alert instance must become one SARIF result."""
 
