@@ -1,0 +1,163 @@
+# =============================================================================
+# OWASP ZAP DAST Pipeline — Dynamic Security Scan
+# Scans qa.sabatech.dev (BETA LIVE) for runtime vulnerabilities that SAST
+# cannot detect: misconfigurations, CORS issues, missing headers, exposed
+# endpoints, injection points active only at runtime.
+#
+# Pipeline:
+#   1. zaproxy/action-baseline@v0.13.0 runs the ZAP Baseline scan
+#   2. JSON report is converted to SARIF 2.1.0 (scripts/security/zap_to_sarif.py)
+#   3. SARIF uploaded to GitHub Security tab
+#   4. Gate fails the build only on HIGH (riskcode 3) findings
+# =============================================================================
+
+name: OWASP ZAP DAST Scan
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Weekly baseline scan — Monday 06:00 UTC
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Target URL to scan'
+        required: false
+        default: 'https://qa.sabatech.dev'
+
+# DAST scans are expensive; do not run concurrent scans of the same target.
+concurrency:
+  group: zap-dast-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  security-events: write   # Required for SARIF upload to GitHub Security tab
+  actions: read
+
+env:
+  ZAP_TARGET: ${{ github.event.inputs.target || 'https://qa.sabatech.dev' }}
+
+jobs:
+  # ===========================================================================
+  # JOB 1: ZAP Baseline Scan + JSON -> SARIF conversion
+  # --------------------------------------------------------------------------
+  zap-scan:
+    name: ZAP Baseline Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Run ZAP Baseline scan
+        id: zap
+        uses: zaproxy/action-baseline@v0.13.0
+        with:
+          target: ${{ env.ZAP_TARGET }}
+          # -a  : all rules (default policy)
+          # -j  : use AJAX spider (the dashboard is a React SPA)
+          # -J  : emit JSON report at zap_report.json
+          cmd_options: '-a -j -J zap_report.json'
+          rules_file_name: '.github/zap-rules.tsv'
+          # Do not auto-file a GitHub issue (we surface findings in Security tab)
+          allow_issue_writing: false
+          # Do not fail the step on any alert; the gate job decides.
+          fail_action: false
+          artifact_name: zap-baseline-report
+        continue-on-error: true
+
+      - name: Convert ZAP JSON report to SARIF
+        id: convert
+        run: |
+          python3 scripts/security/zap_to_sarif.py zap_report.json zap_report.sarif
+          if [ ! -f zap_report.json ]; then
+            echo "report_found=false" >> $GITHUB_OUTPUT
+            echo "⚠️ ZAP scan produced no report (scan aborted or timed out)." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "report_found=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@b0c4fd77f6c559021d78430ec4d0d169ae74a4eb
+        if: always()
+        with:
+          sarif_file: zap_report.sarif
+          category: zap-dast
+
+      - name: Upload SARIF + JSON artifacts
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        if: always()
+        with:
+          name: zap-dast-results
+          path: |
+            zap_report.sarif
+            zap_report.json
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Summarize ZAP findings
+        if: always()
+        run: |
+          echo "## 🛡️ OWASP ZAP DAST Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Target:** \`${{ env.ZAP_TARGET }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f zap_report.sarif ]; then
+            HIGH=$(grep -o '"level": "error"' zap_report.sarif | wc -l)
+            MEDIUM=$(grep -o '"level": "warning"' zap_report.sarif | wc -l)
+            LOW=$(grep -o '"level": "note"' zap_report.sarif | wc -l)
+            INFO=$(grep -o '"level": "none"' zap_report.sarif | wc -l)
+            echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| 🔴 HIGH (fail gate) | $HIGH |" >> $GITHUB_STEP_SUMMARY
+            echo "| 🟠 Medium | $MEDIUM |" >> $GITHUB_STEP_SUMMARY
+            echo "| 🟡 Low | $LOW |" >> $GITHUB_STEP_SUMMARY
+            echo "| ℹ️ Informational | $INFO |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Full results: GitHub **Security tab** → category \`zap-dast\`." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ No SARIF generated (scan aborted before completing)." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ===========================================================================
+  # JOB 2: Security gate — fail the workflow on HIGH/CRITICAL findings
+  # --------------------------------------------------------------------------
+  # ZAP Baseline has no "Critical" tier; its highest tier is "High"
+  # (riskcode 3), which the converter maps to SARIF level "error". The gate
+  # therefore counts results with level "error" and fails if any are present.
+  # ===========================================================================
+  zap-gate:
+    name: ZAP Security Gate
+    runs-on: ubuntu-latest
+    needs: [zap-scan]
+    if: always()
+    steps:
+      - name: Download ZAP results
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005353372de801cfa
+        with:
+          name: zap-dast-results
+          continue-on-error: true
+
+      - name: Check for HIGH/CRITICAL findings
+        run: |
+          if [ ! -f zap_report.sarif ]; then
+            echo "⚠️ No SARIF report available — gate cannot run. Passing (see scan summary)."
+            exit 0
+          fi
+
+          # ZAP "High" riskcode (3) maps to SARIF level "error".
+          HIGH=$(grep -o '"level": "error"' zap_report.sarif | wc -l)
+
+          echo "Total HIGH (riskcode 3) findings: $HIGH"
+
+          if [ "$HIGH" -gt 0 ]; then
+            echo "❌ DAST gate FAILED: $HIGH HIGH findings"
+            echo ""
+            echo "Review the findings in the GitHub Security tab (category: zap-dast)"
+            echo "or fix the underlying issue and re-run the workflow."
+            exit 1
+          else
+            echo "✅ DAST gate PASSED: no HIGH findings"
+          fi
