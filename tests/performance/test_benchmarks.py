@@ -2,11 +2,22 @@
 
 These tests use pytest-benchmark to measure performance of critical operations.
 Run with: pytest tests/performance -v -m performance --benchmark-only
+
+pytest-benchmark is an optional dependency (only installed in the performance
+CI stage). When it is absent the ``benchmark`` fixture is undefined and these
+tests error during setup. We skip the whole module gracefully instead so the
+default test suite stays green.
 """
 
 import time
 
 import pytest
+
+# Skip the entire module when pytest-benchmark is not installed. The plugin is
+# only pulled in by the dedicated performance-tests CI job
+# (``pip install ... pytest-benchmark``); everywhere else the ``benchmark``
+# fixture would be missing and every test would error at setup time.
+pytest.importorskip("pytest_benchmark")
 
 
 class TestCorePerformance:
@@ -15,8 +26,10 @@ class TestCorePerformance:
     @pytest.mark.performance
     def test_import_time(self, benchmark):
         """Benchmark import time of core module."""
+
         def import_core():
             import src.core.entities.test_result  # noqa: F401
+
             return True
 
         result = benchmark(import_core)
@@ -33,7 +46,7 @@ class TestCorePerformance:
                 name="Performance Test",
                 status=TestStatus.PASSED,
                 duration_ms=100.0,
-                message="Benchmark test"
+                message="Benchmark test",
             )
 
         result = benchmark(create_result)
@@ -48,7 +61,7 @@ class TestCorePerformance:
             test_id="perf-test-002",
             name="Serialization Benchmark",
             status=TestStatus.PASSED,
-            duration_ms=50.0
+            duration_ms=50.0,
         )
 
         result = benchmark(lambda: test_result.to_dict())
@@ -57,7 +70,7 @@ class TestCorePerformance:
     @pytest.mark.performance
     def test_logger_performance(self, benchmark):
         """Benchmark QALogger write operations."""
-        from src.core.interfaces.logger import QALogger, LogLevel
+        from src.core.interfaces.logger import LogLevel, QALogger
 
         logger = QALogger(name="benchmark-logger")
 
@@ -65,7 +78,7 @@ class TestCorePerformance:
             logger.log(
                 level=LogLevel.INFO,
                 message="Benchmark log message",
-                context={"test": "performance"}
+                context={"test": "performance"},
             )
             return True
 
@@ -113,7 +126,7 @@ class TestReportPerformance:
                 test_id=f"test-{i}",
                 name=f"Test {i}",
                 status=TestStatus.PASSED if i % 2 == 0 else TestStatus.FAILED,
-                duration_ms=float(i * 10)
+                duration_ms=float(i * 10),
             )
             for i in range(100)
         ]
@@ -134,7 +147,7 @@ class TestReportPerformance:
                 test_id=f"test-{i}",
                 name=f"Test {i}",
                 status=TestStatus.PASSED if i % 2 == 0 else TestStatus.FAILED,
-                duration_ms=float(i * 10)
+                duration_ms=float(i * 10),
             )
             for i in range(100)
         ]
@@ -170,6 +183,7 @@ class TestConcurrencyPerformance:
 @pytest.mark.performance
 def test_benchmark_fixture_works(benchmark):
     """Verify benchmark fixture is working correctly."""
+
     def simple_operation():
         return 1 + 1
 

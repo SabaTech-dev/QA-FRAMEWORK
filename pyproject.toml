@@ -78,4 +78,22 @@ markers = [
     "e2e: End-to-end tests",
     "performance: Performance tests",
     "security: Security tests",
+    # Test-type markers (broadly used across the suite)
+    "api: Tests that exercise a real or mocked HTTP API surface",
+    "parallel_safe: Tests safe to run concurrently under pytest-xdist",
+    "concurrent: Tests validating concurrent / multi-worker behaviour",
+    "serial: Tests that must run in a single worker (not parallel-safe)",
+    "contract_test: Consumer-driven contract tests",
+    "slow: Long-running tests excluded from the fast path",
+    # Infrastructure-dependent markers
+    "database: Tests requiring a live database",
+    "redis: Tests requiring a live Redis instance",
+    "websocket: Tests requiring a WebSocket server",
+    "mobile: Mobile-targeted tests",
+    "android: Android-specific tests",
+    "ios: iOS-specific tests",
+    "android_app: Android application tests",
+    # Reporting / capture markers
+    "video_recording: Tests that record a video artifact",
+    "screenshot_on_failure: Tests capturing a screenshot on failure",
 ]

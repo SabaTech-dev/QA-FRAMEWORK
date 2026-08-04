@@ -10,12 +10,12 @@ Supports multiple input formats:
 """
 
 import json
-import re
 import logging
+import re
+from dataclasses import asdict, dataclass, field
+from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
-from dataclasses import dataclass, field, asdict
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +109,10 @@ class VulnCategory(str, Enum):
         tags_lower = [t.lower() for t in tags]
 
         # Injection-based patterns
-        if any(t in tags_lower for t in ["sqli", "sql-injection", "injection", "ldap", "command-injection"]):
+        if any(
+            t in tags_lower
+            for t in ["sqli", "sql-injection", "injection", "ldap", "command-injection"]
+        ):
             return cls.INJECTION
         if "xss" in tags_lower or "cross-site" in template_lower:
             return cls.INJECTION
@@ -126,8 +129,10 @@ class VulnCategory(str, Enum):
         if any(t in tags_lower for t in ["misconfig", "misconfiguration", "cors", "hdr", "header"]):
             return cls.SECURITY_MISCONFIGURATION
 
-        # Network
-        if any(t in tags_lower for t in ["network", "port", "dns", "ssl", "tls", "exposure"]):
+        # Network exposure: explicit network surface tags only.
+        # NOTE: "exposure" alone means data exposure (info disclosure), not
+        # network exposure, so it is intentionally excluded from this branch.
+        if any(t in tags_lower for t in ["network", "port", "dns", "ssl", "tls"]):
             if "tls" in tags_lower or "ssl" in tags_lower:
                 return cls.TLS_ISSUES
             if "dns" in tags_lower:
@@ -334,7 +339,11 @@ class UnifiedVulnParser:
             if isinstance(tags, str):
                 tags = [tags]
 
-            finding_id = f"NUC-{template_id}-{len(item.get('matched-at', target)[:32])}" if template_id else f"NUC-{hash(str(item)) % 1000000:06d}"
+            finding_id = (
+                f"NUC-{template_id}-{len(item.get('matched-at', target)[:32])}"
+                if template_id
+                else f"NUC-{hash(str(item)) % 1000000:06d}"
+            )
 
             description = item.get("info", {}).get("description", "No description provided")
             remediation = item.get("info", {}).get("remediation")
@@ -486,14 +495,23 @@ class UnifiedVulnParser:
             if isinstance(status, bool):
                 if status is True:  # Passed
                     continue
-            elif isinstance(status, str) and status.lower() in ("pass", "passed", "none", "not-vulnerable"):
+            elif isinstance(status, str) and status.lower() in (
+                "pass",
+                "passed",
+                "none",
+                "not-vulnerable",
+            ):
                 continue
 
             description = item.get("description", item.get("detail", "No description"))
             remediation = item.get("remediation", item.get("recommendation"))
             evidence = item.get("evidence", item.get("proof", item.get("detail")))
 
-            finding_id = f"WSTG-{test_name[:32]}-{len(item.get('url', target)[:16])}" if test_name else f"WSTG-{hash(str(item)) % 1000000:06d}"
+            finding_id = (
+                f"WSTG-{test_name[:32]}-{len(item.get('url', target)[:16])}"
+                if test_name
+                else f"WSTG-{hash(str(item)) % 1000000:06d}"
+            )
 
             references = item.get("references", [])
             if isinstance(references, str):
@@ -629,16 +647,20 @@ class UnifiedVulnParser:
             "timestamp": result.end_time,
             "risk_score": round(risk_percentage, 1),
             "risk_level": (
-                "Critical" if risk_percentage >= 75
-                else "High" if risk_percentage >= 50
-                else "Medium" if risk_percentage >= 25
-                else "Low"
+                "Critical"
+                if risk_percentage >= 75
+                else (
+                    "High"
+                    if risk_percentage >= 50
+                    else "Medium" if risk_percentage >= 25 else "Low"
+                )
             ),
             "severity_breakdown": severity_breakdown,
             "category_breakdown": category_counts,
             "total_findings": result.total_findings,
             "top_critical": [
-                f.to_dict() for f in result.findings
+                f.to_dict()
+                for f in result.findings
                 if f.severity in (VulnSeverity.CRITICAL, VulnSeverity.HIGH)
             ][:10],
             "metadata": result.scan_metadata,
