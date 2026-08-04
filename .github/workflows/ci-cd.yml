@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # v4.2.2
+        uses: actions/checkout@v7 # v4.2.2
 
       - name: Set up Python
         uses: actions/setup-python@v5 # v5.6.0
@@ -90,7 +90,7 @@ jobs:
         python-version: ["3.11", "3.12"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # v4.2.2
+        uses: actions/checkout@v7 # v4.2.2
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5 # v5.6.0
@@ -168,7 +168,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # v4.2.2
+        uses: actions/checkout@v7 # v4.2.2
 
       - name: Set up Python
         uses: actions/setup-python@v5 # v5.6.0
@@ -231,7 +231,7 @@ jobs:
     needs: integration-tests
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # v4.2.2
+        uses: actions/checkout@v7 # v4.2.2
 
       - name: Set up Python
         uses: actions/setup-python@v5 # v5.6.0
@@ -314,7 +314,7 @@ jobs:
     if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[perf]')
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # v4.2.2
+        uses: actions/checkout@v7 # v4.2.2
 
       - name: Set up Python
         uses: actions/setup-python@v5 # v5.6.0
@@ -359,7 +359,7 @@ jobs:
     needs: code-quality
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # v4.2.2
+        uses: actions/checkout@v7 # v4.2.2
 
       - name: Set up Python
         uses: actions/setup-python@v5 # v5.6.0
@@ -406,7 +406,7 @@ jobs:
       checks: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # v4.2.2
+        uses: actions/checkout@v7 # v4.2.2
 
       - name: Set up Python
         uses: actions/setup-python@v5 # v5.6.0
@@ -446,7 +446,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # v4.2.2
+        uses: actions/checkout@v7 # v4.2.2
 
       - name: Set up Python
         uses: actions/setup-python@v5 # v5.6.0
@@ -477,7 +477,7 @@ jobs:
     needs: [code-quality]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # v4.2.2
+        uses: actions/checkout@v7 # v4.2.2
 
       - name: Set up Python
         uses: actions/setup-python@v5 # v5.6.0
@@ -518,7 +518,7 @@ jobs:
     needs: [unit-tests, code-quality, generate-sbom]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # v4.2.2
+        uses: actions/checkout@v7 # v4.2.2
 
       - name: Set up Python
         uses: actions/setup-python@v5 # v5.6.0
