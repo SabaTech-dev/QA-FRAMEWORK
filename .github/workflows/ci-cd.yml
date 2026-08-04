@@ -53,19 +53,15 @@ jobs:
 
       - name: Run Black (formatting check)
         run: poetry run black --check --diff --line-length 100 src tests
-        continue-on-error: true
 
       - name: Run Ruff (linting)
         run: poetry run ruff check src tests --output-format=github
-        continue-on-error: true
 
       - name: Run isort (import sorting check)
         run: poetry run isort --check-only --diff src tests
-        continue-on-error: true
 
       - name: Run MyPy (type checking)
         run: poetry run mypy src --strict --ignore-missing-imports --show-error-codes
-        continue-on-error: true
 
       - name: Run Bandit (security linting)
         run: poetry run bandit -r src -f json -o bandit-report.json || true
@@ -118,7 +114,6 @@ jobs:
         run: poetry install --no-interaction
 
       - name: Run unit tests
-        continue-on-error: true
         run: |
           poetry run pytest tests/unit -v \
             -m "not integration and not e2e and not performance and not security" \
@@ -207,7 +202,6 @@ jobs:
           redis-cli -h localhost -p 6379 ping
 
       - name: Run integration tests
-        continue-on-error: true
         run: |
           poetry run pytest tests/integration -v \
             -m integration \
@@ -263,7 +257,6 @@ jobs:
           playwright install chromium
 
       - name: Run E2E tests
-        continue-on-error: true
         run: |
           pytest tests/integration -v \
             -m e2e \
@@ -285,7 +278,6 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Run Playwright TypeScript E2E tests
-        continue-on-error: true
         run: |
           cd dashboard/frontend
           npx playwright test --reporter=list
@@ -342,7 +334,6 @@ jobs:
           pip install locust pytest-benchmark
 
       - name: Run performance tests
-        continue-on-error: true
         run: |
           pytest tests/performance -v \
             -m performance \
@@ -602,95 +593,3 @@ jobs:
             echo "- Failures: $E2E_FAILURES" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
-
-      - name: Notify Slack on Failure
-        if: failure() && github.ref == 'refs/heads/main'
-        uses: slackapi/slack-github-action@v2 # v2.1.1
-        with:
-          payload: |
-            {
-              "text": "❌ CI/CD Pipeline Failed for ${{ github.repository }}",
-              "blocks": [
-                {
-                  "type": "header",
-                  "text": {
-                    "type": "plain_text",
-                    "text": "CI/CD Pipeline Failed"
-                  }
-                },
-                {
-                  "type": "section",
-                  "fields": [
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Repository:*\n${{ github.repository }}"
-                    },
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Branch:*\n${{ github.ref_name }}"
-                    },
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Commit:*\n${{ github.sha }}"
-                    },
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Author:*\n${{ github.actor }}"
-                    }
-                  ]
-                },
-                {
-                  "type": "actions",
-                  "elements": [
-                    {
-                      "type": "button",
-                      "text": {
-                        "type": "plain_text",
-                        "text": "View Run"
-                      },
-                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                    }
-                  ]
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Notify Slack on Success
-        if: success() && github.ref == 'refs/heads/main'
-        uses: slackapi/slack-github-action@v2 # v2.1.1
-        continue-on-error: true
-        with:
-          payload: |
-            {
-              "text": "✅ CI/CD Pipeline Succeeded for ${{ github.repository }}",
-              "blocks": [
-                {
-                  "type": "header",
-                  "text": {
-                    "type": "plain_text",
-                    "text": "CI/CD Pipeline Succeeded"
-                  }
-                },
-                {
-                  "type": "section",
-                  "fields": [
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Repository:*\n${{ github.repository }}"
-                    },
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Branch:*\n${{ github.ref_name }}"
-                    },
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Commit:*\n${{ github.sha }}"
-                    }
-                  ]
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
