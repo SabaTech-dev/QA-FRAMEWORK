@@ -1,6 +1,6 @@
 # QA-FRAMEWORK Frontend - Production Dockerfile (Coolify)
 # Multi-stage build optimized for Coolify with base_directory: "/"
-FROM node:18-alpine AS builder
+FROM node:26-alpine AS builder
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 # Production stage
-FROM node:18-alpine
+FROM node:26-alpine
 
 # Create non-root user for security (F-002 FIX)
 RUN addgroup -g 1001 -S appuser && \
