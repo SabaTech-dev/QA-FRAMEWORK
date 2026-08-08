@@ -11,7 +11,16 @@
 
 **Proyecto:** QA-FRAMEWORK SaaS MVP
 **Progreso Total:** 91.5% (64/70 tareas)
-**Última Actualización:** 2026-03-05 03:30 UTC
+**Última Actualización:** 2026-06-10 22:04 CEST
+
+---
+
+## ✅ Completados (2026-06-10)
+
+| # | Tarea | Hora | Notas |
+|---|---|---|---|
+| 1 | 🆕 Módulo accuracy_testing domain | 22:04 | Domain layer: value_objects, entities, interfaces. 4 benchmarks sentencia BGH AI liability. Rule-based evaluator. 32/32 tests ✅ |
+| 2 | 📋 npm v12 migration plan | 22:20 | Audit completo de pipelines CI/CD + Dockerfiles. Plan en reports/coder/. Riesgo BAJO — no hay impacto crítico. |
 
 ### FASES ACTUALES
 
