@@ -13,7 +13,7 @@ python-multipart>=0.0.27
 aiofiles==24.1.0
 websockets==14.0
 redis==5.2.0
-rq==1.16.2
+rq==2.9.0
 celery==5.4.0
 flower==2.0.1
 pytest==8.3.3
