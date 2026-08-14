@@ -8,11 +8,58 @@ theme:
     primary: blue
     accent: orange
 
+# Diátaxis: internal docs are excluded from the published site entirely
+exclude_docs: |
+  internal/*
+  internal/**/*
+
 nav:
   - Home: index.md
-  - Architecture: architecture.md
   - Getting Started: getting-started.md
-  - API Reference: api.md
+  - Tutorials:
+      - Learning Path: tutorials/index.md
+  - How-to Guides:
+      - Testing:
+          - Testing Guide: how-to/testing-guide.md
+          - Database Testing: how-to/database-testing.md
+          - Performance Testing: how-to/performance-testing.md
+          - Performance Guide: how-to/performance-guide.md
+          - Security Testing: how-to/security-testing.md
+          - Parallelization: how-to/parallelization.md
+      - Integrations:
+          - WebSocket Realtime: how-to/setup-websockets.md
+          - Stripe Webhooks: how-to/setup-stripe-webhooks.md
+          - Allure Reporting: how-to/setup-allure.md
+      - Deployment:
+          - Overview: how-to/deployment/index.md
+          - Quick Start (Railway): how-to/deployment/quick-start.md
+          - General Deployment: how-to/deployment/general.md
+          - Railway Setup: how-to/deployment/railway-setup.md
+          - Secrets Management: how-to/deployment/secrets-management.md
+          - Pre-deploy Checklist: how-to/deployment/pre-deploy-checklist.md
+          - Railway Templates: how-to/deployment/railway-templates.md
+          - Migration: how-to/deployment/migration.md
+          - Troubleshooting: how-to/deployment/troubleshooting.md
+      - Monitoring: how-to/monitoring-setup.md
+  - Reference:
+      - API: reference/api.md
+      - API Reference (legacy, pending consolidation): reference/api-reference.md
+      - Authentication: reference/auth.md
+      - Environment Variables: reference/environment-variables.md
+      - Notifications: reference/notifications.md
+      - AI Assistant: reference/ai-assistant.md
+      - Global Search: reference/global-search.md
+  - Explanation:
+      - Architecture: explanation/architecture.md
+      - Advanced Test Architecture: explanation/advanced-test-architecture.md
+      - CI/CD Pipeline: explanation/cicd-pipeline.md
+      - Graceful Shutdown: explanation/graceful-shutdown.md
+      - Cloud Provider Comparison: explanation/cloud-provider-comparison.md
+      - OWASP Top 10 2025 Compliance: explanation/owasp-top10-compliance.md
+      - CRA Compliance: explanation/cra-compliance.md
+      - DAST Pipeline (ZAP): explanation/dast-pipeline.md
+      - OpenCore Guide: explanation/opencore-guide.md
+      - Project Study: explanation/project-study.md
   - Contributing: contributing.md
 
 markdown_extensions:

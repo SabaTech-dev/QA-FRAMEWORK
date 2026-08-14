@@ -264,4 +264,4 @@ npm start
 
 ---
 
-For more information, see the [API Reference](api.md) or [Getting Started](getting-started.md) guide.
+For more information, see the [API Reference](../reference/api.md) or [Getting Started](../getting-started.md) guide.

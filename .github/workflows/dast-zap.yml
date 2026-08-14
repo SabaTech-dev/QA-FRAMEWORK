@@ -10,7 +10,7 @@
 #   3. SARIF uploaded to GitHub Security tab
 #   4. Gate fails the build only on HIGH (riskcode 3) findings
 #
-# Docs: docs/security/dast-pipeline.md
+# Docs: docs/explanation/dast-pipeline.md
 # Tests: tests/security/test_zap_tools.py
 # =============================================================================
 

@@ -260,8 +260,8 @@ The application handles the following Stripe events:
 
 - [Stripe Webhooks Documentation](https://stripe.com/docs/webhooks)
 - [Stripe CLI](https://stripe.com/docs/stripe-cli)
-- [Backend API Reference](./API_REFERENCE.md)
-- [Billing System Overview](./BILLING_SYSTEM.md)
+- [Backend API Reference](../reference/api-reference.md)
+- Billing System Overview (doc pending)
 
 ---
 

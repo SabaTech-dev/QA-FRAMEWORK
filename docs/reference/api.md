@@ -694,4 +694,4 @@ const suites = await client.suites.list();
 
 ---
 
-For more information, see the [Getting Started](getting-started.md) guide or [Architecture](architecture.md) documentation.
+For more information, see the [Getting Started](../getting-started.md) guide or [Architecture](../explanation/architecture.md) documentation.

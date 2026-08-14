@@ -472,4 +472,4 @@ allure serve allure-results
 - [Allure Framework](https://docs.qameta.io/allure/)
 - [Allure Python](https://github.com/allure-framework/allure-python)
 - [Pytest Allure](https://pypi.org/project/allure-pytest/)
-- [QA-FRAMEWORK README](../README.md)
+- [QA-FRAMEWORK README](https://github.com/SabaTech-dev/QA-FRAMEWORK/blob/main/README.md)

@@ -20,4 +20,4 @@ See [Getting Started](getting-started.md) for installation instructions.
 
 ## Architecture
 
-See [Architecture](architecture.md) for detailed design documentation.
+See [Architecture](explanation/architecture.md) for detailed design documentation.

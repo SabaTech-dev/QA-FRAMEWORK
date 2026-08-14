@@ -10,16 +10,16 @@
 
 | Documento | Propósito | Tiempo Lectura |
 |-----------|-----------|----------------|
-| [CLOUD_PROVIDER_COMPARISON.md](./CLOUD_PROVIDER_COMPARISON.md) | Comparativa Railway vs Fly.io vs Render | 10 min |
-| [RAILWAY_TEMPLATES.md](./RAILWAY_TEMPLATES.md) | Comandos y templates para Railway CLI | 5 min |
-| [SECRETS_MANAGEMENT.md](./SECRETS_MANAGEMENT.md) | Gestión de secrets en producción | 8 min |
-| [PRE_DEPLOY_CHECKLIST.md](./PRE_DEPLOY_CHECKLIST.md) | Checklist antes de cada deploy | 5 min |
+| [CLOUD_PROVIDER_COMPARISON.md](../../explanation/cloud-provider-comparison.md) | Comparativa Railway vs Fly.io vs Render | 10 min |
+| [RAILWAY_TEMPLATES.md](./railway-templates.md) | Comandos y templates para Railway CLI | 5 min |
+| [SECRETS_MANAGEMENT.md](./secrets-management.md) | Gestión de secrets en producción | 8 min |
+| [PRE_DEPLOY_CHECKLIST.md](./pre-deploy-checklist.md) | Checklist antes de cada deploy | 5 min |
 
 ### Troubleshooting
 
 | Documento | Propósito | Tiempo Lectura |
 |-----------|-----------|----------------|
-| [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | Soluciones a problemas comunes | 15 min |
+| [TROUBLESHOOTING.md](./troubleshooting.md) | Soluciones a problemas comunes | 15 min |
 
 ### Scripts de Automatización
 
@@ -131,7 +131,7 @@ railway up --environment production
 
 Si encuentras problemas durante el deployment:
 
-1. Revisa [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
+1. Revisa [TROUBLESHOOTING.md](./troubleshooting.md)
 2. Busca en Railway Discord
 3. Documenta la solución en `.learnings/INCIDENTS.md`
 4. Actualiza esta documentación

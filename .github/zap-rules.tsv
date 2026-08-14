@@ -11,7 +11,7 @@
 #
 # Gate policy: the CI gate (job `zap-gate`) fails the build on any finding with
 # SARIF level "error", i.e. ZAP riskcode 3 (High). This file controls
-# EXCLUSIONS only — see docs/security/dast-pipeline.md for the full policy and
+# EXCLUSIONS only — see docs/explanation/dast-pipeline.md for the full policy and
 # the justification of every line below.
 #
 # Adding an exclusion REQUIRES a documented justification (see the doc above)

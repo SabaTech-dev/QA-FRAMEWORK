@@ -307,8 +307,8 @@ Create a pull request on GitHub.
 
 ## Next Steps
 
-- Read the [Architecture Guide](architecture.md) to understand the system design
-- Check the [API Reference](api.md) for detailed API documentation
+- Read the [Architecture Guide](explanation/architecture.md) to understand the system design
+- Check the [API Reference](reference/api.md) for detailed API documentation
 - Learn about [Contributing](contributing.md) to the project
 
 ## Getting Help

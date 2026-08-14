@@ -313,16 +313,16 @@ ENVIRONMENT=development DATABASE_URL="" pytest tests/unit/ -v
 
 ## 📚 Documentación
 
-- **Framework**: `docs/ADVANCED_TEST_ARCHITECTURE.md`
+- **Framework**: `docs/explanation/advanced-test-architecture.md`
 - **Dashboard**: `dashboard/README.md`
 - **Deployment**: `dashboard/DEPLOYMENT.md`
-- **API**: `docs/api-guide.md`
-- **Architecture**: `docs/architecture.md`
-- **CI/CD**: `docs/CICD_PIPELINE.md`
+- **API**: `docs/reference/api.md`
+- **Architecture**: `docs/explanation/architecture.md`
+- **CI/CD**: `docs/explanation/cicd-pipeline.md`
 
 ## 🤝 Contribución
 
-Ver [CONTRIBUTING.md](CONTRIBUTING.md) para:
+Ver [Contributing guide](docs/contributing.md) para:
 - Código de conducta
 - Flujo de trabajo Git
 - Estándares de código
