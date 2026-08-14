@@ -10,7 +10,7 @@ services:
       dockerfile: Dockerfile
     container_name: qa-framework-backend
     ports:
-      - "8000:8000"
+      - "8010:8000"
     environment:
       - DATABASE_URL=postgresql://qa_user:qa_pass@postgres:5432/qa_dashboard
       - REDIS_HOST=redis
@@ -29,7 +29,7 @@ services:
     networks:
       - qa-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -42,7 +42,7 @@ services:
       dockerfile: Dockerfile
     container_name: qa-framework-frontend
     ports:
-      - "3000:3000"
+      - "3010:3000"
     environment:
       - VITE_API_URL=http://localhost:8000
     depends_on:
@@ -66,8 +66,8 @@ services:
       POSTGRES_PORT: 5432
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     networks:
       - qa-network
     healthcheck:
@@ -84,8 +84,8 @@ services:
     command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
     volumes:
       - redis-data:/data
-    ports:
-      - "6379:6379"
+    expose:
+      - "6379"
     networks:
       - qa-network
     healthcheck:
