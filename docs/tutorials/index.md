@@ -7,14 +7,17 @@ Every tutorial is verified against a clean environment: **you cannot fail by fol
 
 | # | Tutorial | Time | You will learn |
 |---|----------|------|----------------|
-| 1 | First Test Suite *(coming soon)* | 15 min | Signup → create a suite → run it → read the report |
-| 2 | First API Test *(coming soon)* | 10 min | Write an API test with assertions |
-| 3 | First E2E Test *(coming soon)* | 20 min | Drive a browser with Playwright |
+| 1 | [Tu primera suite de tests](first-test-suite.md) | 15 min | Signup → create a suite → run it → read the report |
+| 2 | [Tu primer test de API](first-api-test.md) | 10 min | Write an API test with assertions |
+| 3 | [Tu primer test E2E](first-e2e-test.md) | 20 min | Drive a browser with Playwright |
 
 !!! note "Beta status"
-    The three beta tutorials are being written right now. In the meantime, start with
-    [Getting Started](../getting-started.md) and the [Quick Start guide](../how-to/deployment/quick-start.md),
-    and explore the runnable examples in [`examples/`](https://github.com/SabaTech-dev/QA-FRAMEWORK/tree/main/examples).
+    The three beta tutorials are written in **Spanish** (target market) and **verified against a
+    clean environment** (2026-08-14, branch `feat/diataxis-nav`): commands, ports and API flows
+    match reality. Known beta limitations are flagged inline with ⚠️ in each tutorial
+    (email-verification step, execution start/read endpoints, Wikipedia selector drift).
+    New here? Start with [Getting Started](../getting-started.md) and the
+    [Quick Start guide](../how-to/deployment/quick-start.md).
 
 ## How tutorials differ from other docs
 

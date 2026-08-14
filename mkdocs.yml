@@ -18,6 +18,9 @@ nav:
   - Getting Started: getting-started.md
   - Tutorials:
       - Learning Path: tutorials/index.md
+      - Tu primera suite de tests: tutorials/first-test-suite.md
+      - Tu primer test de API: tutorials/first-api-test.md
+      - Tu primer test E2E: tutorials/first-e2e-test.md
   - How-to Guides:
       - Testing:
           - Testing Guide: how-to/testing-guide.md
