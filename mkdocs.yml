@@ -46,7 +46,6 @@ nav:
       - Monitoring: how-to/monitoring-setup.md
   - Reference:
       - API: reference/api.md
-      - API Reference (legacy, pending consolidation): reference/api-reference.md
       - Authentication: reference/auth.md
       - Environment Variables: reference/environment-variables.md
       - Notifications: reference/notifications.md
