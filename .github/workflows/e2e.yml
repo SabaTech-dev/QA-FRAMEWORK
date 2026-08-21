@@ -22,13 +22,17 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4 # v4.4.0
         with:
-          node-version: '20'
+          node-version: '26'
           cache: 'npm'
           cache-dependency-path: dashboard/frontend/package-lock.json
 
       - name: Install dependencies
         working-directory: dashboard/frontend
-        run: npm ci
+        run: npm ci --strict-allow-scripts
+
+      - name: Smoke test post-install (npm v12 install-scripts)
+        working-directory: dashboard/frontend
+        run: node scripts/smoke-install.mjs
 
       - name: Install Playwright browsers
         working-directory: dashboard/frontend

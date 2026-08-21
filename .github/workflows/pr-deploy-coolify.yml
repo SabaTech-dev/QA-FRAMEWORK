@@ -8,7 +8,7 @@ on:
 
 env:
   PYTHON_VERSION: "3.11"
-  NODE_VERSION: "18"
+  NODE_VERSION: "26"
 
 jobs:
   # Deploy Backend PR Preview
@@ -144,7 +144,12 @@ jobs:
       - name: Install Frontend Dependencies
         run: |
           cd dashboard/frontend
-          npm ci
+          npm ci --strict-allow-scripts
+
+      - name: Smoke test post-install (npm v12 install-scripts)
+        run: |
+          cd dashboard/frontend
+          node scripts/smoke-install.mjs
 
       - name: Build Frontend
         run: |
