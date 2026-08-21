@@ -62,6 +62,8 @@ nav:
       - DAST Pipeline (ZAP): explanation/dast-pipeline.md
       - OpenCore Guide: explanation/opencore-guide.md
       - Project Study: explanation/project-study.md
+      - ADR-001: Endpoint Accuracy Index: explanation/adr-endpoint-accuracy-provider-selection.md
+      - Model & Provider Radar: explanation/model-provider-radar.md
   - Contributing: contributing.md
 
 markdown_extensions:
