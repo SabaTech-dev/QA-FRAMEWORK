@@ -4,7 +4,7 @@ The QAAnalysis contract mirrors the exact JSON structure the vision model
 is prompted to return (validated in Fase A: 5/5 literal texts, 0 hallucinations).
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, List, Optional
 
@@ -94,7 +94,7 @@ class AnalyzeResponse(BaseModel):
     latency_s: float
     model: str
     regression_detected: bool = False
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class TrendPoint(BaseModel):

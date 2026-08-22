@@ -91,6 +91,25 @@ class TestAnalyzeEndpoint:
         response = client.post("/api/v1/qa-visual/analyze", data={"target": "amc"})
         assert response.status_code == 422
 
+    def test_post_analyze_empty_screenshot_rejected(self, client):
+        response = client.post(
+            "/api/v1/qa-visual/analyze",
+            files={"screenshot": ("page.png", io.BytesIO(b""), "image/png")},
+            data={"target": "amc"},
+        )
+        assert response.status_code == 422
+
+    def test_post_analyze_oversized_screenshot_rejected(self, client):
+        from src.infrastructure.qa_visual.endpoint import MAX_SCREENSHOT_BYTES
+
+        huge = b"x" * (MAX_SCREENSHOT_BYTES + 1)
+        response = client.post(
+            "/api/v1/qa-visual/analyze",
+            files={"screenshot": ("page.png", io.BytesIO(huge), "image/png")},
+            data={"target": "amc"},
+        )
+        assert response.status_code == 413
+
     def test_post_analyze_requires_target(self, client):
         response = client.post(
             "/api/v1/qa-visual/analyze",
