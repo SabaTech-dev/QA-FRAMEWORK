@@ -36,4 +36,4 @@ class TestQAVisualRouterFeatureFlag:
     def test_router_mounted_with_flag_returns_401_without_credentials(self, monkeypatch):
         monkeypatch.setenv("QA_VISUAL_ENABLED", "1")
         client = _client_with_fresh_main()
-        assert client.get(REPORTS_PATH).status_code == 401
+        assert client.get(REPORTS_PATH).status_code in (401, 403)

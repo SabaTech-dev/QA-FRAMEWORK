@@ -72,7 +72,12 @@ app.include_router(
 
 The dashboard backend (`dashboard/backend/main.py`) mounts the router with
 `dependencies=[Depends(get_current_user)]`: **all five endpoints require a
-valid JWT**. Because the Docker build context only ships `dashboard/backend`,
+valid JWT**. The mount is **gated behind `QA_VISUAL_ENABLED=1` (default
+off)** — without the flag the router is not mounted and every qa-visual
+endpoint returns 404. The dashboard is multi-tenant without roles and the
+report store is global, so the flag must stay off until reports are
+owner-scoped (security finding S-1R). Because the Docker build context only
+ships `dashboard/backend`,
 the module is vendored at `dashboard/backend/src/infrastructure/qa_visual/`
 (same pattern as the cache module). A parity test
 (`tests/unit/infrastructure/test_qa_visual_vendor_parity.py`) fails loudly if
@@ -84,7 +89,7 @@ cp src/infrastructure/qa_visual/*.py dashboard/backend/src/infrastructure/qa_vis
 
 Upload hardening (S-2/S-5) applies to `POST /analyze`: `Content-Length`
 pre-check + chunked read capped at 10 MB (413), `image/png` content-type and
-PNG magic-byte validation (415), and `target` limited to 255 chars (422).
+PNG magic-byte validation (415), and `target` limited to 200 chars (422).
 Upstream gateway errors return a generic 502 with full detail in server logs
 only (S-3, CWE-209).
 
@@ -145,7 +150,8 @@ Content-Type: multipart/form-data
 ```
 
 Errors: `422` (missing/empty fields), `413` (screenshot > 10 MB),
-`502` (gateway or model-output failure, includes a raw output excerpt).
+`502` (gateway or model-output failure, generic body — details in server
+logs only).
 
 ### Reports and trends
 
