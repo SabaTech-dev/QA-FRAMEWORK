@@ -11,6 +11,7 @@ from api.v1 import router as api_router
 from api.v1.health import router as health_router, set_startup_complete
 from api.v1.integrations import include_router as include_integrations_router
 from services.auth_service import get_current_user
+from src.infrastructure.qa_visual import create_qa_visual_router
 from core.logging_config import configure_logging, get_logger
 from models import User
 from integration.qa_framework_client import get_qa_test_suites
@@ -65,6 +66,11 @@ app.include_router(health_router, prefix="/api/v1")
 # Include integration router
 include_integrations_router(app)
 
+# QA Visual router (Fase C) — vendored copy under dashboard/backend/src,
+# mounted behind the dashboard auth (S-1): every endpoint requires a valid
+# JWT via Depends(get_current_user).
+app.include_router(create_qa_visual_router(dependencies=[Depends(get_current_user)]))
+
 # Add Prometheus metrics endpoint
 metrics_app = make_asgi_app()
 app.mount("/metrics", metrics_app)
@@ -76,13 +82,10 @@ async def startup_event():
     logger.info("Initializing QA-Framework Dashboard...")
     await init_db()
     set_startup_complete()
-    
+
     # Initialize APM
-    init_app_info(
-        version="0.1.0",
-        environment=settings.ENVIRONMENT
-    )
-    
+    init_app_info(version="0.1.0", environment=settings.ENVIRONMENT)
+
     logger.info("QA-Framework Dashboard initialized successfully")
 
 
@@ -109,13 +112,12 @@ async def get_qa_framework_suites(current_user: User = Depends(get_current_user)
         return {"suites": suites}
     except Exception as e:
         logger.error(f"Error getting QA-FRAMEWORK suites: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Error connecting to QA-FRAMEWORK: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error connecting to QA-FRAMEWORK: {str(e)}")
 
 
 # Only run uvicorn directly when executed as script, not when imported
 if __name__ == "__main__":
     import os
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "8000")))
