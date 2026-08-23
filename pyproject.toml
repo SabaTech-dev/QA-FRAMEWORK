@@ -37,6 +37,7 @@ fastapi = "0.115.4"
 python-jose = {version = ">=3.4.0,<4", extras = ["cryptography"]}
 bcrypt = "4.1.2"
 pyjwt = ">=2.8.0,<3"
+python-multipart = ">=0.0.27"
 redis = "5.0.1"
 psutil = "5.9.8"
 
