@@ -1,14 +1,14 @@
 """Persistence layer package"""
 
-from .tenant_repository import (
-    TenantRepositoryInterface,
-    SQLAlchemyTenantRepository,
-    InMemoryTenantRepository
-)
 from .role_repository import (
+    InMemoryRoleRepository,
     RoleRepositoryInterface,
     SQLAlchemyRoleRepository,
-    InMemoryRoleRepository
+)
+from .tenant_repository import (
+    InMemoryTenantRepository,
+    SQLAlchemyTenantRepository,
+    TenantRepositoryInterface,
 )
 
 __all__ = [
@@ -17,5 +17,5 @@ __all__ = [
     "InMemoryTenantRepository",
     "RoleRepositoryInterface",
     "SQLAlchemyRoleRepository",
-    "InMemoryRoleRepository"
+    "InMemoryRoleRepository",
 ]

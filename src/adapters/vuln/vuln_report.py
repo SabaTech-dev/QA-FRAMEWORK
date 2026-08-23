@@ -8,15 +8,9 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
-from .vuln_parser import (
-    VulnScanResult,
-    VulnerabilityFinding,
-    VulnSeverity,
-    VulnCategory,
-    UnifiedVulnParser,
-)
+from .vuln_parser import UnifiedVulnParser, VulnerabilityFinding, VulnScanResult, VulnSeverity
 
 logger = logging.getLogger(__name__)
 
@@ -379,7 +373,9 @@ class VulnReportGenerator:
         logger.info(f"Markdown report generated: {report_path}")
         return str(report_path)
 
-    def generate_all(self, result: VulnScanResult, base_name: Optional[str] = None) -> Dict[str, str]:
+    def generate_all(
+        self, result: VulnScanResult, base_name: Optional[str] = None
+    ) -> Dict[str, str]:
         """Generate all report formats.
 
         Args:

@@ -13,7 +13,7 @@ from typing import Optional
 
 from pydantic import ValidationError
 
-from src.infrastructure.qa_visual.models import QAIssue, QAAnalysis
+from src.infrastructure.qa_visual.models import QAAnalysis, QAIssue
 
 # Extracts the outermost {...} block, ignoring braces inside strings.
 _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)

@@ -10,11 +10,12 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
-from .value_objects import Money, BillingPeriod, BillingStatus, UsageLimit
+from .value_objects import Money, UsageLimit
 
 
 class PlanType(Enum):
     """Types of subscription plans"""
+
     FREE = "free"
     PRO = "pro"
     ENTERPRISE = "enterprise"
@@ -22,6 +23,7 @@ class PlanType(Enum):
 
 class SubscriptionStatus(Enum):
     """Subscription status"""
+
     ACTIVE = "active"
     TRIALING = "trialing"
     PAST_DUE = "past_due"
@@ -37,10 +39,11 @@ class SubscriptionStatus(Enum):
 class Plan:
     """
     Represents a subscription plan.
-    
+
     This is a domain entity that defines the available plans
     and their pricing/feature structure.
     """
+
     id: UUID = field(default_factory=uuid4)
     name: str = ""
     description: str = ""
@@ -53,30 +56,30 @@ class Plan:
     is_active: bool = True
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    
+
     def __post_init__(self) -> None:
         """Initialize default timestamps"""
         if self.created_at is None:
             self.created_at = datetime.now(timezone.utc)
         if self.updated_at is None:
             self.updated_at = datetime.now(timezone.utc)
-    
+
     def is_free(self) -> bool:
         """Check if this is a free plan"""
         return self.price.is_zero() or self.plan_type == PlanType.FREE
-    
+
     def is_paid(self) -> bool:
         """Check if this is a paid plan"""
         return not self.is_free()
-    
+
     def has_feature(self, feature: str) -> bool:
         """Check if plan includes a feature"""
         return feature in self.features
-    
+
     def check_limit(self, metric: str, value: int) -> bool:
         """Check if value is within plan limits"""
         return self.limits.exceeds_limit(metric, value)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -104,9 +107,10 @@ class Plan:
 class Subscription:
     """
     Represents a user's subscription.
-    
+
     This entity tracks subscription state and metadata.
     """
+
     id: UUID = field(default_factory=uuid4)
     tenant_id: Optional[UUID] = None
     user_id: Optional[UUID] = None
@@ -122,41 +126,38 @@ class Subscription:
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def __post_init__(self) -> None:
         """Initialize default timestamps"""
         if self.created_at is None:
             self.created_at = datetime.now(timezone.utc)
         if self.updated_at is None:
             self.updated_at = datetime.now(timezone.utc)
-    
+
     def is_active(self) -> bool:
         """Check if subscription is active"""
-        return self.status in [
-            SubscriptionStatus.ACTIVE,
-            SubscriptionStatus.TRIALING
-        ]
-    
+        return self.status in [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING]
+
     def is_paid(self) -> bool:
         """Check if subscription is paid"""
         return self.plan_type != PlanType.FREE
-    
+
     def is_in_trial(self) -> bool:
         """Check if subscription is in trial period"""
         return self.status == SubscriptionStatus.TRIALING
-    
+
     def cancel(self, at_period_end: bool = True) -> None:
         """Mark subscription for cancellation"""
         self.cancel_at_period_end = at_period_end
         self.canceled_at = datetime.now(timezone.utc)
         self.updated_at = datetime.now(timezone.utc)
         self.status = SubscriptionStatus.CANCELING
-    
+
     def activate(self) -> None:
         """Activate subscription"""
         self.status = SubscriptionStatus.ACTIVE
         self.updated_at = datetime.now(timezone.utc)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -166,8 +167,12 @@ class Subscription:
             "plan_type": self.plan_type.value,
             "status": self.status.value,
             "is_active": self.is_active(),
-            "current_period_start": self.current_period_start.isoformat() if self.current_period_start else None,
-            "current_period_end": self.current_period_end.isoformat() if self.current_period_end else None,
+            "current_period_start": (
+                self.current_period_start.isoformat() if self.current_period_start else None
+            ),
+            "current_period_end": (
+                self.current_period_end.isoformat() if self.current_period_end else None
+            ),
             "cancel_at_period_end": self.cancel_at_period_end,
         }
 
@@ -176,9 +181,10 @@ class Subscription:
 class Usage:
     """
     Represents resource usage for a tenant.
-    
+
     Tracks actual consumption against plan limits.
     """
+
     id: UUID = field(default_factory=uuid4)
     tenant_id: Optional[UUID] = None
     period_start: Optional[datetime] = None
@@ -191,7 +197,7 @@ class Usage:
     storage_used_gb: float = 0.0
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    
+
     def __post_init__(self) -> None:
         """Initialize default timestamps"""
         if self.created_at is None:
@@ -199,23 +205,35 @@ class Usage:
         if self.updated_at is None:
             self.updated_at = datetime.now(timezone.utc)
         if self.period_start is None:
-            self.period_start = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0)
-    
+            self.period_start = datetime.now(timezone.utc).replace(
+                day=1, hour=0, minute=0, second=0
+            )
+
     def increment_tests(self, count: int = 1) -> None:
         """Increment test execution count"""
         self.tests_executed += count
         self.updated_at = datetime.now(timezone.utc)
-    
+
     def increment_ai_calls(self, count: int = 1) -> None:
         """Increment AI feature usage"""
         self.ai_feature_calls += count
         self.updated_at = datetime.now(timezone.utc)
-    
+
     def check_against_limits(self, plan: Plan) -> Dict[str, bool]:
         """
         Check current usage against plan limits.
-        
+
         Returns dict of metric -> is_within_limit
         """
         return {
-            "tests_executed": not plan
+            "tests_executed": self.tests_executed <= plan.limits.max_tests_per_month
+            or plan.limits.max_tests_per_month == -1,
+            "users_active": self.users_active <= plan.limits.max_users
+            or plan.limits.max_users == -1,
+            "suites_created": self.suites_created <= plan.limits.max_suites
+            or plan.limits.max_suites == -1,
+            "cases_created": self.cases_created <= plan.limits.max_cases_per_suite
+            or plan.limits.max_cases_per_suite == -1,
+            "storage_used_gb": self.storage_used_gb <= plan.limits.storage_gb
+            or plan.limits.storage_gb == -1,
+        }

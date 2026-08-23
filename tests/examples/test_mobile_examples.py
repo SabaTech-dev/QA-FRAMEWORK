@@ -79,7 +79,7 @@ class TestAndroidApp:
         """Test screenshot capture."""
         # Take screenshot
         screenshot_path = mobile_screenshot_dir / "test_screenshot.png"
-        result = android_driver.get_screenshot(str(screenshot_path))
+        _result = android_driver.get_screenshot(str(screenshot_path))
 
         # Verify screenshot was saved
         assert screenshot_path.exists()

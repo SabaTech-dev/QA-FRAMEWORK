@@ -11,10 +11,7 @@ import logging
 from typing import List, Optional, Tuple
 
 from src.infrastructure.qa_visual.config import QAVisualConfig
-from src.infrastructure.qa_visual.gateway_client import (
-    VisionGatewayClient,
-    VisionGatewayError,
-)
+from src.infrastructure.qa_visual.gateway_client import VisionGatewayClient, VisionGatewayError
 from src.infrastructure.qa_visual.models import AnalyzeResponse, TrendAlert, TrendPoint
 from src.infrastructure.qa_visual.parser import parse_qa_analysis
 from src.infrastructure.qa_visual.storage import QAVisualReportStore, new_report_id

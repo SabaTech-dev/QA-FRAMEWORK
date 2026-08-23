@@ -4,31 +4,31 @@ Generate Tests from UI Use Case
 Analyzes UI automation code and generates additional test cases.
 """
 
-from typing import List, Optional, Protocol
 from dataclasses import dataclass
+from typing import List, Optional, Protocol
 
-from ..entities import GeneratedTest, TestScenario, TestGenerationSession
+from ..entities import GeneratedTest, TestGenerationSession, TestScenario
 from ..value_objects import (
+    ConfidenceLevel,
+    GenerationStatus,
     GenerationType,
+    TestCaseMetadata,
     TestFramework,
     TestPriority,
-    GenerationStatus,
-    ConfidenceLevel,
-    TestCaseMetadata,
 )
 
 
 class UIAnalyzer(Protocol):
     """Protocol for analyzing UI automation code."""
-    
+
     def analyze(self, code: str, framework: TestFramework) -> dict:
         """Analyze UI automation code."""
         ...
-    
+
     def extract_selectors(self, code: str) -> List[str]:
         """Extract selectors from UI code."""
         ...
-    
+
     def extract_flows(self, code: str) -> List[dict]:
         """Extract user flows from UI code."""
         ...
@@ -36,7 +36,7 @@ class UIAnalyzer(Protocol):
 
 class LLMAdapter(Protocol):
     """Protocol for LLM-based test generation."""
-    
+
     def generate_test(
         self,
         flow: dict,
@@ -45,11 +45,11 @@ class LLMAdapter(Protocol):
     ) -> GeneratedTest:
         """Generate a test from a UI flow."""
         ...
-    
+
     def suggest_improvements(self, test_code: str) -> List[str]:
         """Suggest improvements to test code."""
         ...
-    
+
     def estimate_confidence(self, flow: dict, test_code: str) -> float:
         """Estimate confidence score for generated test."""
         ...
@@ -58,6 +58,7 @@ class LLMAdapter(Protocol):
 @dataclass
 class GenerateFromUIInput:
     """Input for the GenerateFromUI use case."""
+
     ui_code: str
     framework: TestFramework = TestFramework.PLAYWRIGHT
     tenant_id: Optional[str] = None
@@ -69,6 +70,7 @@ class GenerateFromUIInput:
 @dataclass
 class GenerateFromUIOutput:
     """Output from the GenerateFromUI use case."""
+
     session: TestGenerationSession
     tests: List[GeneratedTest]
     flows_detected: int
@@ -80,11 +82,11 @@ class GenerateFromUIOutput:
 class GenerateFromUI:
     """
     Use case for generating tests from UI automation code.
-    
+
     Analyzes existing Playwright/Cypress code and generates
     additional test cases or improvements.
     """
-    
+
     def __init__(
         self,
         ui_analyzer: UIAnalyzer,
@@ -92,25 +94,29 @@ class GenerateFromUI:
     ):
         self.ui_analyzer = ui_analyzer
         self.llm_adapter = llm_adapter
-    
+
     def execute(self, input_data: GenerateFromUIInput) -> GenerateFromUIOutput:
         """Execute the use case."""
         session = TestGenerationSession(
             tenant_id=input_data.tenant_id,
-            source_type=TestFramework.PLAYWRIGHT if input_data.framework == TestFramework.PLAYWRIGHT else TestFramework.CYPRESS,
+            source_type=(
+                TestFramework.PLAYWRIGHT
+                if input_data.framework == TestFramework.PLAYWRIGHT
+                else TestFramework.CYPRESS
+            ),
         )
-        
+
         try:
             # Analyze UI code
-            analysis = self.ui_analyzer.analyze(
+            _analysis = self.ui_analyzer.analyze(
                 code=input_data.ui_code,
                 framework=input_data.framework,
             )
-            
+
             # Extract flows
             flows = self.ui_analyzer.extract_flows(input_data.ui_code)
             selectors = self.ui_analyzer.extract_selectors(input_data.ui_code)
-            
+
             session = TestGenerationSession(
                 id=session.id,
                 tenant_id=session.tenant_id,
@@ -118,10 +124,10 @@ class GenerateFromUI:
                 total_requirements=len(flows),
                 status=GenerationStatus.ANALYZING,
             )
-            
+
             # Generate tests for each flow
             generated_tests = []
-            
+
             for flow in flows:
                 if input_data.generate_missing_tests:
                     test = self._generate_test_for_flow(
@@ -129,14 +135,14 @@ class GenerateFromUI:
                         framework=input_data.framework,
                         session_id=session.id,
                     )
-                    
+
                     if test.confidence_score >= input_data.min_confidence:
                         generated_tests.append(test)
                         session = session.add_test(test)
-            
+
             # Complete session
             session = session.complete()
-            
+
             return GenerateFromUIOutput(
                 session=session,
                 tests=generated_tests,
@@ -144,13 +150,13 @@ class GenerateFromUI:
                 selectors_found=len(selectors),
                 success=True,
             )
-            
+
         except Exception as e:
             session = session.complete(
                 status=GenerationStatus.FAILED,
                 error=str(e),
             )
-            
+
             return GenerateFromUIOutput(
                 session=session,
                 tests=[],
@@ -159,7 +165,7 @@ class GenerateFromUI:
                 success=False,
                 error_message=str(e),
             )
-    
+
     def _generate_test_for_flow(
         self,
         flow: dict,
@@ -173,13 +179,13 @@ class GenerateFromUI:
             framework=framework,
             context={"session_id": session_id},
         )
-        
+
         # Estimate confidence
         confidence = self.llm_adapter.estimate_confidence(
             flow=flow,
             test_code=test.test_code,
         )
-        
+
         # Create scenario from flow
         scenario = TestScenario(
             name=flow.get("name", "UI Flow"),
@@ -189,7 +195,7 @@ class GenerateFromUI:
             priority=self._map_priority(flow.get("priority", "medium")),
             tags=flow.get("tags", ["ui", "automation"]),
         )
-        
+
         return GeneratedTest(
             id=test.id,
             name=test.name,
@@ -208,7 +214,7 @@ class GenerateFromUI:
             tags=test.tags + ["ui", "generated"],
             tenant_id=test.tenant_id,
         )
-    
+
     def _map_priority(self, priority: str) -> TestPriority:
         """Map string priority to TestPriority enum."""
         mapping = {

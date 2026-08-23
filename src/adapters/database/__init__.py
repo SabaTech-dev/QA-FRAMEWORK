@@ -1,9 +1,9 @@
 """Database Testing Module - Database testing and validation adapters"""
 
-from .sql_validator import SQLValidator, SQLValidationResult
 from .data_integrity_tester import DataIntegrityTester, IntegrityConstraint
-from .migration_tester import MigrationTester, MigrationResult, MigrationStatus
 from .database_client import DatabaseClient, SQLiteClient
+from .migration_tester import MigrationResult, MigrationStatus, MigrationTester
+from .sql_validator import SQLValidationResult, SQLValidator
 
 __all__ = [
     "SQLValidator",

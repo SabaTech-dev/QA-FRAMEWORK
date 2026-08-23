@@ -12,16 +12,9 @@ and Dashboard backend, including:
 import asyncio
 import json
 import time
-from datetime import datetime, timezone
-from typing import Any, Dict, List
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import httpx
 import pytest
-import pytest_asyncio
-
-from src.core.entities.test_result import TestResult, TestStatus
-
 
 # =============================================================================
 # Complete Test Lifecycle Tests
@@ -408,7 +401,7 @@ class TestRealTimeUpdates:
         3. Both channels receive appropriate messages
         4. No cross-channel interference
         """
-        channels = {"executions": [], "notifications": []}
+        _channels = {"executions": [], "notifications": []}
 
         # Send execution update
         await mock_websocket_manager.broadcast(
@@ -544,7 +537,7 @@ class TestErrorHandlingAndRecovery:
             ]
 
             # Start execution
-            response = await authenticated_client.post("/api/v1/executions", json={"suite_id": 1})
+            _response = await authenticated_client.post("/api/v1/executions", json={"suite_id": 1})
 
             # Timeout on status check
             with pytest.raises(Exception):
@@ -787,9 +780,9 @@ class TestCleanupAndMaintenance:
         3. Old data archived
         4. Recent data preserved
         """
-        retention_days = 30
+        _retention_days = 30
 
-        old_executions = [
+        _old_executions = [
             {"id": 1, "date": "2023-01-01"},  # Old
             {"id": 2, "date": "2023-01-02"},  # Old
         ]

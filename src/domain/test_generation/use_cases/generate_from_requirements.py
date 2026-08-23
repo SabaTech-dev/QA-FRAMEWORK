@@ -4,24 +4,24 @@ Generate Tests from Requirements Use Case
 Analyzes requirements documents and generates test cases.
 """
 
-from typing import List, Optional, Protocol
 from dataclasses import dataclass
+from typing import List, Optional, Protocol
 
-from ..entities import GeneratedTest, TestScenario, TestGenerationSession
+from ..entities import GeneratedTest, TestGenerationSession, TestScenario
 from ..value_objects import (
-    GenerationType,
-    TestFramework,
-    TestPriority,
-    GenerationStatus,
     ConfidenceLevel,
+    GenerationStatus,
+    GenerationType,
     RequirementSource,
     TestCaseMetadata,
+    TestFramework,
+    TestPriority,
 )
 
 
 class RequirementParser(Protocol):
     """Protocol for parsing requirements documents."""
-    
+
     def parse(self, content: str) -> List[dict]:
         """Parse requirements content into structured format."""
         ...
@@ -29,7 +29,7 @@ class RequirementParser(Protocol):
 
 class LLMAdapter(Protocol):
     """Protocol for LLM-based test generation."""
-    
+
     def generate_test(
         self,
         requirement: dict,
@@ -38,7 +38,7 @@ class LLMAdapter(Protocol):
     ) -> GeneratedTest:
         """Generate a test from a requirement."""
         ...
-    
+
     def estimate_confidence(self, requirement: dict, test_code: str) -> float:
         """Estimate confidence score for generated test."""
         ...
@@ -47,6 +47,7 @@ class LLMAdapter(Protocol):
 @dataclass
 class GenerateFromRequirementsInput:
     """Input for the GenerateFromRequirements use case."""
+
     content: str
     source_type: RequirementSource = RequirementSource.MARKDOWN
     framework: TestFramework = TestFramework.PYTEST
@@ -58,6 +59,7 @@ class GenerateFromRequirementsInput:
 @dataclass
 class GenerateFromRequirementsOutput:
     """Output from the GenerateFromRequirements use case."""
+
     session: TestGenerationSession
     tests: List[GeneratedTest]
     scenarios: List[TestScenario]
@@ -68,11 +70,11 @@ class GenerateFromRequirementsOutput:
 class GenerateFromRequirements:
     """
     Use case for generating tests from requirements documents.
-    
+
     Takes a requirements document (markdown, JIRA, etc.) and
     generates comprehensive test cases.
     """
-    
+
     def __init__(
         self,
         requirement_parser: RequirementParser,
@@ -80,7 +82,7 @@ class GenerateFromRequirements:
     ):
         self.requirement_parser = requirement_parser
         self.llm_adapter = llm_adapter
-    
+
     def execute(self, input_data: GenerateFromRequirementsInput) -> GenerateFromRequirementsOutput:
         """Execute the use case."""
         session = TestGenerationSession(
@@ -88,7 +90,7 @@ class GenerateFromRequirements:
             source_type=input_data.source_type,
             source_content=input_data.content[:500],  # Store first 500 chars
         )
-        
+
         try:
             # Parse requirements
             requirements = self.requirement_parser.parse(input_data.content)
@@ -100,7 +102,7 @@ class GenerateFromRequirements:
                 total_requirements=len(requirements),
                 status=GenerationStatus.ANALYZING,
             )
-            
+
             # Generate tests for each requirement
             generated_tests = []
             for req in requirements:
@@ -109,32 +111,32 @@ class GenerateFromRequirements:
                     framework=input_data.framework,
                     session_id=session.id,
                 )
-                
+
                 if test.confidence_score >= input_data.min_confidence:
                     generated_tests.append(test)
                     session = session.add_test(test)
-            
+
             # Create scenarios
             scenarios = self._create_scenarios(requirements)
             for scenario in scenarios:
                 session = session.add_scenario(scenario)
-            
+
             # Complete session
             session = session.complete()
-            
+
             return GenerateFromRequirementsOutput(
                 session=session,
                 tests=generated_tests,
                 scenarios=scenarios,
                 success=True,
             )
-            
+
         except Exception as e:
             session = session.complete(
                 status=GenerationStatus.FAILED,
                 error=str(e),
             )
-            
+
             return GenerateFromRequirementsOutput(
                 session=session,
                 tests=[],
@@ -142,7 +144,7 @@ class GenerateFromRequirements:
                 success=False,
                 error_message=str(e),
             )
-    
+
     def _generate_single_test(
         self,
         requirement: dict,
@@ -156,13 +158,13 @@ class GenerateFromRequirements:
             framework=framework,
             context={"session_id": session_id},
         )
-        
+
         # Estimate confidence
         confidence = self.llm_adapter.estimate_confidence(
             requirement=requirement,
             test_code=test.test_code,
         )
-        
+
         # Update test with confidence
         return GeneratedTest(
             id=test.id,
@@ -182,11 +184,11 @@ class GenerateFromRequirements:
             tags=test.tags,
             tenant_id=test.tenant_id,
         )
-    
+
     def _create_scenarios(self, requirements: List[dict]) -> List[TestScenario]:
         """Create test scenarios from requirements."""
         scenarios = []
-        
+
         for req in requirements:
             scenario = TestScenario(
                 name=req.get("title", "Untitled Scenario"),
@@ -199,9 +201,9 @@ class GenerateFromRequirements:
                 source_requirement=req.get("id"),
             )
             scenarios.append(scenario)
-        
+
         return scenarios
-    
+
     def _map_priority(self, priority: str) -> TestPriority:
         """Map string priority to TestPriority enum."""
         mapping = {

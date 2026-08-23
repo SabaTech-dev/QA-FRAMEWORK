@@ -11,10 +11,9 @@ Implements sophisticated testing patterns:
 
 import functools
 import time
-from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, TypeVar
 from unittest.mock import MagicMock
 
 import pytest
@@ -89,7 +88,7 @@ class AAAPattern:
 
     def assert_not_none(self, value: Any, message: str = "") -> "AAAPattern":
         """Assert that value is not None."""
-        msg = message or f"Expected value to not be None"
+        msg = message or "Expected value to not be None"
         return self.assert_that(value is not None, msg)
 
     def assert_raises(

@@ -1,7 +1,5 @@
 """Unit tests for QA Visual model output parsing."""
 
-import pytest
-
 from src.infrastructure.qa_visual.parser import ParseResult, parse_qa_analysis
 
 VALID_JSON = """

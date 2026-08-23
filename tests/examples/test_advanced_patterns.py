@@ -11,19 +11,12 @@ This module showcases:
 
 import pytest
 
-from tests.fixtures.factories import (
-    APIRequestFactory,
-    ObjectMother,
-    UserFactory,
-)
+from tests.fixtures.factories import ObjectMother, UserFactory
 from tests.fixtures.patterns import (
     AAAPattern,
     GivenWhenThen,
     TableDrivenTests,
-    TestDataTable,
     create_isolation_manager,
-    using_aaa,
-    using_bdd,
 )
 
 
@@ -102,7 +95,11 @@ class TestBDDPattern:
         ).when(
             "the user confirms the purchase",
             action=lambda: {"order_id": "ORD-123", "status": "confirmed"},
-        ).then("an order should be created").then("the cart should be emptied").and_(
+        ).then(
+            "an order should be created"
+        ).then(
+            "the cart should be emptied"
+        ).and_(
             "a confirmation email should be sent"
         )
 

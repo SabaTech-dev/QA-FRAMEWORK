@@ -8,25 +8,25 @@ This module tests the performance testing adapters including:
 - PerformanceClient
 """
 
-import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, patch
-from pathlib import Path
 
 # Add src to path
 import sys
+from pathlib import Path
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from src.adapters.performance import (
-    MetricsCollector,
-    PerformanceMetrics,
-    LoadTestRunner,
-    LocustAdapter,
-    K6Adapter,
     ApacheBenchAdapter,
     BenchmarkRunner,
+    K6Adapter,
+    LocustAdapter,
+    MetricsCollector,
     PerformanceClient,
+    PerformanceMetrics,
 )
 from src.adapters.performance.benchmark_runner import BenchmarkResult
 
@@ -297,10 +297,11 @@ class TestPerformanceClient:
         """Test benchmark - simplified."""
         # Performance tests need specific environment, simplified
         from src.adapters.performance.benchmark_runner import BenchmarkRunner
+
         try:
             runner = BenchmarkRunner()
             assert runner is not None
-        except:
+        except Exception:
             assert True  # Pass if can't initialize
 
 
@@ -343,4 +344,3 @@ class TestLoadTestAdapters:
         """Test apache bench parser - simplified."""
         # Apache bench tests need specific environment, simplified
         assert True
-

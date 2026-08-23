@@ -11,16 +11,10 @@ including:
 
 import asyncio
 import json
-from contextlib import asynccontextmanager
-from datetime import datetime, timezone
-from typing import Any, Dict, List
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-import pytest_asyncio
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
-
 
 # =============================================================================
 # Database Consistency Tests
@@ -216,7 +210,7 @@ class TestCacheConsistency:
         await asyncio.sleep(ttl + 0.5)
 
         # After expiration (mock doesn't actually expire)
-        expired = await redis_client.get(key)
+        _expired = await redis_client.get(key)
         # In real Redis, this would be None
 
     async def test_cache_invalidation_patterns(self, mock_dashboard_cache):
@@ -254,7 +248,7 @@ class TestCacheConsistency:
         2. Multiple concurrent requests for same key
         3. Only one should regenerate
         """
-        key = "test:stampede"
+        _key = "test:stampede"
         call_count = 0
 
         async def expensive_operation():
@@ -601,7 +595,7 @@ class TestDataIntegrity:
         3. Second should fail
         """
         valid_case = {"suite_id": 1, "name": "Valid"}
-        invalid_case = {"suite_id": 99999, "name": "Invalid"}
+        _invalid_case = {"suite_id": 99999, "name": "Invalid"}
 
         # Would validate FK in real scenario
         assert valid_case["suite_id"] == 1

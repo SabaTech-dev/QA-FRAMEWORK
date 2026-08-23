@@ -65,7 +65,13 @@ jobs:
         id: changed-files
         run: |
           CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -E '\.py$' || true)
-          echo "changed_files=$CHANGED_FILES" >> $GITHUB_OUTPUT
+          # Multi-line values require the heredoc delimiter format
+          # (bare key=value breaks the runner: "Invalid format '<2nd line>'")
+          {
+            echo "changed_files<<EOF"
+            echo "$CHANGED_FILES"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
           echo "Changed files: $CHANGED_FILES"
 
       - name: Run tests for changed files
