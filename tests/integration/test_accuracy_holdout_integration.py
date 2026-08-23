@@ -22,17 +22,12 @@ import pytest
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from src.domain.accuracy_testing.entities import AccuracyTestSession
-from src.domain.accuracy_testing.splitting import (
-    SplitPolicy,
-    split_benchmarks,
-)
 from src.domain.accuracy_testing.holdout_service import HoldoutEvaluationService
-from src.infrastructure.accuracy_testing.rule_based_evaluator import (
-    RuleBasedAccuracyEvaluator,
-)
+from src.domain.accuracy_testing.splitting import SplitPolicy, split_benchmarks
 from src.infrastructure.accuracy_testing.german_ai_liability_benchmarks import (
     create_german_ai_liability_benchmarks,
 )
+from src.infrastructure.accuracy_testing.rule_based_evaluator import RuleBasedAccuracyEvaluator
 
 
 class ScriptedProvider:

@@ -20,17 +20,17 @@ import pytest
 
 from src.domain.accuracy_testing.entities import (
     AccuracyBenchmark,
-    AccuracyTestSession,
     AccuracyEvaluation,
-)
-from src.domain.accuracy_testing.value_objects import LegalDomain
-from src.domain.accuracy_testing.splitting import (
-    SplitPolicy,
-    BenchmarkSplit,
-    HoldoutSummary,
-    split_benchmarks,
+    AccuracyTestSession,
 )
 from src.domain.accuracy_testing.holdout_service import HoldoutEvaluationService
+from src.domain.accuracy_testing.splitting import (
+    BenchmarkSplit,
+    HoldoutSummary,
+    SplitPolicy,
+    split_benchmarks,
+)
+from src.domain.accuracy_testing.value_objects import LegalDomain
 
 # ========================================================================
 # Helpers

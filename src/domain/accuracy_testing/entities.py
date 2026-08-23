@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
+from .splitting import HoldoutSummary
 from .value_objects import (
     AccuracyLevel,
     CriterionScore,
@@ -19,7 +20,6 @@ from .value_objects import (
     validate_jurisdiction,
     validate_threshold,
 )
-from .splitting import HoldoutSummary
 
 
 @dataclass
