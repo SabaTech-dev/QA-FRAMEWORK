@@ -201,6 +201,21 @@ class TestResponseHandling:
                 await client.analyze_image(b"png")
 
     @pytest.mark.asyncio
+    async def test_http_error_detail_not_in_exception_but_logged(self, caplog):
+        """S-3: upstream body goes to logs, never into the exception message."""
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(500, text="internal stack trace detail")
+
+        async with make_client(handler) as client:
+            with caplog.at_level("ERROR", logger="src.infrastructure.qa_visual.gateway_client"):
+                with pytest.raises(VisionGatewayError) as exc_info:
+                    await client.analyze_image(b"png")
+
+        assert "internal stack trace detail" not in str(exc_info.value)
+        assert any("internal stack trace detail" in r.message for r in caplog.records)
+
+    @pytest.mark.asyncio
     async def test_timeout_raises(self):
         def handler(request: httpx.Request) -> httpx.Response:
             raise httpx.ConnectTimeout("timed out")

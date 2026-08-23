@@ -106,7 +106,10 @@ class VisionGatewayClient:
 
         latency_s = time.monotonic() - started
         if response.status_code != 200:
-            raise VisionGatewayError(f"Gateway HTTP {response.status_code}: {response.text[:200]}")
+            # S-3 (CWE-209): upstream body stays in server logs only, never
+            # in the exception message that could reach an HTTP client.
+            logger.error("Gateway HTTP %s: %s", response.status_code, response.text[:200])
+            raise VisionGatewayError(f"Gateway HTTP {response.status_code}")
 
         try:
             body = response.json()

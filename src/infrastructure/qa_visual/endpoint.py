@@ -16,9 +16,10 @@ Example:
 """
 
 import logging
-from typing import Optional
+from collections.abc import Sequence
+from typing import Any, Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, status
 
 from src.infrastructure.qa_visual.analyzer import (
     QAVisualAnalysisError,
@@ -30,22 +31,56 @@ from src.infrastructure.qa_visual.models import AnalyzeResponse
 logger = logging.getLogger(__name__)
 
 MAX_SCREENSHOT_BYTES = 10 * 1024 * 1024  # 10 MB safety cap
+# Headroom for multipart boundaries and form fields when pre-checking
+# Content-Length, so a legitimate 10 MB image is never rejected early.
+MULTIPART_OVERHEAD_ALLOWANCE = 64 * 1024
+PNG_MAGIC_BYTES = b"\x89PNG\r\n\x1a\n"
+CHUNK_SIZE = 64 * 1024
+
+
+async def _read_capped(upload: UploadFile) -> bytes:
+    """Read the upload in chunks, aborting as soon as the size cap is exceeded.
+
+    Never loads an oversized file fully into memory (S-2b).
+    """
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await upload.read(CHUNK_SIZE)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > MAX_SCREENSHOT_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"Screenshot exceeds {MAX_SCREENSHOT_BYTES // (1024 * 1024)} MB",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 def create_qa_visual_router(
     analyzer: Optional[QAVisualAnalyzer] = None,
     prefix: str = "/api/v1/qa-visual",
+    dependencies: Optional[Sequence[Any]] = None,
 ) -> APIRouter:
     """Create the QA Visual API router.
 
     Args:
         analyzer: pre-configured analyzer (built from env when None)
         prefix: router prefix
+        dependencies: router-level FastAPI dependencies (e.g. auth).
+            Applied to every endpoint; empty by default so the module
+            stays decoupled from any concrete auth service.
 
     Returns:
         FastAPI router with the QA Visual endpoints.
     """
-    router = APIRouter(prefix=prefix, tags=["qa-visual"])
+    router = APIRouter(
+        prefix=prefix,
+        tags=["qa-visual"],
+        dependencies=list(dependencies) if dependencies else [],
+    )
     _analyzer = analyzer
 
     def get_analyzer() -> QAVisualAnalyzer:
@@ -56,29 +91,55 @@ def create_qa_visual_router(
 
     @router.post("/analyze", response_model=AnalyzeResponse)
     async def analyze_screenshot(
+        request: Request,
         screenshot: UploadFile = File(..., description="PNG screenshot to analyze"),
-        target: str = Form(..., description="Target name (page/feature identifier)"),
+        target: str = Form(
+            ..., max_length=255, description="Target name (page/feature identifier)"
+        ),
     ) -> AnalyzeResponse:
         """Analyze one screenshot with the vision model and store the report."""
-        image_bytes = await screenshot.read()
+        # S-2a: reject oversized uploads before reading the body.
+        content_length = request.headers.get("content-length", "")
+        if content_length.isdigit() and int(content_length) > (
+            MAX_SCREENSHOT_BYTES + MULTIPART_OVERHEAD_ALLOWANCE
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"Screenshot exceeds {MAX_SCREENSHOT_BYTES // (1024 * 1024)} MB",
+            )
+        # S-2c: only PNG screenshots are accepted (no paid API calls on junk).
+        if screenshot.content_type != "image/png":
+            raise HTTPException(
+                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                detail="Screenshot must be image/png",
+            )
+        image_bytes = await _read_capped(screenshot)
         if not image_bytes:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Empty screenshot upload",
             )
-        if len(image_bytes) > MAX_SCREENSHOT_BYTES:
+        if not image_bytes.startswith(PNG_MAGIC_BYTES):
             raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail=f"Screenshot exceeds {MAX_SCREENSHOT_BYTES // (1024 * 1024)} MB",
+                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                detail="Screenshot is not a valid PNG",
             )
         try:
             response = await get_analyzer().analyze(image_bytes, target=target)
         except QAVisualAnalysisError as exc:
-            detail = str(exc)
+            # S-3 (CWE-209): full detail goes to server logs only; the HTTP
+            # client gets a generic message.
             excerpt = (exc.raw_content or "")[:200]
-            if excerpt:
-                detail = f"{detail}. Raw output excerpt: {excerpt}"
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=detail) from exc
+            logger.error(
+                "QA Visual analysis failed (target=%s): %s%s",
+                target,
+                exc,
+                f" | raw output excerpt: {excerpt}" if excerpt else "",
+            )
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Vision gateway error; see server logs",
+            ) from exc
         return response
 
     @router.get("/reports")

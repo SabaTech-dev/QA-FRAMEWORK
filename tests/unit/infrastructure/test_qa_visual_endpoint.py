@@ -1,7 +1,6 @@
 """Unit tests for the QA Visual API router."""
 
 import io
-import json
 from pathlib import Path
 from unittest.mock import AsyncMock
 
@@ -110,6 +109,48 @@ class TestAnalyzeEndpoint:
         )
         assert response.status_code == 413
 
+    def test_post_analyze_content_length_precheck_rejects_early(self, client):
+        """S-2a: Content-Length far above the cap is rejected before reading."""
+        from src.infrastructure.qa_visual.endpoint import MAX_SCREENSHOT_BYTES
+
+        huge = b"x" * (MAX_SCREENSHOT_BYTES + 2 * 1024 * 1024)
+        response = client.post(
+            "/api/v1/qa-visual/analyze",
+            files={"screenshot": ("page.png", io.BytesIO(huge), "image/png")},
+            data={"target": "amc"},
+        )
+        assert response.status_code == 413
+        assert "exceeds" in response.json()["detail"].lower()
+
+    def test_post_analyze_rejects_non_png_content_type(self, client, analyzer):
+        """S-2c: uploads that are not image/png get 415, no paid API call."""
+        response = client.post(
+            "/api/v1/qa-visual/analyze",
+            files={"screenshot": ("page.jpg", io.BytesIO(PNG_BYTES), "image/jpeg")},
+            data={"target": "amc"},
+        )
+        assert response.status_code == 415
+        analyzer.analyze.assert_not_awaited()
+
+    def test_post_analyze_rejects_non_png_magic_bytes(self, client, analyzer):
+        """S-2c: image/png content-type but no PNG signature is rejected."""
+        response = client.post(
+            "/api/v1/qa-visual/analyze",
+            files={"screenshot": ("page.png", io.BytesIO(b"JFIFnotapng"), "image/png")},
+            data={"target": "amc"},
+        )
+        assert response.status_code == 415
+        analyzer.analyze.assert_not_awaited()
+
+    def test_post_analyze_target_too_long_rejected(self, client):
+        """S-5: target longer than 255 chars is rejected (422), no 500."""
+        response = client.post(
+            "/api/v1/qa-visual/analyze",
+            files={"screenshot": ("page.png", io.BytesIO(PNG_BYTES), "image/png")},
+            data={"target": "x" * 256},
+        )
+        assert response.status_code == 422
+
     def test_post_analyze_requires_target(self, client):
         response = client.post(
             "/api/v1/qa-visual/analyze",
@@ -117,7 +158,8 @@ class TestAnalyzeEndpoint:
         )
         assert response.status_code == 422
 
-    def test_post_analyze_analysis_error_returns_502(self, client, analyzer):
+    def test_post_analyze_analysis_error_returns_generic_502(self, client, analyzer):
+        """S-3: upstream gateway detail must NOT reach the HTTP client."""
         analyzer.analyze.side_effect = QAVisualAnalysisError(
             "Vision gateway failed: Gateway HTTP 503: down"
         )
@@ -127,9 +169,12 @@ class TestAnalyzeEndpoint:
             data={"target": "amc"},
         )
         assert response.status_code == 502
-        assert "503" in response.json()["detail"]
+        detail = response.json()["detail"]
+        assert "503" not in detail
+        assert "down" not in detail
 
-    def test_post_analyze_parse_error_reports_raw_excerpt(self, client, analyzer):
+    def test_post_analyze_parse_error_does_not_leak_raw_output(self, client, analyzer):
+        """S-3: raw model output excerpt must NOT reach the HTTP client."""
         analyzer.analyze.side_effect = QAVisualAnalysisError(
             "Model output could not be parsed into the QA contract",
             raw_content="garbage output",
@@ -140,7 +185,22 @@ class TestAnalyzeEndpoint:
             data={"target": "amc"},
         )
         assert response.status_code == 502
-        assert "garbage" in response.json()["detail"]
+        assert "garbage" not in response.json()["detail"]
+
+    def test_post_analyze_error_detail_logged_server_side(self, client, analyzer, caplog):
+        """S-3: full detail goes to server logs, not to the client."""
+        analyzer.analyze.side_effect = QAVisualAnalysisError(
+            "Vision gateway failed: Gateway HTTP 503: down",
+            raw_content="secret model output",
+        )
+        with caplog.at_level("ERROR", logger="src.infrastructure.qa_visual.endpoint"):
+            client.post(
+                "/api/v1/qa-visual/analyze",
+                files={"screenshot": ("page.png", io.BytesIO(PNG_BYTES), "image/png")},
+                data={"target": "amc"},
+            )
+        assert any("503" in r.message for r in caplog.records)
+        assert any("secret model output" in r.message for r in caplog.records)
 
 
 class TestReportsEndpoints:
@@ -197,3 +257,51 @@ class TestBaselinesEndpoint:
     def test_get_baseline_not_found(self, client):
         response = client.get("/api/v1/qa-visual/baselines/nope")
         assert response.status_code == 404
+
+
+class TestRouterDependencies:
+    """S-1 (Fase C): the factory must accept injectable router dependencies."""
+
+    def _protected_client(self, analyzer):
+        from fastapi import Depends, HTTPException
+
+        def deny_all() -> None:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+
+        app = FastAPI()
+        app.include_router(
+            create_qa_visual_router(analyzer=analyzer, dependencies=[Depends(deny_all)])
+        )
+        return TestClient(app)
+
+    def test_dependencies_apply_to_all_five_endpoints(self, analyzer):
+        client = self._protected_client(analyzer)
+        get_paths = [
+            "/api/v1/qa-visual/reports",
+            "/api/v1/qa-visual/reports/rep-001",
+            "/api/v1/qa-visual/trends",
+            "/api/v1/qa-visual/baselines/amc",
+        ]
+        for path in get_paths:
+            assert client.get(path).status_code == 401, path
+        response = client.post(
+            "/api/v1/qa-visual/analyze",
+            files={"screenshot": ("page.png", io.BytesIO(PNG_BYTES), "image/png")},
+            data={"target": "amc"},
+        )
+        assert response.status_code == 401
+
+    def test_dependencies_run_before_analyzer(self, analyzer):
+        client = self._protected_client(analyzer)
+        client.post(
+            "/api/v1/qa-visual/analyze",
+            files={"screenshot": ("page.png", io.BytesIO(PNG_BYTES), "image/png")},
+            data={"target": "amc"},
+        )
+        analyzer.analyze.assert_not_awaited()
+
+    def test_no_dependencies_backward_compatible(self, analyzer):
+        app = FastAPI()
+        app.include_router(create_qa_visual_router(analyzer=analyzer))
+        client = TestClient(app)
+        assert client.get("/api/v1/qa-visual/reports").status_code == 200
