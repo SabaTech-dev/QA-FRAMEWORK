@@ -1,14 +1,22 @@
 """Wiring tests for the QA Visual router in the dashboard (Fase C — card 0ddedd75).
 
-S-1: dashboard/backend/main.py mounts the vendored qa_visual router with
-``dependencies=[Depends(get_current_user)]``. Every endpoint must reject
-unauthenticated requests on the REAL app: 403 without an Authorization
-header (HTTPBearer semantics) and 401 with a malformed bearer token.
+S-1/S-1R: dashboard/backend/main.py mounts the vendored qa_visual router —
+gated behind QA_VISUAL_ENABLED=1 — with ``dependencies=[Depends(get_current_user)]``.
+Every endpoint must reject unauthenticated requests on the REAL app.
+Without credentials the response is 401 or 403 depending on the stack's
+HTTPBearer handling (this one answers 401 "Not authenticated"); with a
+malformed bearer token get_current_user answers 401.
+
+The flag must be set BEFORE main is imported because the app (and the
+conditional router mount) is built at import time; the fixture reloads
+main under the flag so ordering vs. test_qa_visual_feature_flag.py is
+irrelevant.
 
 A hand-built app with an injected fake analyzer proves the authenticated
 happy path, so no paid gateway call or real report dir is touched.
 """
 
+import importlib
 import io
 from unittest.mock import AsyncMock
 
@@ -36,9 +44,14 @@ GET_PATHS = [
 
 @pytest.fixture(scope="module")
 def main_app():
+    # S-1R: build the app with the router actually mounted.
+    mp = pytest.MonkeyPatch()
+    mp.setenv("QA_VISUAL_ENABLED", "1")
     import main as dashboard_main
 
-    return dashboard_main.app
+    app = importlib.reload(dashboard_main).app
+    yield app
+    mp.undo()
 
 
 @pytest.fixture(scope="module")
@@ -49,17 +62,17 @@ def main_client(main_app):
 class TestMainAppAuthEnforcement:
     """The real dashboard app must enforce auth on all five endpoints."""
 
-    def test_no_credentials_403_all_get_endpoints(self, main_client):
+    def test_no_credentials_rejected_all_get_endpoints(self, main_client):
         for path in GET_PATHS:
-            assert main_client.get(path).status_code == 403, path
+            assert main_client.get(path).status_code in (401, 403), path
 
-    def test_no_credentials_403_analyze(self, main_client):
+    def test_no_credentials_rejected_analyze(self, main_client):
         response = main_client.post(
             "/api/v1/qa-visual/analyze",
             files={"screenshot": ("page.png", PNG_BYTES, "image/png")},
             data={"target": "amc"},
         )
-        assert response.status_code == 403
+        assert response.status_code in (401, 403)
 
     def test_malformed_token_401_all_endpoints(self, main_client):
         headers = {"Authorization": "Bearer not.a.jwt"}

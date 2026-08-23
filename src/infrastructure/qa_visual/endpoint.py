@@ -93,8 +93,12 @@ def create_qa_visual_router(
     async def analyze_screenshot(
         request: Request,
         screenshot: UploadFile = File(..., description="PNG screenshot to analyze"),
+        # S-5R: storage derives the filename as target + 29 bytes of suffix;
+        # 200 + 29 = 229 stays under the 255-byte filesystem name cap. A 255
+        # limit here would let targets of 227-255 chars pass the Form and
+        # then fail with OSError Errno 36 when the report is saved.
         target: str = Form(
-            ..., max_length=255, description="Target name (page/feature identifier)"
+            ..., max_length=200, description="Target name (page/feature identifier)"
         ),
     ) -> AnalyzeResponse:
         """Analyze one screenshot with the vision model and store the report."""

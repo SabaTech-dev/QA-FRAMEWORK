@@ -69,7 +69,12 @@ include_integrations_router(app)
 # QA Visual router (Fase C) — vendored copy under dashboard/backend/src,
 # mounted behind the dashboard auth (S-1): every endpoint requires a valid
 # JWT via Depends(get_current_user).
-app.include_router(create_qa_visual_router(dependencies=[Depends(get_current_user)]))
+# S-1R: the backend is multi-tenant without roles and the report store is
+# global (cross-tenant BOLA, CVSS 5.4), so the router stays UNMOUNTED
+# (endpoints 404) unless the deploy explicitly opts in with
+# QA_VISUAL_ENABLED=1, pending owner-scoped reports / role checks.
+if os.getenv("QA_VISUAL_ENABLED") == "1":
+    app.include_router(create_qa_visual_router(dependencies=[Depends(get_current_user)]))
 
 # Add Prometheus metrics endpoint
 metrics_app = make_asgi_app()

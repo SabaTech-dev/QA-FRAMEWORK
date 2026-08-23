@@ -143,13 +143,30 @@ class TestAnalyzeEndpoint:
         analyzer.analyze.assert_not_awaited()
 
     def test_post_analyze_target_too_long_rejected(self, client):
-        """S-5: target longer than 255 chars is rejected (422), no 500."""
+        """S-5R: target longer than 200 chars is rejected (422), no 500."""
         response = client.post(
             "/api/v1/qa-visual/analyze",
             files={"screenshot": ("page.png", io.BytesIO(PNG_BYTES), "image/png")},
-            data={"target": "x" * 256},
+            data={"target": "x" * 201},
         )
         assert response.status_code == 422
+
+    def test_post_analyze_target_at_limit_accepted(self, client, analyzer):
+        """S-5R: 200-char target passes Form validation.
+
+        Storage derives the filename as target + 29 bytes of suffix, so the
+        Form limit must stay under the 255-byte filesystem name cap
+        (200 + 29 = 229 < 255). Targets of 201+ chars would pass a 255 Form
+        limit and then explode with OSError Errno 36 on save.
+        """
+        target = "x" * 200
+        analyzer.analyze.return_value = make_response(report_id="limit-rep", target=target)
+        response = client.post(
+            "/api/v1/qa-visual/analyze",
+            files={"screenshot": ("page.png", io.BytesIO(PNG_BYTES), "image/png")},
+            data={"target": target},
+        )
+        assert response.status_code == 200
 
     def test_post_analyze_requires_target(self, client):
         response = client.post(
