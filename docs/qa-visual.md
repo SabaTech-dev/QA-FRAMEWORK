@@ -57,6 +57,51 @@ app = FastAPI()
 app.include_router(create_qa_visual_router())  # config from env
 ```
 
+The factory accepts injectable router-level `dependencies` so the mounter
+controls authentication without coupling the module to any auth service
+(security hardening S-1):
+
+```python
+from fastapi import Depends
+app.include_router(
+    create_qa_visual_router(dependencies=[Depends(get_current_user)])
+)
+```
+
+### Dashboard wiring (Fase C)
+
+The dashboard backend (`dashboard/backend/main.py`) mounts the router with
+`dependencies=[Depends(get_current_user)]`: **all five endpoints require a
+valid JWT**. Because the Docker build context only ships `dashboard/backend`,
+the module is vendored at `dashboard/backend/src/infrastructure/qa_visual/`
+(same pattern as the cache module). A parity test
+(`tests/unit/infrastructure/test_qa_visual_vendor_parity.py`) fails loudly if
+the two copies drift — after changing `src/infrastructure/qa_visual/`, re-copy:
+
+```bash
+cp src/infrastructure/qa_visual/*.py dashboard/backend/src/infrastructure/qa_visual/
+```
+
+Upload hardening (S-2/S-5) applies to `POST /analyze`: `Content-Length`
+pre-check + chunked read capped at 10 MB (413), `image/png` content-type and
+PNG magic-byte validation (415), and `target` limited to 255 chars (422).
+Upstream gateway errors return a generic 502 with full detail in server logs
+only (S-3, CWE-209).
+
+### Data handling (S-4)
+
+Every `POST /analyze` call sends the **full screenshot** (base64, up to ~13 MB
+payload for a 10 MB image) to the external vision gateway
+(`https://opencode.ai/zen/go/v1/chat/completions`). Policy:
+
+- **Synthetic/test data only** — QA Visual targets must not contain real PII,
+  customer data or credentials. If screenshots may capture real user data,
+  evaluate GDPR Art. 32 (processor transfer) and add pre-send redaction
+  before enabling the module in that environment.
+- Reports and screenshots stored under `reports/qa-visual/` are runtime
+  artifacts; the directory is gitignored to prevent accidental commits.
+
+
 ### Analyze a screenshot
 
 ```http

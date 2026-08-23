@@ -63,3 +63,6 @@ docs/_build/
 # Playwright
 test-results/
 playwright-report/
+
+# QA Visual runtime artifacts (reports + hook screenshots)
+reports/qa-visual/

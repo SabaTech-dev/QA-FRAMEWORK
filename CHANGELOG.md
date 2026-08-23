@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **QA Visual dashboard wiring (Fase C)**: the dashboard backend mounts the
+  qa-visual router behind JWT auth (`Depends(get_current_user)`) — all five
+  endpoints require authentication. The module is vendored at
+  `dashboard/backend/src/infrastructure/qa_visual/` (Docker build context only
+  ships `dashboard/backend`), guarded by a vendor-parity test that fails on
+  drift between the two copies.
+
+### Security
+
+- **S-1 (HIGH)**: router factory now accepts injectable `dependencies`;
+  mounted in the dashboard with auth. Backward compatible (no dependencies
+  by default).
+- **S-2 (MEDIUM)**: upload hardening in `POST /analyze` — `Content-Length`
+  pre-check before reading, chunked read capped at 10 MB (never loads an
+  oversized file fully into memory), `image/png` content-type plus PNG
+  magic-byte validation (415, no paid API calls on junk uploads).
+- **S-3 (LOW)**: 502 responses no longer leak upstream gateway bodies or raw
+  model output excerpts to HTTP clients (CWE-209); full detail is logged
+  server-side only.
+- **S-5 (LOW)**: `target` form field capped at 255 chars (422 instead of an
+  uncontrolled OSError 500 on >255-byte filenames).
+- **S-7 (INFO)**: `reports/qa-visual/` runtime artifacts gitignored.
+- **S-4 (LOW)**: data-handling policy documented in `docs/qa-visual.md`
+  (screenshots egress to the external vision gateway; synthetic/test data
+  only; GDPR Art. 32 note).
+
 ## [1.1.0] - 2026-08-22
 
 ### Added
