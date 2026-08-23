@@ -10,19 +10,34 @@ Provides:
 - Benchmark sessions for batch evaluation
 """
 
-from .entities import AccuracyBenchmark, AccuracyEvaluation, AccuracyTestSession
-from .interfaces import IAccuracyEvaluator, IBenchmarkRepository, IResponseProvider
 from .value_objects import (
-    MAX_EVAL_INPUT_LENGTH,
-    AccuracyLevel,
-    CriterionScore,
     EvaluationCriterion,
+    AccuracyLevel,
     EvaluationStatus,
     LegalDomain,
     ResponseVerdict,
+    CriterionScore,
     validate_jurisdiction,
     validate_threshold,
+    MAX_EVAL_INPUT_LENGTH,
 )
+from .splitting import (
+    SplitPolicy,
+    BenchmarkSplit,
+    HoldoutSummary,
+    split_benchmarks,
+)
+from .entities import (
+    AccuracyEvaluation,
+    AccuracyBenchmark,
+    AccuracyTestSession,
+)
+from .interfaces import (
+    IAccuracyEvaluator,
+    IResponseProvider,
+    IBenchmarkRepository,
+)
+from .holdout_service import HoldoutEvaluationService
 
 __all__ = [
     # Value Objects
@@ -35,6 +50,11 @@ __all__ = [
     "validate_jurisdiction",
     "validate_threshold",
     "MAX_EVAL_INPUT_LENGTH",
+    # Splitting (F-ACC-006)
+    "SplitPolicy",
+    "BenchmarkSplit",
+    "HoldoutSummary",
+    "split_benchmarks",
     # Entities
     "AccuracyEvaluation",
     "AccuracyBenchmark",
@@ -43,4 +63,6 @@ __all__ = [
     "IAccuracyEvaluator",
     "IResponseProvider",
     "IBenchmarkRepository",
+    # Services
+    "HoldoutEvaluationService",
 ]
