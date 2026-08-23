@@ -33,6 +33,10 @@ sqlalchemy = "^2.0"
 asyncpg = "0.29.0"
 aiomysql = "0.2.0"
 aiosqlite = "0.19.0"
+fastapi = "0.115.4"
+python-jose = {version = ">=3.4.0,<4", extras = ["cryptography"]}
+bcrypt = "4.1.2"
+pyjwt = ">=2.8.0,<3"
 redis = "5.0.1"
 psutil = "5.9.8"
 
