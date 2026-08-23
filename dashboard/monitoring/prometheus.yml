@@ -8,7 +8,13 @@ global:
 
 scrape_configs:
   # Backend API metrics
+  # card f90a8079: interval 60s (NO global 15s) — backend RateLimitMiddleware rate-limits
+  # /metrics/ (post-307-redirect path, NOT in skip_paths) at 100 req/h per IP (free plan).
+  # 15s = 240 req/h >> 100 → 59% scrapes 429 (steady state 140 fail/h, avg_over_time(up)=0.41).
+  # 60s = 60 req/h < 100 → scrape estable. REVERT a 15s cuando el middleware normalice
+  # skip_paths (trailing slash) — fix de código vía pipeline.
   - job_name: 'qa-framework-backend'
+    scrape_interval: 60s
     static_configs:
       - targets: ['qa-framework-backend:8000']
     metrics_path: '/metrics'
