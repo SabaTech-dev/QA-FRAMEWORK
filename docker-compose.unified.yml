@@ -133,7 +133,7 @@ services:
   
   # Prometheus
   prometheus:
-    image: prom/prometheus:v2.45.0
+    image: prom/prometheus:v3.14.0
     container_name: qa-framework-prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -142,14 +142,14 @@ services:
       - ./dashboard/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9091:9090"
     networks:
       - qa-network
     restart: unless-stopped
 
   # Grafana
   grafana:
-    image: grafana/grafana:10.0.0
+    image: grafana/grafana:12.4.9
     container_name: qa-framework-grafana
     environment:
       - GF_SECURITY_ADMIN_USER=admin
@@ -159,7 +159,7 @@ services:
       - ./dashboard/monitoring/grafana/provisioning:/etc/grafana/provisioning
       - grafana-data:/var/lib/grafana
     ports:
-      - "3001:3000"
+      - "127.0.0.1:3005:3000"
     networks:
       - qa-network
     depends_on:
@@ -177,7 +177,7 @@ services:
       - ./dashboard/monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
       - alertmanager-data:/alertmanager
     ports:
-      - "9093:9093"
+      - "127.0.0.1:9093:9093"
     networks:
       - qa-network
     restart: unless-stopped
