@@ -168,7 +168,8 @@ services:
 
   # Alertmanager
   alertmanager:
-    image: prom/alertmanager:v0.25.0
+    # v0.28.1: telegram_configs.bot_token_file requires >=0.27 (secret externalization)
+    image: prom/alertmanager:v0.28.1
     container_name: qa-framework-alertmanager
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
@@ -181,6 +182,8 @@ services:
     networks:
       - qa-network
     restart: unless-stopped
+    secrets:
+      - alertmanager_telegram_token
 
 # Named volumes
 volumes:
@@ -191,6 +194,11 @@ volumes:
   grafana-data:
   alertmanager-data:
   nuclei-templates:
+
+# Secrets (host-local files, NEVER committed — see .gitignore)
+secrets:
+  alertmanager_telegram_token:
+    file: ./dashboard/monitoring/alertmanager/.secrets/telegram_token
 
 # Networks
 networks:
