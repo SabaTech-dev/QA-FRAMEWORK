@@ -140,7 +140,10 @@ services:
       - '--storage.tsdb.path=/prometheus'
     volumes:
       - ./dashboard/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./dashboard/monitoring/prometheus/alerts:/etc/prometheus/prometheus/alerts:ro
       - prometheus-data:/prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "127.0.0.1:9091:9090"
     networks:
@@ -178,6 +181,25 @@ services:
       - alertmanager-data:/alertmanager
     ports:
       - "127.0.0.1:9093:9093"
+    networks:
+      - qa-network
+    restart: unless-stopped
+
+  # qa-scoped exporters (card 0c8154e1) — internal only, no host port publish
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.20.1
+    container_name: qa-framework-postgres-exporter
+    environment:
+      - DATA_SOURCE_NAME=postgresql://qa_user:qa_pass@postgres:5432/qa_dashboard?sslmode=disable
+    networks:
+      - qa-network
+    restart: unless-stopped
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.89.0
+    container_name: qa-framework-redis-exporter
+    environment:
+      - REDIS_ADDR=redis://redis:6379
     networks:
       - qa-network
     restart: unless-stopped
