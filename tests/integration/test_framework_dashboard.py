@@ -14,16 +14,13 @@ core and the Dashboard backend, including:
 import asyncio
 import json
 import time
-from datetime import datetime, timezone
-from typing import Dict, List
+from typing import List
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
-import pytest_asyncio
 
 from src.core.entities.test_result import TestResult, TestStatus
-
 
 # =============================================================================
 # Framework → Dashboard Integration Tests
@@ -101,14 +98,16 @@ class TestFrameworkToDashboardIntegration:
         # Arrange: Create execution
         execution_data = {"suite_id": 1, "environment": "test", "parameters": {"parallel": True}}
 
-        create_response = await authenticated_client.post("/api/v1/executions", json=execution_data)
+        _create_response = await authenticated_client.post(
+            "/api/v1/executions", json=execution_data
+        )
 
         # Act: Update execution status (simulating framework updates)
         status_updates = ["pending", "running", "completed"]
 
         for status in status_updates:
-            update_response = await authenticated_client.post(
-                f"/api/v1/executions/1/status", json={"status": status}
+            _update_response = await authenticated_client.post(
+                "/api/v1/executions/1/status", json={"status": status}
             )
 
             # Allow time for processing
@@ -460,7 +459,6 @@ class TestIntegrationPerformance:
 
     async def test_api_response_time(self, authenticated_client, benchmark):
         """Test API response time is within acceptable limits."""
-        import time
 
         start = time.time()
 
@@ -477,7 +475,6 @@ class TestIntegrationPerformance:
         self, authenticated_client, test_result_factory, benchmark
     ):
         """Test performance of bulk result submission."""
-        import time
 
         # Generate 100 results
         results = [test_result_factory(test_id=f"test_{i:03d}") for i in range(100)]
@@ -505,7 +502,6 @@ class TestIntegrationPerformance:
 
     async def test_concurrent_api_calls_performance(self, authenticated_client, benchmark):
         """Test performance under concurrent API calls."""
-        import time
 
         async def make_request(i: int):
             with patch.object(authenticated_client, "get") as mock_get:

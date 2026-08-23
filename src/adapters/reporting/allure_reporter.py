@@ -248,7 +248,9 @@ class AllureReporter(IReporter):
         else:
             raise ValueError(f"Unsupported report format: {report_format}")
 
-    def capture_failure_screenshot(self, screenshot_func: Any, *args: Any, **kwargs: Any) -> Optional[str]:
+    def capture_failure_screenshot(
+        self, screenshot_func: Any, *args: Any, **kwargs: Any
+    ) -> Optional[str]:
         """
         Capture screenshot on test failure.
 
@@ -367,7 +369,7 @@ class AllureReporter(IReporter):
 
         try:
             # Try to use allure command line tool
-            result = subprocess.run(
+            _result = subprocess.run(
                 [
                     "allure",
                     "generate",

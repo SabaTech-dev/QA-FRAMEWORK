@@ -4,16 +4,16 @@ import pytest
 from pydantic import ValidationError
 
 from src.infrastructure.qa_visual.models import (
-    QAIssue,
-    QAAnalysis,
-    VisualRegression,
     Accessibility,
-    LayoutInfo,
     AnalyzeResponse,
-    TrendPoint,
-    TrendAlert,
-    Severity,
     IssueCategory,
+    LayoutInfo,
+    QAAnalysis,
+    QAIssue,
+    Severity,
+    TrendAlert,
+    TrendPoint,
+    VisualRegression,
 )
 
 

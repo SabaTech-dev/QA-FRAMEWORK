@@ -1,11 +1,13 @@
 """Token generation utilities using JWT."""
-from abc import ABC, abstractmethod
-from datetime import datetime, timezone, timedelta
-from typing import Optional, Dict, Any
-import secrets
+
 import hashlib
-from jose import JWTError, jwt
+import secrets
+from abc import ABC, abstractmethod
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, Optional
 from uuid import uuid4
+
+from jose import JWTError, jwt
 
 
 class TokenGenerator(ABC):
@@ -17,7 +19,7 @@ class TokenGenerator(ABC):
         user_id: str,
         tenant_id: Optional[str] = None,
         scopes: Optional[list] = None,
-        extra_claims: Optional[Dict[str, Any]] = None
+        extra_claims: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Generate an access token.
 
@@ -91,7 +93,7 @@ class JWTokenGenerator(TokenGenerator):
         access_token_expire_minutes: int = 60,
         refresh_token_expire_days: int = 7,
         verification_token_expire_hours: int = 24,
-        password_reset_token_expire_hours: int = 1
+        password_reset_token_expire_hours: int = 1,
     ):
         """Initialize JWT token generator.
 
@@ -115,7 +117,7 @@ class JWTokenGenerator(TokenGenerator):
         user_id: str,
         tenant_id: Optional[str] = None,
         scopes: Optional[list] = None,
-        extra_claims: Optional[Dict[str, Any]] = None
+        extra_claims: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Generate JWT access token."""
         now = datetime.now(timezone.utc)
@@ -161,7 +163,7 @@ class JWTokenGenerator(TokenGenerator):
     def generate_verification_token(self, user_id: str) -> str:
         """Generate email verification token (URL-safe random string)."""
         # Use cryptographically secure random token
-        random_bytes = secrets.token_bytes(32)
+        _random_bytes = secrets.token_bytes(32)
         token = secrets.token_urlsafe(32)
         # Include user ID hash for validation
         user_hash = hashlib.sha256(user_id.encode()).hexdigest()[:16]

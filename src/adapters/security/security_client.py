@@ -1,11 +1,12 @@
 """Main security testing client"""
 
 from typing import Any, Dict, List, Optional
-from src.core.interfaces import ISecurityClient
+
+from src.adapters.security.auth_tester import AuthTester
+from src.adapters.security.rate_limit_tester import RateLimitTester
 from src.adapters.security.sql_injection_tester import SQLInjectionTester
 from src.adapters.security.xss_tester import XSSTester
-from src.adapters.security.auth_tester import AuthTester, AuthTestCase
-from src.adapters.security.rate_limit_tester import RateLimitTester
+from src.core.interfaces import ISecurityClient
 
 
 class SecurityClient(ISecurityClient):

@@ -10,17 +10,10 @@ backend, including:
 """
 
 import asyncio
-import random
 import time
-from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Set
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
-import httpx
 import pytest
-import pytest_asyncio
-
 
 # =============================================================================
 # Multi-User Concurrent Operations Tests
@@ -121,7 +114,7 @@ class TestMultiUserConcurrentOperations:
                 )
 
                 response = await authenticated_client.post(
-                    f"/api/v1/executions", json={"suite_id": suite_id}
+                    "/api/v1/executions", json={"suite_id": suite_id}
                 )
 
                 if response.status_code == 200:
@@ -204,7 +197,7 @@ class TestConcurrentTestExecutions:
                 )
 
                 response = await authenticated_client.post(
-                    f"/api/v1/executions", json={"suite_id": suite_id}
+                    "/api/v1/executions", json={"suite_id": suite_id}
                 )
 
                 results.append({"suite_id": suite_id, "data": response.json()})

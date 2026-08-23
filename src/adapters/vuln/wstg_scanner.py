@@ -7,19 +7,12 @@ Executes tests based on the OWASP Web Security Testing Guide v4.2.
 import asyncio
 import json
 import logging
-import os
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
-from .vuln_parser import (
-    VulnScanResult,
-    VulnerabilityFinding,
-    VulnSeverity,
-    VulnCategory,
-    UnifiedVulnParser,
-)
+from .vuln_parser import UnifiedVulnParser, VulnScanResult
 
 logger = logging.getLogger(__name__)
 
@@ -209,8 +202,11 @@ class WSTGScanner:
     ) -> List[str]:
         """Build the Docker command for WSTG scanner."""
         cmd = [
-            "docker", "run", "--rm",
-            "--network", self.network,
+            "docker",
+            "run",
+            "--rm",
+            "--network",
+            self.network,
         ]
 
         # Mount output volume
@@ -244,9 +240,7 @@ class WSTGScanner:
 
         return cmd
 
-    async def _run_docker(
-        self, cmd: List[str], timeout: int = 600
-    ) -> tuple[str, str, float]:
+    async def _run_docker(self, cmd: List[str], timeout: int = 600) -> tuple[str, str, float]:
         """Execute Docker command and capture output."""
         start = datetime.utcnow()
         proc = await asyncio.create_subprocess_exec(
@@ -256,9 +250,7 @@ class WSTGScanner:
         )
 
         try:
-            stdout, stderr = await asyncio.wait_for(
-                proc.communicate(), timeout=timeout
-            )
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
         except asyncio.TimeoutError:
             proc.kill()
             duration = (datetime.utcnow() - start).total_seconds()
@@ -266,7 +258,11 @@ class WSTGScanner:
             return "", f"TIMEOUT after {timeout}s", duration
 
         duration = (datetime.utcnow() - start).total_seconds()
-        return stdout.decode("utf-8", errors="replace"), stderr.decode("utf-8", errors="replace"), duration
+        return (
+            stdout.decode("utf-8", errors="replace"),
+            stderr.decode("utf-8", errors="replace"),
+            duration,
+        )
 
     async def list_categories(self) -> Dict[str, str]:
         """List available WSTG test categories.

@@ -7,17 +7,17 @@ This module provides a unified interface for vulnerability scanning using:
 It includes Docker wrappers, result parsing, and report generation.
 """
 
+from .nuclei_scanner import NucleiScanner
+from .vuln_client import VulnClient
 from .vuln_parser import (
-    VulnSeverity,
+    UnifiedVulnParser,
     VulnCategory,
     VulnerabilityFinding,
     VulnScanResult,
-    UnifiedVulnParser,
+    VulnSeverity,
 )
 from .vuln_report import VulnReportGenerator
-from .nuclei_scanner import NucleiScanner
 from .wstg_scanner import WSTGScanner
-from .vuln_client import VulnClient
 
 __all__ = [
     "VulnSeverity",

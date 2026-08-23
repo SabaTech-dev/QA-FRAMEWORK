@@ -13,7 +13,6 @@ from src.infrastructure.qa_visual.analyzer import (
 )
 from src.infrastructure.qa_visual.config import QAVisualConfig
 from src.infrastructure.qa_visual.gateway_client import VisionGatewayError, VisionResult
-from src.infrastructure.qa_visual.models import QAAnalysis
 from src.infrastructure.qa_visual.storage import QAVisualReportStore
 
 GOOD_CONTENT = json.dumps(

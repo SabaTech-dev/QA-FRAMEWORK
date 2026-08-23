@@ -281,9 +281,9 @@ class AppiumDriver(IMobileDriver):
 
     def wait_for_element(self, locator: str, locator_type: str = "id", timeout: int = 10) -> Any:
         """Wait for element to be present."""
-        from selenium.webdriver.support.ui import WebDriverWait
-        from selenium.webdriver.support import expected_conditions as EC
         from appium.webdriver.common.appiumby import AppiumBy
+        from selenium.webdriver.support import expected_conditions as EC
+        from selenium.webdriver.support.ui import WebDriverWait
 
         by_map = {
             "id": AppiumBy.ID,

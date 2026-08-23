@@ -1,13 +1,12 @@
 """Migration infrastructure for multi-tenant data migration."""
 
+# Export MigrationStatus enum
 from .migrator import DataMigrator
 from .migrator import DataMigrator as DataMigratorType
-from .user_migrator import UserMigrator
-from .test_migrator import TestMigrator
-from .report_generator import MigrationReportGenerator
-
-# Export MigrationStatus enum
 from .migrator import DataMigrator as _DataMigrator
+from .report_generator import MigrationReportGenerator
+from .test_migrator import TestMigrator
+from .user_migrator import UserMigrator
 
 __all__ = [
     "DataMigrator",

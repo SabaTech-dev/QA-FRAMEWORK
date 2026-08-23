@@ -7,7 +7,6 @@ from typing import Any, Dict, List
 
 from .migrator import DataMigrator
 
-
 # MigrationStatus is defined as DataMigrator.MigrationStatus
 MigrationStatus = DataMigrator.MigrationStatus
 
@@ -57,9 +56,7 @@ class MigrationReportGenerator:
             "warnings": self._collect_all_warnings(migrators),
             "errors": self._collect_all_errors(migrators),
             "by_component": self._group_by_component(migrators),
-            "recommendations": self._generate_recommendations(
-                overall_status, migrators
-            ),
+            "recommendations": self._generate_recommendations(overall_status, migrators),
             "details": self._generate_component_details(migrators),
         }
 
@@ -71,8 +68,7 @@ class MigrationReportGenerator:
         start_times = [
             stats.get("started_at")
             for migrator in migrators
-            if (stats := migrator.get_stats())
-            and stats.get("started_at") is not None
+            if (stats := migrator.get_stats()) and stats.get("started_at") is not None
         ]
         return min(start_times) if start_times else None
 
@@ -104,7 +100,7 @@ class MigrationReportGenerator:
         """Collect all warnings from all migrators."""
         warnings = []
         for migrator in migrators:
-            if (stats := migrator.get_stats()):
+            if stats := migrator.get_stats():
                 warnings.extend(stats.get("warnings", []))
         return warnings
 
@@ -112,18 +108,17 @@ class MigrationReportGenerator:
         """Collect all errors from all migrators."""
         errors = []
         for migrator in migrators:
-            if (stats := migrator.get_stats()):
+            if stats := migrator.get_stats():
                 errors.extend(stats.get("errors", []))
         return errors
 
     def _group_by_component(self, migrators: List[DataMigrator]) -> Dict[str, Dict[str, Any]]:
         """Group migration stats by component."""
-        from .migrator import DataMigrator
 
         by_component = {}
 
         for migrator in migrators:
-            if (stats := migrator.get_stats()):
+            if stats := migrator.get_stats():
                 # Determine component from migrator class name
                 class_name = migrator.__class__.__name__.replace("Migrator", "")
                 by_component[class_name] = {
@@ -147,7 +142,6 @@ class MigrationReportGenerator:
         Returns:
             List of recommendations
         """
-        from datetime import timezone
 
         recommendations = []
 
@@ -155,26 +149,14 @@ class MigrationReportGenerator:
             recommendations.append(
                 "Migration completed successfully. All data migrated to default tenant."
             )
-            recommendations.append(
-                "Verify data integrity by reviewing the details section below."
-            )
-            recommendations.append(
-                "Consider setting up backup before production deployment."
-            )
+            recommendations.append("Verify data integrity by reviewing the details section below.")
+            recommendations.append("Consider setting up backup before production deployment.")
 
         elif overall_status == DataMigrator.MigrationStatus.FAILED:
-            recommendations.append(
-                "Migration failed. Review errors section for details."
-            )
-            recommendations.append(
-                "Check database connections and permissions."
-            )
-            recommendations.append(
-                "Ensure you have write permissions for all tables involved."
-            )
-            recommendations.append(
-                "Consider restoring from backup before retrying."
-            )
+            recommendations.append("Migration failed. Review errors section for details.")
+            recommendations.append("Check database connections and permissions.")
+            recommendations.append("Ensure you have write permissions for all tables involved.")
+            recommendations.append("Consider restoring from backup before retrying.")
 
             # Check for common issues
             all_errors = self._collect_all_errors(migrators)
@@ -186,30 +168,26 @@ class MigrationReportGenerator:
         # Add warnings-based recommendations
         all_warnings = self._collect_all_warnings(migrators)
         if all_warnings:
-            recommendations.append(
-                f"Found {len(all_warnings)} warning(s). Review them carefully."
-            )
-            recommendations.append(
-                "Some data may have been skipped or migrated with limitations."
-            )
+            recommendations.append(f"Found {len(all_warnings)} warning(s). Review them carefully.")
+            recommendations.append("Some data may have been skipped or migrated with limitations.")
 
         return recommendations
 
-    def _generate_component_details(
-        self, migrators: List[DataMigrator]
-    ) -> Dict[str, Any]:
+    def _generate_component_details(self, migrators: List[DataMigrator]) -> Dict[str, Any]:
         """Generate detailed information for each component."""
         details = {}
 
         for migrator in migrators:
-            if (stats := migrator.get_stats()):
+            if stats := migrator.get_stats():
                 class_name = migrator.__class__.__name__.replace("Migrator", "")
 
                 # Add common stats
                 details[class_name] = {
-                    "status": stats.get("status", {}).value
-                    if isinstance(stats.get("status"), MigrationStatus)
-                    else stats.get("status"),
+                    "status": (
+                        stats.get("status", {}).value
+                        if isinstance(stats.get("status"), MigrationStatus)
+                        else stats.get("status")
+                    ),
                     "total_records": stats.get("total_records", 0),
                     "migrated_records": stats.get("migrated_records", 0),
                     "failed_records": stats.get("failed_records", 0),
@@ -219,9 +197,7 @@ class MigrationReportGenerator:
 
                 # Add component-specific details
                 if hasattr(migrator, "get_migrated_suites"):
-                    details[class_name]["migrated_items"] = len(
-                        migrator.get_migrated_suites()
-                    )
+                    details[class_name]["migrated_items"] = len(migrator.get_migrated_suites())
 
         return details
 
@@ -327,7 +303,7 @@ class MigrationReportGenerator:
             Summary string
         """
         summary = report.get("summary", {})
-        by_component = report.get("by_component", {})
+        _by_component = report.get("by_component", {})
 
         summary_str = (
             f"Migration {summary.get('overall_status').upper()} | "

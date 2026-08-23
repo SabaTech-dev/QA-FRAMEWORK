@@ -8,9 +8,8 @@ the QA framework core and the dashboard backend.
 import asyncio
 import os
 import sys
-from contextlib import asynccontextmanager
-from datetime import datetime, timezone, timedelta
-from typing import Any, AsyncGenerator, Dict, Generator, Optional
+from datetime import datetime, timezone
+from typing import AsyncGenerator, Generator, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx

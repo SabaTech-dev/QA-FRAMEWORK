@@ -1,13 +1,14 @@
 """Test entity - Domain model for test results"""
 
-from enum import Enum
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Any, Dict, Optional
 
 
 class TestStatus(Enum):
     """Test execution status"""
+
     PASSED = "passed"
     FAILED = "failed"
     SKIPPED = "skipped"
@@ -19,7 +20,7 @@ class TestStatus(Enum):
 class TestResult:
     """
     Entity representing a test execution result.
-    
+
     Attributes:
         test_name: Name of the test
         status: Test status (passed, failed, skipped, error)
@@ -28,28 +29,29 @@ class TestResult:
         metadata: Additional test metadata
         timestamp: When the test was executed
     """
+
     test_name: str
     status: TestStatus
     execution_time: float
     error_message: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
     timestamp: Optional[datetime] = None
-    
+
     def __post_init__(self) -> None:
         """Initialize default values"""
         if self.metadata is None:
             self.metadata = {}
         if self.timestamp is None:
             self.timestamp = datetime.now(timezone.utc)
-    
+
     def is_passed(self) -> bool:
         """Check if test passed"""
         return self.status == TestStatus.PASSED
-    
+
     def is_failed(self) -> bool:
         """Check if test failed"""
         return self.status == TestStatus.FAILED
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert test result to dictionary"""
         return {
@@ -58,5 +60,5 @@ class TestResult:
             "execution_time": self.execution_time,
             "error_message": self.error_message,
             "metadata": self.metadata,
-            "timestamp": self.timestamp.isoformat() if self.timestamp else None
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
         }

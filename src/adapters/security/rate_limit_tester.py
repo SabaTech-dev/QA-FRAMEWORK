@@ -2,9 +2,9 @@
 
 import asyncio
 import time
-from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class RateLimitType(Enum):
@@ -198,9 +198,11 @@ class RateLimitTester:
             "recovered": recovered,
             "recovery_successful": recovered,
             "recommendations": [
-                "Rate limit properly resets after window"
-                if recovered
-                else "Rate limit may not be resetting correctly"
+                (
+                    "Rate limit properly resets after window"
+                    if recovered
+                    else "Rate limit may not be resetting correctly"
+                )
             ],
         }
 
@@ -247,7 +249,7 @@ class RateLimitTester:
                 retry_after=retry_after,
             )
 
-        except Exception as e:
+        except Exception:
             elapsed = time.time() - start
             return RateLimitResult(
                 request_number=request_number, status_code=0, response_time=elapsed, blocked=False

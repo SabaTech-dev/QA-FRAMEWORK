@@ -1,9 +1,9 @@
 """SQL query validation module"""
 
 import re
-from typing import Any, Dict, List
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, List
 
 
 class ValidationSeverity(Enum):
