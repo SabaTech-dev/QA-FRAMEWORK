@@ -79,7 +79,7 @@ jobs:
           fi
 
       - name: Comment PR with Backend Preview URL
-        uses: actions/github-script@v7 # v7.1.0
+        uses: actions/github-script@v9 # v7.1.0
         with:
           script: |
             const previewUrl = '${{ steps.deploy.outputs.preview_url }}';
@@ -214,7 +214,7 @@ jobs:
           fi
 
       - name: Comment PR with Frontend Preview URL
-        uses: actions/github-script@v7 # v7.1.0
+        uses: actions/github-script@v9 # v7.1.0
         with:
           script: |
             const previewUrl = '${{ steps.deploy.outputs.preview_url }}';
@@ -328,7 +328,7 @@ jobs:
 
       - name: Comment PR with Health Check Results
         if: always()
-        uses: actions/github-script@v7 # v7.1.0
+        uses: actions/github-script@v9 # v7.1.0
         with:
           script: |
             const backendStatus = '${{ steps.backend-health.outputs.status }}';
@@ -381,7 +381,7 @@ jobs:
           echo "Frontend preview cleanup response: $RESPONSE"
 
       - name: Comment PR with Cleanup Confirmation
-        uses: actions/github-script@v7 # v7.1.0
+        uses: actions/github-script@v9 # v7.1.0
         with:
           script: |
             const message = `## 🧹 Preview Cleanup
