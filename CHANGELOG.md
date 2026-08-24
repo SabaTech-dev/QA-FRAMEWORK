@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **Auth hardening (cards L-1, L-2, adv-1, JWT edges)**: four fixes on the
+  QA Visual auth path. L-1: `get_current_user` (and the optional-auth and
+  QA Visual principal paths behind it) now rejects refresh tokens — the
+  `type` claim must be absent (pre-tag tokens) or `"access"`; access
+  tokens are minted with `type=access`. L-2: `get_current_user` rejects
+  deactivated accounts with 403 immediately, closing the inconsistency
+  with the refresh and optional paths. adv-1 (fail-closed storage):
+  `QAVisualReportStore.get_report` requires an explicit `owner` or
+  `is_admin=True` — a bare call raises `ValueError`, an owner-scoped read
+  of someone else's report raises `ReportAccessDenied` (router answers
+  403), so authorization no longer lives only in the endpoint layer
+  (BOLA guard). JWT edge (a): expired tokens answer 401, never 500
+  (regression-tested). JWT edge (b): `QAVisualPrincipal(owner="")` is
+  invalid at the model (`field_validator`), the router answers 422 for
+  blank-owner principals that bypass validation, and the dashboard
+  adapter `get_qa_visual_principal` rejects users without a usable
+  username. Applied to both module copies (root `src/` and the vendored
+  `dashboard/backend/src/`).
+
 ### Added
 
 - **Accuracy testing API wiring (card c9825844)**: the accuracy_testing
