@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
+from .splitting import HoldoutSummary
 from .value_objects import (
     AccuracyLevel,
     CriterionScore,
@@ -235,6 +236,10 @@ class AccuracyTestSession:
     benchmarks: List[AccuracyBenchmark] = field(default_factory=list)
     evaluations: List[AccuracyEvaluation] = field(default_factory=list)
 
+    # F-ACC-006: holdout result as aggregate-only summary. Per-item holdout
+    # results must never be attached here — only HoldoutSummary aggregates.
+    holdout_summary: Optional[HoldoutSummary] = None
+
     # Stats
     total_benchmarks: int = 0
     evaluations_completed: int = 0
@@ -291,6 +296,7 @@ class AccuracyTestSession:
             ai_model=self.ai_model,
             benchmarks=self.benchmarks,
             evaluations=new_evals,
+            holdout_summary=self.holdout_summary,
             total_benchmarks=self.total_benchmarks,
             evaluations_completed=len(completed),
             evaluations_passed=passed,
@@ -322,6 +328,7 @@ class AccuracyTestSession:
             ai_model=self.ai_model,
             benchmarks=self.benchmarks,
             evaluations=self.evaluations,
+            holdout_summary=self.holdout_summary,
             total_benchmarks=self.total_benchmarks,
             evaluations_completed=self.evaluations_completed,
             evaluations_passed=self.evaluations_passed,
@@ -330,6 +337,28 @@ class AccuracyTestSession:
             total_time_ms=total_time,
             status=final_status,
             error_message=error or self.error_message,
+        )
+
+    def with_holdout_summary(self, summary: HoldoutSummary) -> "AccuracyTestSession":
+        """F-ACC-006: attach aggregate holdout summary (immutable pattern)."""
+        return AccuracyTestSession(
+            id=self.id,
+            tenant_id=self.tenant_id,
+            name=self.name,
+            description=self.description,
+            legal_domain=self.legal_domain,
+            ai_model=self.ai_model,
+            benchmarks=self.benchmarks,
+            evaluations=self.evaluations,
+            holdout_summary=summary,
+            total_benchmarks=self.total_benchmarks,
+            evaluations_completed=self.evaluations_completed,
+            evaluations_passed=self.evaluations_passed,
+            started_at=self.started_at,
+            completed_at=self.completed_at,
+            total_time_ms=self.total_time_ms,
+            status=self.status,
+            error_message=self.error_message,
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -352,6 +381,9 @@ class AccuracyTestSession:
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
             "total_time_ms": self.total_time_ms,
             "evaluations": [e.to_dict() for e in self.evaluations],
+            # F-ACC-006: holdout exposed as aggregate summary only —
+            # never per-item holdout questions, responses, or scores.
+            "holdout_summary": self.holdout_summary.to_dict() if self.holdout_summary else None,
             # F-ACC-004: tenant_id excluded from public output
         }
 
