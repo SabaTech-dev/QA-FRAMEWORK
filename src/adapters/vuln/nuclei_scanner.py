@@ -8,19 +8,12 @@ import asyncio
 import json
 import logging
 import os
-import tempfile
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
-from .vuln_parser import (
-    VulnScanResult,
-    VulnerabilityFinding,
-    VulnSeverity,
-    VulnCategory,
-    UnifiedVulnParser,
-)
+from .vuln_parser import UnifiedVulnParser, VulnScanResult
 
 logger = logging.getLogger(__name__)
 
@@ -248,9 +241,7 @@ class NucleiScanner:
             result.end_time = datetime.utcnow().isoformat() + "Z"
             result.raw_output = stdout[:10000] if stdout else None
 
-            logger.info(
-                f"Nuclei network scan complete: {result.total_findings} findings"
-            )
+            logger.info(f"Nuclei network scan complete: {result.total_findings} findings")
             return result
 
         except Exception as e:
@@ -282,7 +273,7 @@ class NucleiScanner:
         Returns:
             VulnScanResult
         """
-        scan_type = "network" if not target.startswith("http") else "web"
+        _scan_type = "network" if not target.startswith("http") else "web"
         return await self.scan_web(
             target=target,
             templates=[template_path],
@@ -302,9 +293,13 @@ class NucleiScanner:
     ) -> List[str]:
         """Build the Docker command for Nuclei."""
         cmd = [
-            "docker", "run", "--rm",
-            "--network", self.network,
-            "-v", f"{self.docker_socket}:/var/run/docker.sock",
+            "docker",
+            "run",
+            "--rm",
+            "--network",
+            self.network,
+            "-v",
+            f"{self.docker_socket}:/var/run/docker.sock",
         ]
 
         # Mount custom templates if they exist
@@ -354,9 +349,7 @@ class NucleiScanner:
 
         return cmd
 
-    async def _run_docker(
-        self, cmd: List[str], timeout: int = 300
-    ) -> tuple[str, str, float]:
+    async def _run_docker(self, cmd: List[str], timeout: int = 300) -> tuple[str, str, float]:
         """Execute Docker command and capture output.
 
         Args:
@@ -374,9 +367,7 @@ class NucleiScanner:
         )
 
         try:
-            stdout, stderr = await asyncio.wait_for(
-                proc.communicate(), timeout=timeout
-            )
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
         except asyncio.TimeoutError:
             proc.kill()
             duration = (datetime.utcnow() - start).total_seconds()
@@ -384,7 +375,11 @@ class NucleiScanner:
             return "", f"TIMEOUT after {timeout}s", duration
 
         duration = (datetime.utcnow() - start).total_seconds()
-        return stdout.decode("utf-8", errors="replace"), stderr.decode("utf-8", errors="replace"), duration
+        return (
+            stdout.decode("utf-8", errors="replace"),
+            stderr.decode("utf-8", errors="replace"),
+            duration,
+        )
 
     async def list_templates(self) -> List[Dict[str, Any]]:
         """List available Nuclei templates.
@@ -393,7 +388,10 @@ class NucleiScanner:
             List of template metadata dicts
         """
         cmd = [
-            "docker", "run", "--rm", NUCLEI_IMAGE,
+            "docker",
+            "run",
+            "--rm",
+            NUCLEI_IMAGE,
             "-tl",
         ]
 
@@ -415,7 +413,10 @@ class NucleiScanner:
             True if update succeeded
         """
         cmd = [
-            "docker", "run", "--rm", NUCLEI_IMAGE,
+            "docker",
+            "run",
+            "--rm",
+            NUCLEI_IMAGE,
             "-update-templates",
         ]
 
@@ -435,7 +436,10 @@ class NucleiScanner:
         """
         try:
             version_cmd = [
-                "docker", "run", "--rm", NUCLEI_IMAGE,
+                "docker",
+                "run",
+                "--rm",
+                NUCLEI_IMAGE,
                 "--version",
             ]
             stdout, stderr, _ = await self._run_docker(version_cmd, timeout=30)

@@ -1,17 +1,20 @@
 """Unit tests for migration system."""
 
-import pytest
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
-# Skip all tests in this file if migration module is not available
-pytest.importorskip("src.infrastructure.migration", reason="src.infrastructure.migration module not available. This test requires the migration system.")
+import pytest
 
-from src.infrastructure.migration import (
+# Skip all tests in this file if migration module is not available
+pytest.importorskip(
+    "src.infrastructure.migration",
+    reason="src.infrastructure.migration module not available. This test requires the migration system.",
+)
+
+from src.infrastructure.migration import (  # noqa: E402  # import tras setup de entorno
     DataMigrator,
-    UserMigrator,
-    TestMigrator,
     MigrationReportGenerator,
+    TestMigrator,
+    UserMigrator,
 )
 
 
@@ -25,13 +28,9 @@ class TestDataMigrator:
         migrator = DataMigrator(mock_session, dry_run=False)
 
         # Mock tenant already exists
-        with patch.object(
-            migrator.db_session, "execute", new_callable=AsyncMock
-        ) as mock_execute:
+        with patch.object(migrator.db_session, "execute", new_callable=AsyncMock) as mock_execute:
             mock_result = MagicMock()  # Use MagicMock for result (scalar_one_or_none is sync)
-            mock_result.scalar_one_or_none.return_value = MagicMock(
-                slug="default", id="default-id"
-            )
+            mock_result.scalar_one_or_none.return_value = MagicMock(slug="default", id="default-id")
             mock_execute.return_value = mock_result
 
             tenant = await migrator.create_default_tenant()
@@ -49,9 +48,7 @@ class TestDataMigrator:
         migrator = DataMigrator(mock_session, dry_run=False)
 
         # Mock tenant doesn't exist
-        with patch.object(
-            migrator.db_session, "execute", new_callable=AsyncMock
-        ) as mock_execute:
+        with patch.object(migrator.db_session, "execute", new_callable=AsyncMock) as mock_execute:
             mock_result = MagicMock()  # Use MagicMock for result
             mock_result.scalar_one_or_none.return_value = None
             mock_execute.return_value = mock_result
@@ -69,9 +66,7 @@ class TestDataMigrator:
         mock_session = AsyncMock()
         migrator = DataMigrator(mock_session, dry_run=True)
 
-        with patch.object(
-            migrator.db_session, "execute", new_callable=AsyncMock
-        ) as mock_execute:
+        with patch.object(migrator.db_session, "execute", new_callable=AsyncMock) as mock_execute:
             mock_result = MagicMock()  # Use MagicMock for result
             mock_result.scalar_one_or_none.return_value = None
             mock_execute.return_value = mock_result
@@ -145,9 +140,7 @@ class TestUserMigrator:
         mock_user.id = 1
 
         # Mock user migration
-        with patch.object(
-            mock_session, "execute", new_callable=AsyncMock
-        ) as mock_execute:
+        with patch.object(mock_session, "execute", new_callable=AsyncMock) as mock_execute:
             mock_result = MagicMock()  # Use MagicMock for result
             mock_result.scalars.return_value.all.return_value = [mock_user]
             mock_execute.return_value = mock_result
@@ -174,9 +167,7 @@ class TestUserMigrator:
         mock_user.tenant_id = None
 
         # Mock user migration
-        with patch.object(
-            mock_session, "execute", new_callable=AsyncMock
-        ) as mock_execute:
+        with patch.object(mock_session, "execute", new_callable=AsyncMock) as mock_execute:
             mock_result = MagicMock()  # Use MagicMock for result
             mock_result.scalars.return_value.all.return_value = [mock_user]
             mock_execute.return_value = mock_result
@@ -225,9 +216,7 @@ class TestTestMigrator:
         mock_case.id = 1
 
         # Mock migrations
-        with patch.object(
-            mock_session, "execute", new_callable=AsyncMock
-        ) as mock_execute:
+        with patch.object(mock_session, "execute", new_callable=AsyncMock) as mock_execute:
             mock_result = MagicMock()  # Use MagicMock for result
             mock_result.scalars.return_value.all.return_value = [mock_suite]
             mock_execute.return_value = mock_result
@@ -323,6 +312,7 @@ class TestMigrationReportGenerator:
 
         # Verify content
         import json
+
         with open(output_file) as f:
             loaded = json.load(f)
             assert loaded["summary"]["overall_status"] == "completed"

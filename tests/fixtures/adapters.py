@@ -11,18 +11,15 @@ SOLID Principles:
     - DIP: Depends on ConfigManager abstraction
 """
 
-import asyncio
-from pathlib import Path
-from typing import Any, AsyncGenerator, Dict, Generator, Optional
+from typing import Any, AsyncGenerator, Dict, Generator
 
-import pytest
 import httpx
-from playwright.async_api import async_playwright, Browser, BrowserContext, Page
+import pytest
+from playwright.async_api import Browser, BrowserContext, Page, async_playwright
 
 from src.adapters.http.httpx_client import HTTPXClient
 from src.adapters.ui.playwright_page import PlaywrightPage
 from src.infrastructure.config.config_manager import QAConfig
-
 
 # =============================================================================
 # HTTP CLIENT FIXTURES
@@ -240,10 +237,12 @@ async def browser_context(
     )
 
     # Add worker identification
-    await context.add_init_script(f"""
+    await context.add_init_script(
+        f"""
         window.__TEST_WORKER_ID__ = "{worker_id}";
         window.__TEST_PARALLEL__ = true;
-    """)
+    """
+    )
 
     try:
         yield context

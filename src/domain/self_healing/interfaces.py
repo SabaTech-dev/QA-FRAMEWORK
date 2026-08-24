@@ -5,14 +5,15 @@ Abstract interfaces defining contracts for the self-healing system.
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional, List, Protocol
-from .entities import Selector, HealingResult, HealingSession
-from .value_objects import SelectorType, HealingContext
+from typing import List, Optional, Protocol
+
+from .entities import HealingResult, HealingSession, Selector
+from .value_objects import HealingContext, SelectorType
 
 
 class ISelectorHealer(Protocol):
     """Protocol for selector healing implementations."""
-    
+
     def heal(
         self,
         broken_selector: Selector,
@@ -20,11 +21,11 @@ class ISelectorHealer(Protocol):
     ) -> HealingResult:
         """
         Attempt to heal a broken selector.
-        
+
         Args:
             broken_selector: The selector that failed
             context: Context about the page and element
-            
+
         Returns:
             HealingResult with the healed selector and confidence score
         """
@@ -33,7 +34,7 @@ class ISelectorHealer(Protocol):
 
 class IConfidenceScorer(Protocol):
     """Protocol for confidence scoring implementations."""
-    
+
     def score(
         self,
         selector: Selector,
@@ -41,16 +42,16 @@ class IConfidenceScorer(Protocol):
     ) -> float:
         """
         Calculate confidence score for a selector.
-        
+
         Args:
             selector: The selector to score
             context: Context about the page and element
-            
+
         Returns:
             Confidence score between 0.0 and 1.0
         """
         ...
-    
+
     def score_candidates(
         self,
         selectors: List[Selector],
@@ -58,11 +59,11 @@ class IConfidenceScorer(Protocol):
     ) -> List[tuple]:
         """
         Score multiple candidate selectors.
-        
+
         Args:
             selectors: List of selectors to score
             context: Context about the page and element
-            
+
         Returns:
             List of (selector, score) tuples sorted by score descending
         """
@@ -71,12 +72,12 @@ class IConfidenceScorer(Protocol):
 
 class ISelectorRepository(ABC):
     """Abstract repository for selector persistence."""
-    
+
     @abstractmethod
     async def get_by_id(self, selector_id: str) -> Optional[Selector]:
         """Retrieve a selector by ID."""
         pass
-    
+
     @abstractmethod
     async def get_by_value(
         self,
@@ -85,7 +86,7 @@ class ISelectorRepository(ABC):
     ) -> Optional[Selector]:
         """Retrieve a selector by its value and type."""
         pass
-    
+
     @abstractmethod
     async def get_alternatives(
         self,
@@ -93,12 +94,12 @@ class ISelectorRepository(ABC):
     ) -> List[Selector]:
         """Get alternative selectors for a given selector."""
         pass
-    
+
     @abstractmethod
     async def save(self, selector: Selector) -> Selector:
         """Save a selector (create or update)."""
         pass
-    
+
     @abstractmethod
     async def save_alternative(
         self,
@@ -107,7 +108,7 @@ class ISelectorRepository(ABC):
     ) -> None:
         """Save an alternative selector for a parent."""
         pass
-    
+
     @abstractmethod
     async def get_low_confidence(
         self,
@@ -117,7 +118,7 @@ class ISelectorRepository(ABC):
     ) -> List[Selector]:
         """Get selectors with confidence below threshold."""
         pass
-    
+
     @abstractmethod
     async def record_usage(
         self,
@@ -130,12 +131,12 @@ class ISelectorRepository(ABC):
 
 class IHealingSessionRepository(ABC):
     """Abstract repository for healing session persistence."""
-    
+
     @abstractmethod
     async def get_by_id(self, session_id: str) -> Optional[HealingSession]:
         """Retrieve a healing session by ID."""
         pass
-    
+
     @abstractmethod
     async def get_by_test_run(
         self,
@@ -143,12 +144,12 @@ class IHealingSessionRepository(ABC):
     ) -> Optional[HealingSession]:
         """Retrieve a healing session by test run ID."""
         pass
-    
+
     @abstractmethod
     async def save(self, session: HealingSession) -> HealingSession:
         """Save a healing session."""
         pass
-    
+
     @abstractmethod
     async def get_recent(
         self,
@@ -161,7 +162,7 @@ class IHealingSessionRepository(ABC):
 
 class ISelectorGenerator(Protocol):
     """Protocol for generating new selectors."""
-    
+
     def generate_from_attributes(
         self,
         attributes: dict,
@@ -169,14 +170,14 @@ class ISelectorGenerator(Protocol):
     ) -> List[Selector]:
         """Generate candidate selectors from element attributes."""
         ...
-    
+
     def generate_from_context(
         self,
         context: HealingContext,
     ) -> List[Selector]:
         """Generate candidate selectors from page context."""
         ...
-    
+
     def generate_composite(
         self,
         selectors: List[Selector],
@@ -187,28 +188,28 @@ class ISelectorGenerator(Protocol):
 
 class IPageAnalyzer(Protocol):
     """Protocol for analyzing page structure."""
-    
+
     def get_element_at_selector(
         self,
         selector: Selector,
     ) -> Optional[dict]:
         """Get element info at the given selector."""
         ...
-    
+
     def find_similar_elements(
         self,
         context: HealingContext,
     ) -> List[dict]:
         """Find elements similar to the target element."""
         ...
-    
+
     def validate_selector(
         self,
         selector: Selector,
     ) -> bool:
         """Validate that a selector finds exactly one element."""
         ...
-    
+
     def get_page_structure(
         self,
         url: str,

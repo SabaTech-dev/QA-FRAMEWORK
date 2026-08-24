@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:26-alpine
 
 WORKDIR /app
 
@@ -13,7 +13,12 @@ USER appuser
 COPY --chown=appuser:appgroup package*.json ./
 
 # Install dependencies
-RUN npm install
+# npm 12: enforce del allowlist de install scripts (allowScripts en package.json)
+RUN npm install --strict-allow-scripts
+
+# Smoke post-install: fallar el build si el binario nativo no carga
+COPY --chown=appuser:appgroup scripts/smoke-install.mjs ./scripts/smoke-install.mjs
+RUN node scripts/smoke-install.mjs
 
 # Copy the rest of the application
 COPY --chown=appuser:appgroup . .

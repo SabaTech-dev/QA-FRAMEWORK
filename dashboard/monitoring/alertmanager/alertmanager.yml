@@ -14,7 +14,7 @@ route:
       group_wait: 0s
       repeat_interval: 5m
       continue: true
-    
+
     - match:
         severity: warning
       receiver: 'warning-alerts'
@@ -23,21 +23,10 @@ route:
 
 receivers:
   - name: 'default-receiver'
-    slack_configs:
-      - api_url: '${SLACK_WEBHOOK_URL:-http://localhost:3000}'
-        channel: '#alerts'
-        title: 'QA-Framework Alert'
-        text: |
-          {{ range .Alerts }}
-          *Alert:* {{ .Annotations.summary }}
-          *Description:* {{ .Annotations.description }}
-          *Severity:* {{ .Labels.severity }}
-          *Instance:* {{ .Labels.instance }}
-          {{ end }}
     telegram_configs:
-      - bot_token: '${TELEGRAM_BOT_TOKEN:-}'
-        api_url: '${TELEGRAM_API_URL:-https://api.telegram.org}'
-        chat_id: '${TELEGRAM_CHAT_ID:-}'
+      - bot_token_file: /run/secrets/alertmanager_telegram_token
+        api_url: 'https://api.telegram.org'
+        chat_id: 346997361
         parse_mode: 'HTML'
         message: |
           🚨 <b>QA-FRAMEWORK ALERT</b>
@@ -51,38 +40,10 @@ receivers:
           {{ end }}
 
   - name: 'critical-alerts'
-    slack_configs:
-      - api_url: '${SLACK_WEBHOOK_URL:-http://localhost:3000}'
-        channel: '#critical-alerts'
-        title: '🚨 CRITICAL: QA-Framework Alert'
-        text: |
-          {{ range .Alerts }}
-          *CRITICAL ALERT:* {{ .Annotations.summary }}
-          *Description:* {{ .Annotations.description }}
-          *Instance:* {{ .Labels.instance }}
-          *Time:* {{ .StartsAt.Format "2006-01-02 15:04:05" }}
-          {{ end }}
-    email_configs:
-      - to: '${ALERT_EMAIL:-admin@example.com}'
-        from: 'alertmanager@qa-framework.local'
-        smarthost: '${SMTP_HOST:-localhost:587}'
-        auth_username: '${SMTP_USER:-}'
-        auth_password: '${SMTP_PASSWORD:-}'
-        headers:
-          Subject: 'CRITICAL: QA-Framework Alert'
-        html: |
-          <h2>Critical Alert from QA-Framework Dashboard</h2>
-          {{ range .Alerts }}
-          <p><strong>Alert:</strong> {{ .Annotations.summary }}</p>
-          <p><strong>Description:</strong> {{ .Annotations.description }}</p>
-          <p><strong>Severity:</strong> {{ .Labels.severity }}</p>
-          <p><strong>Instance:</strong> {{ .Labels.instance }}</p>
-          <hr>
-          {{ end }}
     telegram_configs:
-      - bot_token: '${TELEGRAM_BOT_TOKEN:-}'
-        api_url: '${TELEGRAM_API_URL:-https://api.telegram.org}'
-        chat_id: '${TELEGRAM_CHAT_ID:-}'
+      - bot_token_file: /run/secrets/alertmanager_telegram_token
+        api_url: 'https://api.telegram.org'
+        chat_id: 346997361
         parse_mode: 'HTML'
         message: |
           🔴 <b>CRITICAL - QA-FRAMEWORK</b>
@@ -95,19 +56,10 @@ receivers:
           {{ end }}
 
   - name: 'warning-alerts'
-    slack_configs:
-      - api_url: '${SLACK_WEBHOOK_URL:-http://localhost:3000}'
-        channel: '#warnings'
-        title: '⚠️ Warning: QA-Framework'
-        text: |
-          {{ range .Alerts }}
-          *Warning:* {{ .Annotations.summary }}
-          *Description:* {{ .Annotations.description }}
-          {{ end }}
     telegram_configs:
-      - bot_token: '${TELEGRAM_BOT_TOKEN:-}'
-        api_url: '${TELEGRAM_API_URL:-https://api.telegram.org}'
-        chat_id: '${TELEGRAM_CHAT_ID:-}'
+      - bot_token_file: /run/secrets/alertmanager_telegram_token
+        api_url: 'https://api.telegram.org'
+        chat_id: 346997361
         parse_mode: 'HTML'
         message: |
           ⚠️ <b>WARNING - QA-FRAMEWORK</b>

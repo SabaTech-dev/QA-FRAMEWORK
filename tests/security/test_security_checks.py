@@ -17,8 +17,7 @@ class TestSecurityConfiguration:
     def test_no_hardcoded_secrets_in_config(self):
         """Verify no hardcoded secrets in configuration files."""
         config_path = os.path.join(
-            os.path.dirname(__file__),
-            "..", "..", "dashboard", "backend", "config.py"
+            os.path.dirname(__file__), "..", "..", "dashboard", "backend", "config.py"
         )
 
         if not os.path.exists(config_path):
@@ -29,30 +28,23 @@ class TestSecurityConfiguration:
 
         # Check for common secret patterns
         secret_patterns = [
-            "secret_key = \"",  # Hardcoded string
-            "password = \"",    # Hardcoded password
-            "api_key = \"",     # Hardcoded API key
+            'secret_key = "',  # Hardcoded string
+            'password = "',  # Hardcoded password
+            'api_key = "',  # Hardcoded API key
         ]
 
         for pattern in secret_patterns:
-            assert pattern not in content.lower(), \
-                f"Potential hardcoded secret found: {pattern}"
+            assert pattern not in content.lower(), f"Potential hardcoded secret found: {pattern}"
 
     @pytest.mark.security
     def test_env_file_not_committed(self):
         """Verify .env file is not in git."""
-        env_path = os.path.join(
-            os.path.dirname(__file__),
-            "..", "..", ".env"
-        )
+        env_path = os.path.join(os.path.dirname(__file__), "..", "..", ".env")
 
         # .env should exist locally but not be committed
         if os.path.exists(env_path):
             # Check .gitignore includes .env
-            gitignore_path = os.path.join(
-                os.path.dirname(__file__),
-                "..", "..", ".gitignore"
-            )
+            gitignore_path = os.path.join(os.path.dirname(__file__), "..", "..", ".gitignore")
 
             if os.path.exists(gitignore_path):
                 with open(gitignore_path, "r") as f:
@@ -62,22 +54,17 @@ class TestSecurityConfiguration:
     @pytest.mark.security
     def test_dependencies_no_known_vulnerabilities(self):
         """Verify dependencies have no known vulnerabilities."""
-        import subprocess
         import os
+        import subprocess
 
         # Use pip-audit to check only project dependencies (not system packages)
         try:
-            req_file = os.path.join(
-                os.path.dirname(__file__), "..", "..", "requirements.txt"
-            )
+            req_file = os.path.join(os.path.dirname(__file__), "..", "..", "requirements.txt")
             if not os.path.exists(req_file):
                 pytest.skip("requirements.txt not found")
 
             result = subprocess.run(
-                ["pip-audit", "-r", req_file, "--desc"],
-                capture_output=True,
-                text=True,
-                timeout=120
+                ["pip-audit", "-r", req_file, "--desc"], capture_output=True, text=True, timeout=120
             )
 
             # pip-audit exit codes: 0=ok, 1=vulns found, other=tool errors
@@ -85,13 +72,12 @@ class TestSecurityConfiguration:
             # but contain "internal pip failure" in stderr — skip those
             if result.returncode == 1 and "vulnerability" in result.stdout.lower():
                 pytest.fail(
-                    f"Vulnerabilities found in project dependencies:\n"
-                    f"{result.stdout[:500]}"
+                    f"Vulnerabilities found in project dependencies:\n" f"{result.stdout[:500]}"
                 )
             elif result.returncode != 0:
                 pytest.skip(
-                    f"pip-audit tool error (not a vulnerability) — "
-                    f"likely build failure on some deps (e.g., locust/gevent on Python 3.14)"
+                    "pip-audit tool error (not a vulnerability) — "
+                    "likely build failure on some deps (e.g., locust/gevent on Python 3.14)"
                 )
         except FileNotFoundError:
             pytest.skip("pip-audit not installed")

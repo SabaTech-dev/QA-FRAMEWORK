@@ -1,10 +1,11 @@
 """Performance metrics collection and analysis"""
 
-import time
 import statistics
-from typing import Any, Dict, List, Optional
-from dataclasses import dataclass, field
+import time
 from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
+
 from src.core.interfaces import IMetricsCollector
 
 
@@ -115,9 +116,11 @@ class PerformanceMetrics:
                 "p99": round(self.p99_response_time, 2),
             },
             "error_types": dict(self.error_types),
-            "duration": round(self.end_time - self.start_time, 2)
-            if self.start_time and self.end_time
-            else 0,
+            "duration": (
+                round(self.end_time - self.start_time, 2)
+                if self.start_time and self.end_time
+                else 0
+            ),
         }
 
 

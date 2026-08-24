@@ -1,15 +1,16 @@
 """Main performance testing client"""
 
 from typing import Any, Dict, List, Optional
-from src.core.interfaces import IPerformanceClient
+
+from src.adapters.performance.benchmark_runner import BenchmarkRunner
 from src.adapters.performance.load_test_runner import (
+    ApacheBenchAdapter,
+    K6Adapter,
     LoadTestRunner,
     LocustAdapter,
-    K6Adapter,
-    ApacheBenchAdapter,
 )
-from src.adapters.performance.benchmark_runner import BenchmarkRunner, BenchmarkResult
 from src.adapters.performance.metrics_collector import MetricsCollector
+from src.core.interfaces import IPerformanceClient
 
 
 class PerformanceClient(IPerformanceClient):

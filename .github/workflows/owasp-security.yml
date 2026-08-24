@@ -38,12 +38,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7 # v4.2.2
 
+      - name: Install Semgrep
+        run: pip install semgrep==1.165.0
+
       - name: Run Semgrep
-        uses: returntocorp/semgrep-action@v1
-        with:
-          config: .semgrep.yml
-          output-format: sarif
-          output: semgrep-results.sarif
+        # returntocorp/semgrep-action@v1 is deprecated and silently ignores the
+        # output/output-format inputs, so the SARIF file was never produced.
+        # Plain CLI guarantees the artifact exists for upload-sarif and the gate.
+        run: semgrep scan --config .semgrep.yml --sarif --output semgrep-results.sarif
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
 
@@ -169,15 +171,17 @@ jobs:
     steps:
       - name: Download Semgrep results
         uses: actions/download-artifact@v4 # v4.3.0
+        continue-on-error: true  # step-level: download-artifact has no such input
         with:
           name: semgrep-results
-          continue-on-error: true
 
       - name: Check for critical findings
         run: |
           CRITICAL=0
           if [ -f semgrep-results.sarif ]; then
-            C=$(grep -o '"severity": "error"' semgrep-results.sarif 2>/dev/null | wc -l)
+            # SARIF exposes severity via results[].level ("error"/"warning"/"note");
+            # the old grep for '"severity": "error"' could never match.
+            C=$(grep -o '"level": "error"' semgrep-results.sarif 2>/dev/null | wc -l)
             CRITICAL=$((CRITICAL + C))
           fi
           

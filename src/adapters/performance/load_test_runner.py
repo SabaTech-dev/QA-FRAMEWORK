@@ -1,11 +1,12 @@
 """Load test runner with support for multiple tools"""
 
 import asyncio
+import os
 import subprocess
 import tempfile
-import os
-from typing import Any, Dict, List, Optional
 from abc import ABC, abstractmethod
+from typing import Any, Dict, Optional
+
 from src.adapters.performance.metrics_collector import MetricsCollector
 
 
@@ -140,7 +141,7 @@ class LocustAdapter(LoadTestRunner):
 
     def _create_temp_locustfile(self, target_url: str) -> str:
         """Create a temporary locustfile."""
-        content = f"""
+        content = """
 from locust import HttpUser, task, between
 
 class QuickstartUser(HttpUser):
@@ -229,7 +230,7 @@ class K6Adapter(LoadTestRunner):
             cmd.append(script_path)
 
             self._collector.start_collection()
-            start_time = asyncio.get_event_loop().time()
+            _start_time = asyncio.get_event_loop().time()
 
             process = await asyncio.create_subprocess_exec(
                 *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
@@ -237,7 +238,7 @@ class K6Adapter(LoadTestRunner):
 
             stdout, stderr = await process.communicate()
 
-            end_time = asyncio.get_event_loop().time()
+            _end_time = asyncio.get_event_loop().time()
             self._collector.stop_collection()
 
             # Try to load k6 summary if available
@@ -260,7 +261,7 @@ class K6Adapter(LoadTestRunner):
 
     def _create_temp_script(self, target_url: str) -> str:
         """Create a temporary k6 script."""
-        content = f'''
+        content = f"""
 import http from 'k6/http';
 import {{ check, sleep }} from 'k6';
 
@@ -269,7 +270,7 @@ export default function() {{
     check(response, {{'status is 200': (r) => r.status === 200}});
     sleep(1);
 }}
-'''
+"""
         fd, path = tempfile.mkstemp(suffix=".js")
         with os.fdopen(fd, "w") as f:
             f.write(content)
@@ -345,7 +346,7 @@ class ApacheBenchAdapter(LoadTestRunner):
         ]
 
         self._collector.start_collection()
-        start_time = asyncio.get_event_loop().time()
+        _start_time = asyncio.get_event_loop().time()
 
         process = await asyncio.create_subprocess_exec(
             *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
@@ -353,7 +354,7 @@ class ApacheBenchAdapter(LoadTestRunner):
 
         stdout, stderr = await process.communicate()
 
-        end_time = asyncio.get_event_loop().time()
+        _end_time = asyncio.get_event_loop().time()
         self._collector.stop_collection()
 
         results = self._parse_ab_output(stdout.decode())
