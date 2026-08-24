@@ -13,9 +13,9 @@ depend on filename parsing.
 import json
 import re
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from src.infrastructure.qa_visual.models import AnalyzeResponse
 
@@ -46,7 +46,7 @@ class QAVisualReportStore:
         self._dir.mkdir(parents=True, exist_ok=True)
         response.report_id = response.report_id or new_report_id()
         if not response.timestamp or response.timestamp.year < 2000:
-            response.timestamp = datetime.now(timezone.utc)
+            response.timestamp = datetime.now(UTC)
         path = (
             self._dir / f"qa_visual_{_sanitize_target(response.target)}_{response.report_id}.json"
         )
@@ -55,10 +55,10 @@ class QAVisualReportStore:
 
     def list_reports(
         self,
-        target: Optional[str] = None,
-        limit: Optional[int] = None,
-        owner: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        target: str | None = None,
+        limit: int | None = None,
+        owner: str | None = None,
+    ) -> list[dict[str, Any]]:
         """List reports (newest first), optionally filtered by target.
 
         When ``owner`` is given only that owner's reports are returned;
@@ -78,7 +78,7 @@ class QAVisualReportStore:
         reports.sort(key=lambda r: r.get("timestamp") or "", reverse=True)
         return reports[:limit] if limit else reports
 
-    def get_report(self, report_id: str) -> Optional[Dict[str, Any]]:
+    def get_report(self, report_id: str) -> dict[str, Any] | None:
         """Return one report by id, or None."""
         for path in self._dir.glob("*.json") if self._dir.exists() else []:
             report = self._read_report(path)
@@ -86,7 +86,7 @@ class QAVisualReportStore:
                 return report
         return None
 
-    def get_baseline(self, target: str, owner: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    def get_baseline(self, target: str, owner: str | None = None) -> dict[str, Any] | None:
         """Return the earliest report for a target (its visual baseline).
 
         With ``owner`` the baseline is scoped to that owner so scores are
@@ -98,7 +98,7 @@ class QAVisualReportStore:
         return min(reports, key=lambda r: r.get("timestamp") or "")
 
     @staticmethod
-    def _read_report(path: Path) -> Optional[Dict[str, Any]]:
+    def _read_report(path: Path) -> dict[str, Any] | None:
         try:
             return json.loads(path.read_text())
         except (json.JSONDecodeError, OSError):

@@ -6,8 +6,8 @@ If FastAPI is not installed, import will fail but other modules will work.
 """
 
 try:
+    from collections.abc import Callable
     from contextlib import asynccontextmanager
-    from typing import Callable, Optional
 
     from fastapi import FastAPI, Request, Response
     from starlette.middleware.base import BaseHTTPMiddleware
@@ -28,7 +28,7 @@ try:
         - Adds connection tracking headers
         """
 
-        def __init__(self, app, manager: Optional[ShutdownManager] = None):
+        def __init__(self, app, manager: ShutdownManager | None = None):
             super().__init__(app)
             self.manager = manager or shutdown_manager
 
@@ -89,7 +89,7 @@ try:
                     await self.manager.connection_tracker.deregister_connection(connection_id)
 
     def setup_fastapi_shutdown(
-        app: FastAPI, manager: Optional[ShutdownManager] = None, setup_signal_handlers: bool = True
+        app: FastAPI, manager: ShutdownManager | None = None, setup_signal_handlers: bool = True
     ) -> None:
         """
         Setup graceful shutdown for a FastAPI application.
@@ -142,7 +142,7 @@ try:
 
         logger.info("FastAPI graceful shutdown configured (middleware only)")
 
-    def create_shutdown_lifespan(manager: Optional[ShutdownManager] = None):
+    def create_shutdown_lifespan(manager: ShutdownManager | None = None):
         """
         Create a lifespan context manager for FastAPI apps using the new lifespan pattern.
 
@@ -182,7 +182,7 @@ try:
         return lifespan
 
     async def register_database_connection(
-        engine, session_factory=None, manager: Optional[ShutdownManager] = None
+        engine, session_factory=None, manager: ShutdownManager | None = None
     ) -> None:
         """
         Register database connections for graceful shutdown.
@@ -205,7 +205,7 @@ try:
         logger.info("Database engine registered for shutdown")
 
     async def register_redis_connection(
-        redis_client, name: str = "redis", manager: Optional[ShutdownManager] = None
+        redis_client, name: str = "redis", manager: ShutdownManager | None = None
     ) -> None:
         """
         Register Redis connection for graceful shutdown.
@@ -244,9 +244,9 @@ try:
                 return {"data": "value"}
         """
 
-        def __init__(self, manager: Optional[ShutdownManager] = None):
+        def __init__(self, manager: ShutdownManager | None = None):
             self.manager = manager or shutdown_manager
-            self.connection_id: Optional[str] = None
+            self.connection_id: str | None = None
 
         async def __aenter__(self):
             """Enter context - register and start tracking"""

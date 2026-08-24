@@ -6,7 +6,7 @@ Simplified security tests that can run independently.
 
 import os
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -145,7 +145,7 @@ class TestWebhookSecurity:
     def test_webhook_timestamp_tolerance(self):
         """Test webhook timestamp validation."""
         # Stripe webhooks should be within 5 minutes
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         valid_timestamp = int((now - timedelta(minutes=2)).timestamp())
         invalid_timestamp = int((now - timedelta(minutes=10)).timestamp())
@@ -198,7 +198,6 @@ class TestDataProtection:
 
         # Implementation should only store necessary PII
         # Optional PII should be stored in Stripe, not locally
-        pass
 
     def test_subscription_status_values(self):
         """Test that subscription statuses are from valid set."""
@@ -289,7 +288,6 @@ class TestLoggingSecurity:
 
         # Log messages should not contain sensitive data
         # This is a documentation test
-        pass
 
     def test_billing_events_logged(self):
         """Test that important billing events are logged."""

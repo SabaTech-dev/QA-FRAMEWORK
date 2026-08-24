@@ -5,7 +5,7 @@ Abstract interfaces defining contracts for the accuracy testing system.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Optional, Protocol
+from typing import Protocol
 
 from .entities import AccuracyBenchmark, AccuracyEvaluation, AccuracyTestSession
 from .value_objects import LegalDomain
@@ -55,48 +55,41 @@ class IBenchmarkRepository(ABC):
     """Abstract repository for benchmark persistence."""
 
     @abstractmethod
-    async def get_by_id(self, benchmark_id: str) -> Optional[AccuracyBenchmark]:
+    async def get_by_id(self, benchmark_id: str) -> AccuracyBenchmark | None:
         """Retrieve a benchmark by ID."""
-        pass
 
     @abstractmethod
     async def get_by_domain(
         self,
         legal_domain: LegalDomain,
         limit: int = 100,
-    ) -> List[AccuracyBenchmark]:
+    ) -> list[AccuracyBenchmark]:
         """Get benchmarks for a legal domain."""
-        pass
 
     @abstractmethod
     async def save(self, benchmark: AccuracyBenchmark) -> AccuracyBenchmark:
         """Save a benchmark (create or update)."""
-        pass
 
     @abstractmethod
     async def delete(self, benchmark_id: str) -> bool:
         """Delete a benchmark."""
-        pass
 
 
 class ITestSessionRepository(ABC):
     """Abstract repository for test session persistence."""
 
     @abstractmethod
-    async def get_by_id(self, session_id: str) -> Optional[AccuracyTestSession]:
+    async def get_by_id(self, session_id: str) -> AccuracyTestSession | None:
         """Retrieve a test session by ID."""
-        pass
 
     @abstractmethod
     async def save(self, session: AccuracyTestSession) -> AccuracyTestSession:
         """Save a test session."""
-        pass
 
     @abstractmethod
     async def get_recent(
         self,
         tenant_id: str,
         limit: int = 10,
-    ) -> List[AccuracyTestSession]:
+    ) -> list[AccuracyTestSession]:
         """Get recent test sessions for a tenant."""
-        pass

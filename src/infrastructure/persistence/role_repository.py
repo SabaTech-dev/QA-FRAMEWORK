@@ -8,7 +8,6 @@ This module provides:
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Optional
 from uuid import UUID
 
 from src.domain.entities.role import Role
@@ -33,10 +32,9 @@ class RoleRepositoryInterface(ABC):
         Returns:
             Created role with generated ID
         """
-        pass
 
     @abstractmethod
-    async def get_by_id(self, role_id: UUID) -> Optional[Role]:
+    async def get_by_id(self, role_id: UUID) -> Role | None:
         """
         Get role by ID.
 
@@ -46,10 +44,9 @@ class RoleRepositoryInterface(ABC):
         Returns:
             Role if found, None otherwise
         """
-        pass
 
     @abstractmethod
-    async def get_by_tenant_and_name(self, tenant_id: UUID, name: str) -> Optional[Role]:
+    async def get_by_tenant_and_name(self, tenant_id: UUID, name: str) -> Role | None:
         """
         Get role by tenant ID and role name.
 
@@ -60,10 +57,9 @@ class RoleRepositoryInterface(ABC):
         Returns:
             Role if found, None otherwise
         """
-        pass
 
     @abstractmethod
-    async def get_default_role(self, tenant_id: UUID) -> Optional[Role]:
+    async def get_default_role(self, tenant_id: UUID) -> Role | None:
         """
         Get the default role for a tenant (used for new users).
 
@@ -73,10 +69,9 @@ class RoleRepositoryInterface(ABC):
         Returns:
             Default role if found, None otherwise
         """
-        pass
 
     @abstractmethod
-    async def list_by_tenant(self, tenant_id: UUID, skip: int = 0, limit: int = 100) -> List[Role]:
+    async def list_by_tenant(self, tenant_id: UUID, skip: int = 0, limit: int = 100) -> list[Role]:
         """
         List all roles for a tenant with pagination.
 
@@ -88,7 +83,6 @@ class RoleRepositoryInterface(ABC):
         Returns:
             List of roles
         """
-        pass
 
     @abstractmethod
     async def update(self, role: Role) -> Role:
@@ -101,7 +95,6 @@ class RoleRepositoryInterface(ABC):
         Returns:
             Updated role
         """
-        pass
 
     @abstractmethod
     async def delete(self, role_id: UUID) -> bool:
@@ -114,10 +107,9 @@ class RoleRepositoryInterface(ABC):
         Returns:
             True if deleted, False if not found
         """
-        pass
 
     @abstractmethod
-    async def create_default_roles(self, tenant_id: UUID) -> List[Role]:
+    async def create_default_roles(self, tenant_id: UUID) -> list[Role]:
         """
         Create default roles (owner, admin, member, viewer) for a tenant.
 
@@ -127,7 +119,6 @@ class RoleRepositoryInterface(ABC):
         Returns:
             List of created roles
         """
-        pass
 
 
 class SQLAlchemyRoleRepository(RoleRepositoryInterface):
@@ -166,7 +157,7 @@ class SQLAlchemyRoleRepository(RoleRepositoryInterface):
 
         return self._map_to_entity(db_role)
 
-    async def get_by_id(self, role_id: UUID) -> Optional[Role]:
+    async def get_by_id(self, role_id: UUID) -> Role | None:
         """Get role by ID from database"""
         from sqlalchemy import select
 
@@ -181,7 +172,7 @@ class SQLAlchemyRoleRepository(RoleRepositoryInterface):
 
         return self._map_to_entity(db_role)
 
-    async def get_by_tenant_and_name(self, tenant_id: UUID, name: str) -> Optional[Role]:
+    async def get_by_tenant_and_name(self, tenant_id: UUID, name: str) -> Role | None:
         """Get role by tenant ID and name from database"""
         from sqlalchemy import select
 
@@ -198,7 +189,7 @@ class SQLAlchemyRoleRepository(RoleRepositoryInterface):
 
         return self._map_to_entity(db_role)
 
-    async def get_default_role(self, tenant_id: UUID) -> Optional[Role]:
+    async def get_default_role(self, tenant_id: UUID) -> Role | None:
         """Get default role for tenant from database"""
         from sqlalchemy import select
 
@@ -215,7 +206,7 @@ class SQLAlchemyRoleRepository(RoleRepositoryInterface):
 
         return self._map_to_entity(db_role)
 
-    async def list_by_tenant(self, tenant_id: UUID, skip: int = 0, limit: int = 100) -> List[Role]:
+    async def list_by_tenant(self, tenant_id: UUID, skip: int = 0, limit: int = 100) -> list[Role]:
         """List all roles for a tenant with pagination"""
         from sqlalchemy import select
 
@@ -271,7 +262,7 @@ class SQLAlchemyRoleRepository(RoleRepositoryInterface):
 
         return True
 
-    async def create_default_roles(self, tenant_id: UUID) -> List[Role]:
+    async def create_default_roles(self, tenant_id: UUID) -> list[Role]:
         """Create default roles for tenant"""
         from src.domain.entities.role import ROLE_PERMISSIONS
 
@@ -321,25 +312,25 @@ class InMemoryRoleRepository(RoleRepositoryInterface):
         self._roles[role.id] = role
         return role
 
-    async def get_by_id(self, role_id: UUID) -> Optional[Role]:
+    async def get_by_id(self, role_id: UUID) -> Role | None:
         """Get role from memory by ID"""
         return self._roles.get(role_id)
 
-    async def get_by_tenant_and_name(self, tenant_id: UUID, name: str) -> Optional[Role]:
+    async def get_by_tenant_and_name(self, tenant_id: UUID, name: str) -> Role | None:
         """Get role from memory by tenant ID and name"""
         for role in self._roles.values():
             if role.tenant_id == tenant_id and role.name == name:
                 return role
         return None
 
-    async def get_default_role(self, tenant_id: UUID) -> Optional[Role]:
+    async def get_default_role(self, tenant_id: UUID) -> Role | None:
         """Get default role for tenant from memory"""
         for role in self._roles.values():
             if role.tenant_id == tenant_id and role.is_default:
                 return role
         return None
 
-    async def list_by_tenant(self, tenant_id: UUID, skip: int = 0, limit: int = 100) -> List[Role]:
+    async def list_by_tenant(self, tenant_id: UUID, skip: int = 0, limit: int = 100) -> list[Role]:
         """List all roles for tenant from memory with pagination"""
         roles = [r for r in self._roles.values() if r.tenant_id == tenant_id]
         return roles[skip : skip + limit]
@@ -358,7 +349,7 @@ class InMemoryRoleRepository(RoleRepositoryInterface):
         del self._roles[role_id]
         return True
 
-    async def create_default_roles(self, tenant_id: UUID) -> List[Role]:
+    async def create_default_roles(self, tenant_id: UUID) -> list[Role]:
         """Create default roles for tenant in memory"""
         from src.domain.entities.role import ROLE_PERMISSIONS
 

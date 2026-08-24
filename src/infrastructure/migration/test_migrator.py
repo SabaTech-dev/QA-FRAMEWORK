@@ -1,7 +1,6 @@
 """Test migrator for multi-tenant migration."""
 
 import logging
-from typing import List
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -81,7 +80,7 @@ class TestMigrator(DataMigrator):
                     self.stats["migrated_records"] += 1
 
                 except Exception as e:
-                    error_msg = f"Failed to migrate test suite {suite.name}: {str(e)}"
+                    error_msg = f"Failed to migrate test suite {suite.name}: {e!s}"
                     logger.error(error_msg)
                     self.add_error(error_msg)
                     self.errors.append(error_msg)
@@ -96,7 +95,7 @@ class TestMigrator(DataMigrator):
             }
 
         except Exception as e:
-            error_msg = f"Test migration failed: {str(e)}"
+            error_msg = f"Test migration failed: {e!s}"
             logger.error(error_msg)
             self.add_error(error_msg)
             if not self.dry_run:
@@ -133,13 +132,13 @@ class TestMigrator(DataMigrator):
                     await self._migrate_executions(test_case, default_tenant)
 
                 except Exception as e:
-                    error_msg = f"Failed to migrate test case {test_case.name}: {str(e)}"
+                    error_msg = f"Failed to migrate test case {test_case.name}: {e!s}"
                     logger.error(error_msg)
                     self.add_error(error_msg)
                     self.errors.append(error_msg)
 
         except Exception as e:
-            error_msg = f"Failed to migrate test cases for suite {suite.name}: {str(e)}"
+            error_msg = f"Failed to migrate test cases for suite {suite.name}: {e!s}"
             logger.error(error_msg)
             self.add_error(error_msg)
             self.errors.append(error_msg)
@@ -174,18 +173,18 @@ class TestMigrator(DataMigrator):
                     logger.info(f"Execution {execution.id} will be migrated with its test case")
 
                 except Exception as e:
-                    error_msg = f"Failed to migrate execution {execution.id}: {str(e)}"
+                    error_msg = f"Failed to migrate execution {execution.id}: {e!s}"
                     logger.error(error_msg)
                     self.add_error(error_msg)
                     self.errors.append(error_msg)
 
         except Exception as e:
-            error_msg = f"Failed to get executions for test case {test_case.name}: {str(e)}"
+            error_msg = f"Failed to get executions for test case {test_case.name}: {e!s}"
             logger.error(error_msg)
             self.add_error(error_msg)
             self.errors.append(error_msg)
 
-    def get_migrated_suites(self) -> List:
+    def get_migrated_suites(self) -> list:
         """
         Get list of migrated test suites.
 
@@ -194,7 +193,7 @@ class TestMigrator(DataMigrator):
         """
         return self.migrated_suites
 
-    def get_migrated_cases(self) -> List:
+    def get_migrated_cases(self) -> list:
         """
         Get list of migrated test cases.
 
@@ -203,7 +202,7 @@ class TestMigrator(DataMigrator):
         """
         return self.migrated_cases
 
-    def get_errors(self) -> List[str]:
+    def get_errors(self) -> list[str]:
         """
         Get list of migration errors.
 

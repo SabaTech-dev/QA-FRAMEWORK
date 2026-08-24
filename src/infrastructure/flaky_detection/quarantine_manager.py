@@ -4,8 +4,7 @@ Quarantine Manager Implementation
 Manages quarantined tests and their evaluation.
 """
 
-from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from src.domain.flaky_detection.entities import QuarantineEntry, TestRun
@@ -22,15 +21,15 @@ class InMemoryQuarantineManager:
 
     def __init__(self, default_expiry_days: int = 30):
         self.default_expiry_days = default_expiry_days
-        self._quarantines: Dict[str, QuarantineEntry] = {}
-        self._by_test: Dict[str, str] = {}  # test_id -> quarantine_id
+        self._quarantines: dict[str, QuarantineEntry] = {}
+        self._by_test: dict[str, str] = {}  # test_id -> quarantine_id
 
     async def quarantine(
         self,
         test_identifier: TestIdentifier,
         reason: QuarantineReason,
-        description: Optional[str] = None,
-        expires_in_days: Optional[int] = None,
+        description: str | None = None,
+        expires_in_days: int | None = None,
     ) -> QuarantineEntry:
         """Quarantine a flaky test."""
         test_id = str(test_identifier)
@@ -43,16 +42,16 @@ class InMemoryQuarantineManager:
         # Calculate expiry
         expires_at = None
         if expires_in_days is not None:
-            expires_at = datetime.now(timezone.utc) + timedelta(days=expires_in_days)
+            expires_at = datetime.now(UTC) + timedelta(days=expires_in_days)
         elif self.default_expiry_days > 0:
-            expires_at = datetime.now(timezone.utc) + timedelta(days=self.default_expiry_days)
+            expires_at = datetime.now(UTC) + timedelta(days=self.default_expiry_days)
 
         entry = QuarantineEntry(
             id=str(uuid4()),
             test_identifier=test_identifier,
             reason=reason,
             description=description,
-            quarantined_at=datetime.now(timezone.utc),
+            quarantined_at=datetime.now(UTC),
             quarantined_by="system",
             expires_at=expires_at,
             tenant_id=None,
@@ -66,8 +65,8 @@ class InMemoryQuarantineManager:
     async def release(
         self,
         test_identifier: TestIdentifier,
-        notes: Optional[str] = None,
-    ) -> Optional[QuarantineEntry]:
+        notes: str | None = None,
+    ) -> QuarantineEntry | None:
         """Release a test from quarantine."""
         test_id = str(test_identifier)
 
@@ -88,7 +87,7 @@ class InMemoryQuarantineManager:
     async def get_quarantined(
         self,
         tenant_id: str,
-    ) -> List[QuarantineEntry]:
+    ) -> list[QuarantineEntry]:
         """Get all quarantined tests for a tenant."""
         return [
             entry
@@ -99,8 +98,8 @@ class InMemoryQuarantineManager:
     async def evaluate(
         self,
         test_identifier: TestIdentifier,
-        recent_runs: List[TestRun],
-    ) -> Optional[QuarantineEntry]:
+        recent_runs: list[TestRun],
+    ) -> QuarantineEntry | None:
         """
         Evaluate if a quarantined test can be released.
 
@@ -138,7 +137,7 @@ class InMemoryQuarantineManager:
 
         return entry.add_evaluation(False, f"Only {consecutive_passes} consecutive passes")
 
-    async def get_expired(self) -> List[QuarantineEntry]:
+    async def get_expired(self) -> list[QuarantineEntry]:
         """Get quarantined tests that have expired."""
         return [
             entry
@@ -146,7 +145,7 @@ class InMemoryQuarantineManager:
             if entry.is_expired and not entry.is_resolved
         ]
 
-    async def get_all(self) -> List[QuarantineEntry]:
+    async def get_all(self) -> list[QuarantineEntry]:
         """Get all quarantine entries."""
         return list(self._quarantines.values())
 

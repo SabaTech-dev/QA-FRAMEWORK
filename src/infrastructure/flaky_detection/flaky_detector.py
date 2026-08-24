@@ -6,7 +6,6 @@ Statistical and pattern-based detection of flaky tests.
 
 import statistics
 from collections import Counter
-from typing import List, Tuple
 
 from src.domain.flaky_detection.entities import FlakyTest, TestRun
 from src.domain.flaky_detection.value_objects import (
@@ -46,7 +45,7 @@ class FlakyDetector:
     def detect(
         self,
         test_identifier: TestIdentifier,
-        runs: List[TestRun],
+        runs: list[TestRun],
     ) -> FlakinessScore:
         """
         Detect if a test is flaky based on its run history.
@@ -91,8 +90,8 @@ class FlakyDetector:
 
     def batch_detect(
         self,
-        tests: List[Tuple[TestIdentifier, List[TestRun]]],
-    ) -> List[Tuple[TestIdentifier, FlakinessScore]]:
+        tests: list[tuple[TestIdentifier, list[TestRun]]],
+    ) -> list[tuple[TestIdentifier, FlakinessScore]]:
         """Detect flakiness for multiple tests."""
         results = []
 
@@ -108,7 +107,7 @@ class FlakyDetector:
     def analyze_test(
         self,
         test_identifier: TestIdentifier,
-        runs: List[TestRun],
+        runs: list[TestRun],
     ) -> FlakyTest:
         """
         Perform full analysis of a test.
@@ -156,7 +155,7 @@ class FlakyDetector:
             last_flaky_at=None,
         )
 
-    def _statistical_analysis(self, runs: List[TestRun]) -> float:
+    def _statistical_analysis(self, runs: list[TestRun]) -> float:
         """
         Statistical analysis of pass/fail rates.
 
@@ -191,7 +190,7 @@ class FlakyDetector:
 
         return min(1.0, score)
 
-    def _sequence_analysis(self, runs: List[TestRun]) -> float:
+    def _sequence_analysis(self, runs: list[TestRun]) -> float:
         """
         Analyze failure sequences.
 
@@ -233,7 +232,7 @@ class FlakyDetector:
 
         return min(1.0, score)
 
-    def _duration_analysis(self, runs: List[TestRun]) -> float:
+    def _duration_analysis(self, runs: list[TestRun]) -> float:
         """
         Analyze duration variance.
 
@@ -258,7 +257,7 @@ class FlakyDetector:
 
         return coefficient_of_variation * 0.5
 
-    def _detect_failure_pattern(self, runs: List[TestRun]) -> FailurePattern:
+    def _detect_failure_pattern(self, runs: list[TestRun]) -> FailurePattern:
         """Detect failure patterns in test runs."""
         consecutive_failures = 0
         max_consecutive = 0
@@ -311,7 +310,7 @@ class FlakyDetector:
             cluster_positions=clusters,
         )
 
-    def _extract_common_errors(self, runs: List[TestRun]) -> List[str]:
+    def _extract_common_errors(self, runs: list[TestRun]) -> list[str]:
         """Extract common error messages from failed runs."""
         errors = []
         for run in runs:

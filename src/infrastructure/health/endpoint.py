@@ -1,7 +1,7 @@
 """Aggregated health status endpoint for FastAPI integration"""
 
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
@@ -11,9 +11,9 @@ from src.infrastructure.health.models import AggregatedHealthStatus, HealthCheck
 
 
 def create_health_router(
-    health_checker: Optional[HealthChecker] = None,
+    health_checker: HealthChecker | None = None,
     prefix: str = "/health",
-    tags: Optional[list] = None,
+    tags: list | None = None,
     include_liveness: bool = True,
     include_readiness: bool = True,
     include_startup: bool = True,
@@ -52,11 +52,11 @@ def create_health_router(
     checker = health_checker or get_health_checker()
 
     # Application state
-    startup_time: Optional[datetime] = None
+    startup_time: datetime | None = None
 
     def set_startup_complete():
         nonlocal startup_time
-        startup_time = datetime.now(timezone.utc)
+        startup_time = datetime.now(UTC)
 
     @router.get("/live", status_code=status.HTTP_200_OK)
     async def liveness_probe():
@@ -66,7 +66,7 @@ def create_health_router(
         Returns 200 if the application is running.
         If this fails, Kubernetes will restart the pod.
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         uptime = (now - startup_time).total_seconds() if startup_time else 0
 
         return {
@@ -117,7 +117,7 @@ def create_health_router(
                 },
             )
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return {
             "status": "started",
             "startup_time": startup_time.isoformat(),
@@ -170,7 +170,7 @@ def create_health_router(
         Forces the next health check to run all checks.
         """
         checker.invalidate_cache()
-        return {"message": "Cache invalidated", "timestamp": datetime.now(timezone.utc).isoformat()}
+        return {"message": "Cache invalidated", "timestamp": datetime.now(UTC).isoformat()}
 
     # Store startup function reference
     router.set_startup_complete = set_startup_complete
@@ -178,7 +178,7 @@ def create_health_router(
     return router
 
 
-def _get_system_info() -> Dict[str, Any]:
+def _get_system_info() -> dict[str, Any]:
     """Get system information for health status."""
     import os
     import platform
@@ -231,10 +231,10 @@ class HealthEndpointManager:
             health_manager.mark_ready()
     """
 
-    def __init__(self, config: Optional[HealthCheckConfig] = None):
+    def __init__(self, config: HealthCheckConfig | None = None):
         """Initialize health endpoint manager."""
         self.checker = HealthChecker(config)
-        self._router: Optional[APIRouter] = None
+        self._router: APIRouter | None = None
         self._ready = False
 
     def configure_database(
@@ -256,7 +256,7 @@ class HealthEndpointManager:
         name: str,
         host: str = "localhost",
         port: int = 6379,
-        password: Optional[str] = None,
+        password: str | None = None,
         db: int = 0,
     ) -> "HealthEndpointManager":
         """Configure Redis health check."""

@@ -23,8 +23,8 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING, List, Optional
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from .value_objects import AccuracyLevel, validate_threshold
 
@@ -91,8 +91,8 @@ class BenchmarkSplit:
     appear in UI payloads or execution logs.
     """
 
-    eval_benchmarks: List["AccuracyBenchmark"] = field(default_factory=list)
-    holdout_benchmarks: List["AccuracyBenchmark"] = field(default_factory=list)
+    eval_benchmarks: list[AccuracyBenchmark] = field(default_factory=list)
+    holdout_benchmarks: list[AccuracyBenchmark] = field(default_factory=list)
     # L-1: no secure default policy exists — required, keyword-only.
     policy: SplitPolicy = field(kw_only=True)
 
@@ -145,14 +145,14 @@ class BenchmarkSplit:
         return f"BenchmarkSplit(eval_count={self.eval_count}, holdout_count={self.holdout_count})"
 
 
-def _sort_key(benchmark: "AccuracyBenchmark", salt: str):
+def _sort_key(benchmark: AccuracyBenchmark, salt: str):
     """Deterministic sort key: SHA-256 of salted id (process-stable)."""
     digest = hashlib.sha256(f"{salt}:{benchmark.id}".encode()).hexdigest()
     return (digest, benchmark.id)
 
 
 def split_benchmarks(
-    benchmarks: List["AccuracyBenchmark"],
+    benchmarks: list[AccuracyBenchmark],
     policy: SplitPolicy,
 ) -> BenchmarkSplit:
     """
@@ -230,7 +230,7 @@ class HoldoutSummary:
     pass_rate: float = 0.0
     average_score: float = 0.0
     hallucination_count: int = 0
-    evaluated_at: Optional[datetime] = None
+    evaluated_at: datetime | None = None
 
     def __post_init__(self):
         validate_threshold(self.pass_rate)
@@ -249,14 +249,14 @@ class HoldoutSummary:
         return self.holdout_count == 0
 
     @classmethod
-    def empty(cls) -> "HoldoutSummary":
+    def empty(cls) -> HoldoutSummary:
         """Summary for an empty holdout run."""
         return cls(
             holdout_count=0,
             pass_rate=0.0,
             average_score=0.0,
             hallucination_count=0,
-            evaluated_at=datetime.now(timezone.utc),
+            evaluated_at=datetime.now(UTC),
         )
 
     def to_dict(self) -> dict:

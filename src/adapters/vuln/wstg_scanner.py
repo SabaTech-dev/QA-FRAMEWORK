@@ -10,7 +10,7 @@ import logging
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .vuln_parser import UnifiedVulnParser, VulnScanResult
 
@@ -66,13 +66,13 @@ class WSTGScanner:
     async def scan_web(
         self,
         target: str,
-        categories: Optional[List[str]] = None,
-        auth_token: Optional[str] = None,
-        cookie: Optional[str] = None,
-        proxy: Optional[str] = None,
+        categories: list[str] | None = None,
+        auth_token: str | None = None,
+        cookie: str | None = None,
+        proxy: str | None = None,
         rate_limit: int = 10,
         timeout: int = 300,
-        scan_id: Optional[str] = None,
+        scan_id: str | None = None,
     ) -> VulnScanResult:
         """Run a comprehensive WSTG web scan.
 
@@ -173,7 +173,7 @@ class WSTGScanner:
         self,
         target: str,
         category: str,
-        scan_id: Optional[str] = None,
+        scan_id: str | None = None,
     ) -> VulnScanResult:
         """Run a specific WSTG category scan.
 
@@ -194,12 +194,12 @@ class WSTGScanner:
     def _build_command(
         self,
         target: str,
-        categories: Optional[List[str]] = None,
-        auth_token: Optional[str] = None,
-        cookie: Optional[str] = None,
-        proxy: Optional[str] = None,
+        categories: list[str] | None = None,
+        auth_token: str | None = None,
+        cookie: str | None = None,
+        proxy: str | None = None,
         rate_limit: int = 10,
-    ) -> List[str]:
+    ) -> list[str]:
         """Build the Docker command for WSTG scanner."""
         cmd = [
             "docker",
@@ -240,7 +240,7 @@ class WSTGScanner:
 
         return cmd
 
-    async def _run_docker(self, cmd: List[str], timeout: int = 600) -> tuple[str, str, float]:
+    async def _run_docker(self, cmd: list[str], timeout: int = 600) -> tuple[str, str, float]:
         """Execute Docker command and capture output."""
         start = datetime.utcnow()
         proc = await asyncio.create_subprocess_exec(
@@ -251,7 +251,7 @@ class WSTGScanner:
 
         try:
             stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             proc.kill()
             duration = (datetime.utcnow() - start).total_seconds()
             logger.warning(f"WSTG scan timed out after {timeout}s")
@@ -264,7 +264,7 @@ class WSTGScanner:
             duration,
         )
 
-    async def list_categories(self) -> Dict[str, str]:
+    async def list_categories(self) -> dict[str, str]:
         """List available WSTG test categories.
 
         Returns:
@@ -272,7 +272,7 @@ class WSTGScanner:
         """
         return dict(self.WSTG_CATEGORIES)
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Check if WSTG scanner is available.
 
         Returns:
@@ -298,4 +298,3 @@ class WSTGScanner:
 
     async def close(self):
         """Cleanup resources."""
-        pass

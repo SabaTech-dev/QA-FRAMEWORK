@@ -13,8 +13,7 @@ execution logs can reveal holdout content that could be tuned against.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import List
+from datetime import UTC, datetime
 
 from .interfaces import IAccuracyEvaluator, IResponseProvider
 from .splitting import BenchmarkSplit, HoldoutSummary
@@ -49,7 +48,7 @@ class HoldoutEvaluationService:
             HoldoutSummary with aggregate metrics. Per-item evaluations are
             intentionally discarded after aggregation (F-ACC-006).
         """
-        holdout: List = split.holdout_benchmarks
+        holdout: list = split.holdout_benchmarks
         if not holdout:
             return HoldoutSummary.empty()
 
@@ -76,5 +75,5 @@ class HoldoutEvaluationService:
             pass_rate=passed / count,
             average_score=score_sum / count,
             hallucination_count=hallucinations,
-            evaluated_at=datetime.now(timezone.utc),
+            evaluated_at=datetime.now(UTC),
         )

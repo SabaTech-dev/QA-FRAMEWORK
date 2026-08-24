@@ -2,7 +2,8 @@
 
 import time
 import traceback
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from src.core.entities.test_result import TestResult, TestStatus
 from src.core.interfaces import ITestRunner
@@ -64,7 +65,7 @@ class TestRunner(ITestRunner):
             except AssertionError as e:
                 # Test failed
                 execution_time = time.time() - start_time
-                error_msg = f"Assertion failed: {str(e)}"
+                error_msg = f"Assertion failed: {e!s}"
 
                 test_result = TestResult(
                     test_name=test_name,
@@ -79,7 +80,7 @@ class TestRunner(ITestRunner):
             except Exception as e:
                 # Test error
                 execution_time = time.time() - start_time
-                error_msg = f"Error: {str(e)}\n{traceback.format_exc()}"
+                error_msg = f"Error: {e!s}\n{traceback.format_exc()}"
 
                 test_result = TestResult(
                     test_name=test_name,

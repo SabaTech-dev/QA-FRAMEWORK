@@ -5,8 +5,8 @@ Core entities that represent selectors, healing results, and sessions.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 from uuid import uuid4
 
 from .value_objects import (
@@ -30,20 +30,20 @@ class Selector:
     id: str = field(default_factory=lambda: str(uuid4()))
     value: str = ""
     selector_type: SelectorType = SelectorType.CSS
-    description: Optional[str] = None
-    metadata: Optional[SelectorMetadata] = None
-    alternatives: List["Selector"] = field(default_factory=list)
+    description: str | None = None
+    metadata: SelectorMetadata | None = None
+    alternatives: list["Selector"] = field(default_factory=list)
     is_active: bool = True
-    tenant_id: Optional[str] = None
+    tenant_id: str | None = None
 
     def __post_init__(self):
         if self.metadata is None:
             self.metadata = SelectorMetadata(
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
                 updated_at=None,
                 usage_count=0,
                 success_rate=1.0,
-                last_successful=datetime.now(timezone.utc),
+                last_successful=datetime.now(UTC),
                 source="manual",
             )
 
@@ -98,18 +98,18 @@ class HealingResult:
     """
 
     id: str = field(default_factory=lambda: str(uuid4()))
-    original_selector: Optional[Selector] = None
-    healed_selector: Optional[Selector] = None
+    original_selector: Selector | None = None
+    healed_selector: Selector | None = None
     status: HealingStatus = HealingStatus.PENDING
     confidence_score: float = 0.0
     confidence_level: ConfidenceLevel = ConfidenceLevel.VERY_LOW
     healing_time_ms: int = 0
     attempts: int = 0
     candidates_evaluated: int = 0
-    error_message: Optional[str] = None
-    context: Optional[HealingContext] = None
+    error_message: str | None = None
+    context: HealingContext | None = None
     created_at: datetime = field(default_factory=datetime.utcnow)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     @property
     def is_successful(self) -> bool:
@@ -121,7 +121,7 @@ class HealingResult:
         """Check if result has high confidence."""
         return self.confidence_level == ConfidenceLevel.HIGH
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary."""
         return {
             "id": self.id,
@@ -149,11 +149,11 @@ class HealingSession:
     """
 
     id: str = field(default_factory=lambda: str(uuid4()))
-    test_run_id: Optional[str] = None
-    tenant_id: Optional[str] = None
-    results: List[HealingResult] = field(default_factory=list)
+    test_run_id: str | None = None
+    tenant_id: str | None = None
+    results: list[HealingResult] = field(default_factory=list)
     started_at: datetime = field(default_factory=datetime.utcnow)
-    completed_at: Optional[datetime] = None
+    completed_at: datetime | None = None
     status: HealingStatus = HealingStatus.PENDING
 
     @property
@@ -211,11 +211,11 @@ class HealingSession:
             tenant_id=self.tenant_id,
             results=self.results,
             started_at=self.started_at,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
             status=final_status,
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary."""
         return {
             "id": self.id,

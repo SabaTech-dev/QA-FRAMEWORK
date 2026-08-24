@@ -11,7 +11,7 @@ import os
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .vuln_parser import UnifiedVulnParser, VulnScanResult
 
@@ -37,8 +37,8 @@ class NucleiScanner:
         self,
         docker_socket: str = "/var/run/docker.sock",
         network: str = NUCLEI_NETWORK,
-        templates_dir: Optional[str] = None,
-        custom_templates_dir: Optional[str] = None,
+        templates_dir: str | None = None,
+        custom_templates_dir: str | None = None,
         output_dir: str = "./reports/vuln",
     ):
         """Initialize Nuclei scanner.
@@ -62,13 +62,13 @@ class NucleiScanner:
     async def scan_web(
         self,
         target: str,
-        templates: Optional[List[str]] = None,
-        severity: Optional[str] = None,
+        templates: list[str] | None = None,
+        severity: str | None = None,
         rate_limit: int = 150,
         concurrency: int = 25,
         timeout: int = 30,
-        extra_args: Optional[List[str]] = None,
-        scan_id: Optional[str] = None,
+        extra_args: list[str] | None = None,
+        scan_id: str | None = None,
     ) -> VulnScanResult:
         """Scan a web target for vulnerabilities.
 
@@ -163,13 +163,13 @@ class NucleiScanner:
     async def scan_network(
         self,
         target: str,
-        templates: Optional[List[str]] = None,
-        severity: Optional[str] = None,
+        templates: list[str] | None = None,
+        severity: str | None = None,
         rate_limit: int = 500,
         concurrency: int = 50,
         timeout: int = 15,
-        extra_args: Optional[List[str]] = None,
-        scan_id: Optional[str] = None,
+        extra_args: list[str] | None = None,
+        scan_id: str | None = None,
     ) -> VulnScanResult:
         """Scan a network target for vulnerabilities.
 
@@ -261,7 +261,7 @@ class NucleiScanner:
         self,
         target: str,
         template_path: str,
-        scan_id: Optional[str] = None,
+        scan_id: str | None = None,
     ) -> VulnScanResult:
         """Run a specific custom template against a target.
 
@@ -284,13 +284,13 @@ class NucleiScanner:
         self,
         target: str,
         scan_type: str = "web",
-        templates: Optional[List[str]] = None,
-        severity: Optional[str] = None,
+        templates: list[str] | None = None,
+        severity: str | None = None,
         rate_limit: int = 150,
         concurrency: int = 25,
         timeout: int = 30,
-        extra_args: Optional[List[str]] = None,
-    ) -> List[str]:
+        extra_args: list[str] | None = None,
+    ) -> list[str]:
         """Build the Docker command for Nuclei."""
         cmd = [
             "docker",
@@ -349,7 +349,7 @@ class NucleiScanner:
 
         return cmd
 
-    async def _run_docker(self, cmd: List[str], timeout: int = 300) -> tuple[str, str, float]:
+    async def _run_docker(self, cmd: list[str], timeout: int = 300) -> tuple[str, str, float]:
         """Execute Docker command and capture output.
 
         Args:
@@ -368,7 +368,7 @@ class NucleiScanner:
 
         try:
             stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             proc.kill()
             duration = (datetime.utcnow() - start).total_seconds()
             logger.warning(f"Nuclei scan timed out after {timeout}s")
@@ -381,7 +381,7 @@ class NucleiScanner:
             duration,
         )
 
-    async def list_templates(self) -> List[Dict[str, Any]]:
+    async def list_templates(self) -> list[dict[str, Any]]:
         """List available Nuclei templates.
 
         Returns:
@@ -428,7 +428,7 @@ class NucleiScanner:
             logger.error(f"Failed to update templates: {e}")
             return False
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Check if Nuclei is available and healthy.
 
         Returns:
@@ -470,4 +470,3 @@ class NucleiScanner:
 
     async def close(self):
         """Cleanup resources."""
-        pass

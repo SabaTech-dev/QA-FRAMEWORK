@@ -8,7 +8,8 @@ Provides fixtures for API contract testing:
 - Auto-validation hooks
 """
 
-from typing import Any, Dict, Generator
+from collections.abc import Generator
+from typing import Any
 
 import pytest
 
@@ -44,7 +45,7 @@ def coverage_checker(openapi_spec_path: str) -> ContractCoverageChecker:
 
 
 @pytest.fixture(scope="function")
-def contract_validation_context() -> Generator[Dict[str, Any], None, None]:
+def contract_validation_context() -> Generator[dict[str, Any], None, None]:
     """Context for contract validation within a test."""
     context = {
         "validated_responses": [],

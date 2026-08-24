@@ -20,7 +20,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any
 
 import yaml
 
@@ -63,12 +63,12 @@ class EndpointContract:
 
     path: str
     method: str
-    operation_id: Optional[str] = None
-    summary: Optional[str] = None
-    parameters: List[Dict[str, Any]] = field(default_factory=list)
-    request_body: Optional[Dict[str, Any]] = None
-    responses: Dict[str, Any] = field(default_factory=dict)
-    tags: List[str] = field(default_factory=list)
+    operation_id: str | None = None
+    summary: str | None = None
+    parameters: list[dict[str, Any]] = field(default_factory=list)
+    request_body: dict[str, Any] | None = None
+    responses: dict[str, Any] = field(default_factory=dict)
+    tags: list[str] = field(default_factory=list)
     deprecated: bool = False
 
 
@@ -76,9 +76,8 @@ class ISchemaValidator(ABC):
     """Interface for schema validators."""
 
     @abstractmethod
-    def validate(self, data: Any, schema: Dict[str, Any]) -> ValidationResult:
+    def validate(self, data: Any, schema: dict[str, Any]) -> ValidationResult:
         """Validate data against schema."""
-        pass
 
 
 class JSONSchemaValidator(ISchemaValidator):
@@ -86,7 +85,7 @@ class JSONSchemaValidator(ISchemaValidator):
     JSON Schema validator for OpenAPI schemas.
     """
 
-    def validate(self, data: Any, schema: Dict[str, Any]) -> ValidationResult:
+    def validate(self, data: Any, schema: dict[str, Any]) -> ValidationResult:
         """Validate data against JSON schema."""
         try:
             from jsonschema import ValidationError, validate
@@ -108,7 +107,7 @@ class JSONSchemaValidator(ISchemaValidator):
                 actual=e.instance,
             )
 
-    def _basic_validation(self, data: Any, schema: Dict[str, Any]) -> ValidationResult:
+    def _basic_validation(self, data: Any, schema: dict[str, Any]) -> ValidationResult:
         """Basic validation without jsonschema library."""
         schema_type = schema.get("type")
 
@@ -144,12 +143,12 @@ class OpenAPIParser:
     Extracts contract information from OpenAPI specs.
     """
 
-    def __init__(self, spec_path: Union[str, Path]):
+    def __init__(self, spec_path: str | Path):
         self.spec_path = Path(spec_path)
-        self._spec: Optional[Dict[str, Any]] = None
-        self._endpoints: List[EndpointContract] = []
+        self._spec: dict[str, Any] | None = None
+        self._endpoints: list[EndpointContract] = []
 
-    def parse(self) -> Dict[str, Any]:
+    def parse(self) -> dict[str, Any]:
         """Parse OpenAPI specification file."""
         if self._spec is not None:
             return self._spec
@@ -165,7 +164,7 @@ class OpenAPIParser:
 
         return self._spec
 
-    def get_endpoints(self) -> List[EndpointContract]:
+    def get_endpoints(self) -> list[EndpointContract]:
         """Extract all endpoint contracts from spec."""
         if self._endpoints:
             return self._endpoints
@@ -192,7 +191,7 @@ class OpenAPIParser:
 
         return self._endpoints
 
-    def get_endpoint(self, path: str, method: str) -> Optional[EndpointContract]:
+    def get_endpoint(self, path: str, method: str) -> EndpointContract | None:
         """Get contract for specific endpoint."""
         endpoints = self.get_endpoints()
         for endpoint in endpoints:
@@ -200,7 +199,7 @@ class OpenAPIParser:
                 return endpoint
         return None
 
-    def get_schemas(self) -> Dict[str, Any]:
+    def get_schemas(self) -> dict[str, Any]:
         """Get all schemas defined in components."""
         spec = self.parse()
         components = spec.get("components", {})
@@ -209,12 +208,12 @@ class OpenAPIParser:
             return schemas if isinstance(schemas, dict) else {}
         return {}
 
-    def get_schema(self, schema_name: str) -> Optional[Dict[str, Any]]:
+    def get_schema(self, schema_name: str) -> dict[str, Any] | None:
         """Get specific schema by name."""
         schemas = self.get_schemas()
         return schemas.get(schema_name)
 
-    def resolve_schema(self, schema_ref: str) -> Optional[Dict[str, Any]]:
+    def resolve_schema(self, schema_ref: str) -> dict[str, Any] | None:
         """Resolve schema reference (e.g., #/components/schemas/User)."""
         if not schema_ref.startswith("#/"):
             return None
@@ -237,10 +236,10 @@ class ContractValidator:
     Validates API responses against OpenAPI contracts.
     """
 
-    def __init__(self, spec_path: Union[str, Path]):
+    def __init__(self, spec_path: str | Path):
         self.parser = OpenAPIParser(spec_path)
         self.schema_validator = JSONSchemaValidator()
-        self.violations: List[ContractViolation] = []
+        self.violations: list[ContractViolation] = []
 
     def validate_response(
         self,
@@ -248,8 +247,8 @@ class ContractValidator:
         method: str,
         status_code: int,
         response_body: Any,
-        headers: Optional[Dict[str, str]] = None,
-    ) -> List[ContractViolation]:
+        headers: dict[str, str] | None = None,
+    ) -> list[ContractViolation]:
         """
         Validate an API response against the contract.
 
@@ -374,7 +373,7 @@ class ContractValidator:
                 )
 
     def _validate_headers(
-        self, contract: EndpointContract, status_code: int, headers: Dict[str, str]
+        self, contract: EndpointContract, status_code: int, headers: dict[str, str]
     ) -> None:
         """Validate response headers."""
         status_str = str(status_code)
@@ -389,7 +388,7 @@ class ContractValidator:
         # Check required headers
         for header_name, header_spec in expected_headers.items():
             if header_spec.get("required", False):
-                if header_name.lower() not in [h.lower() for h in headers.keys()]:
+                if header_name.lower() not in [h.lower() for h in headers]:
                     self.violations.append(
                         ContractViolation(
                             rule="required_header",
@@ -404,10 +403,10 @@ class ContractValidator:
         self,
         endpoint_path: str,
         method: str,
-        request_body: Optional[Any] = None,
-        query_params: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None,
-    ) -> List[ContractViolation]:
+        request_body: Any | None = None,
+        query_params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> list[ContractViolation]:
         """Validate an API request against the contract."""
         self.violations = []
 
@@ -461,7 +460,7 @@ class ContractValidator:
                 )
 
     def _validate_query_params(
-        self, contract: EndpointContract, query_params: Dict[str, Any]
+        self, contract: EndpointContract, query_params: dict[str, Any]
     ) -> None:
         """Validate query parameters."""
         param_specs = {p["name"]: p for p in contract.parameters if p.get("in") == "query"}
@@ -498,15 +497,15 @@ class ContractCoverageChecker:
     Checks API test coverage against OpenAPI contract.
     """
 
-    def __init__(self, spec_path: Union[str, Path]):
+    def __init__(self, spec_path: str | Path):
         self.parser = OpenAPIParser(spec_path)
-        self.tested_endpoints: Set[Tuple[str, str]] = set()
+        self.tested_endpoints: set[tuple[str, str]] = set()
 
     def mark_tested(self, path: str, method: str) -> None:
         """Mark an endpoint as tested."""
         self.tested_endpoints.add((path, method.upper()))
 
-    def get_coverage(self) -> Dict[str, Any]:
+    def get_coverage(self) -> dict[str, Any]:
         """
         Get contract coverage report.
 
@@ -530,7 +529,7 @@ class ContractCoverageChecker:
             "untested": sorted(list(untested)),
         }
 
-    def generate_report(self, output_path: Optional[str] = None) -> str:
+    def generate_report(self, output_path: str | None = None) -> str:
         """Generate coverage report in markdown format."""
         coverage = self.get_coverage()
 
@@ -572,7 +571,7 @@ class ContractTestDecorator:
             pass
     """
 
-    def __init__(self, path: str, method: str, spec_path: Optional[str] = None) -> None:
+    def __init__(self, path: str, method: str, spec_path: str | None = None) -> None:
         self.path = path
         self.method = method
         self.spec_path = spec_path
@@ -585,7 +584,7 @@ class ContractTestDecorator:
         return func
 
 
-def contract_test(path: str, method: str, spec_path: Optional[str] = None) -> ContractTestDecorator:
+def contract_test(path: str, method: str, spec_path: str | None = None) -> ContractTestDecorator:
     """Factory function for contract test decorator."""
     return ContractTestDecorator(path, method, spec_path)
 
@@ -594,21 +593,21 @@ def contract_test(path: str, method: str, spec_path: Optional[str] = None) -> Co
 
 
 def validate_api_response(
-    spec_path: Union[str, Path],
+    spec_path: str | Path,
     endpoint_path: str,
     method: str,
     status_code: int,
     response_body: Any,
-    headers: Optional[Dict[str, str]] = None,
-) -> List[ContractViolation]:
+    headers: dict[str, str] | None = None,
+) -> list[ContractViolation]:
     """Convenience function to validate an API response."""
     validator = ContractValidator(spec_path)
     return validator.validate_response(endpoint_path, method, status_code, response_body, headers)
 
 
 def check_contract_coverage(
-    spec_path: Union[str, Path], tested_endpoints: List[Tuple[str, str]]
-) -> Dict[str, Any]:
+    spec_path: str | Path, tested_endpoints: list[tuple[str, str]]
+) -> dict[str, Any]:
     """Check coverage of tested endpoints against contract."""
     checker = ContractCoverageChecker(spec_path)
     for path, method in tested_endpoints:

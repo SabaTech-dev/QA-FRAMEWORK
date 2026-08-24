@@ -4,7 +4,7 @@ import asyncio
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class RateLimitType(Enum):
@@ -33,7 +33,7 @@ class RateLimitResult:
     status_code: int
     response_time: float
     blocked: bool
-    retry_after: Optional[int] = None
+    retry_after: int | None = None
 
 
 class RateLimitTester:
@@ -59,7 +59,7 @@ class RateLimitTester:
 
     def __init__(self) -> None:
         """Initialize rate limit tester."""
-        self._results: List[RateLimitResult] = []
+        self._results: list[RateLimitResult] = []
 
     async def test_rate_limiting(
         self,
@@ -68,8 +68,8 @@ class RateLimitTester:
         requests_count: int,
         time_window: int,
         method: str = "GET",
-        payload: Optional[Dict] = None,
-    ) -> Dict[str, Any]:
+        payload: dict | None = None,
+    ) -> dict[str, Any]:
         """
         Test rate limiting implementation.
 
@@ -120,7 +120,7 @@ class RateLimitTester:
 
     async def test_burst_capacity(
         self, http_client: Any, target_url: str, burst_size: int = 20, method: str = "GET"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Test burst handling capacity.
 
@@ -165,7 +165,7 @@ class RateLimitTester:
 
     async def test_rate_limit_recovery(
         self, http_client: Any, target_url: str, limit: int = 10, recovery_time: int = 60
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Test rate limit recovery time.
 
@@ -207,7 +207,7 @@ class RateLimitTester:
         }
 
     async def _send_request(
-        self, http_client: Any, url: str, method: str, payload: Optional[Dict], request_number: int
+        self, http_client: Any, url: str, method: str, payload: dict | None, request_number: int
     ) -> RateLimitResult:
         """Send a single request and capture result."""
         start = time.time()
@@ -255,7 +255,7 @@ class RateLimitTester:
                 request_number=request_number, status_code=0, response_time=elapsed, blocked=False
             )
 
-    def _analyze_results(self) -> Dict[str, Any]:
+    def _analyze_results(self) -> dict[str, Any]:
         """Analyze rate limiting results."""
         if not self._results:
             return {}
@@ -284,7 +284,7 @@ class RateLimitTester:
             "block_rate": len(blocked) / len(self._results) if self._results else 0,
         }
 
-    def _analyze_burst_results(self, results: List[RateLimitResult]) -> Dict[str, Any]:
+    def _analyze_burst_results(self, results: list[RateLimitResult]) -> dict[str, Any]:
         """Analyze burst test results."""
         successful = [r for r in results if r.status_code == 200]
         blocked = [r for r in results if r.blocked]
@@ -313,7 +313,7 @@ class RateLimitTester:
         # If second half is significantly slower, might indicate backoff
         return avg_second > (avg_first * 1.5)
 
-    def _result_to_dict(self, result: RateLimitResult) -> Dict[str, Any]:
+    def _result_to_dict(self, result: RateLimitResult) -> dict[str, Any]:
         """Convert RateLimitResult to dictionary."""
         return {
             "request_number": result.request_number,
@@ -323,7 +323,7 @@ class RateLimitTester:
             "retry_after": result.retry_after,
         }
 
-    def _get_recommendations(self, analysis: Dict[str, Any]) -> List[str]:
+    def _get_recommendations(self, analysis: dict[str, Any]) -> list[str]:
         """Generate recommendations based on analysis."""
         recommendations = []
 
@@ -359,7 +359,7 @@ class RateLimitTester:
 
         return recommendations
 
-    def _get_burst_recommendations(self, analysis: Dict[str, Any]) -> List[str]:
+    def _get_burst_recommendations(self, analysis: dict[str, Any]) -> list[str]:
         """Generate recommendations for burst test."""
         if analysis["block_rate"] < 0.5:
             return [

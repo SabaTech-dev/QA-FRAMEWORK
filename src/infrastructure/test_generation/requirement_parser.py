@@ -5,7 +5,6 @@ Parses requirements documents into structured format.
 """
 
 import re
-from typing import List
 
 
 class MarkdownRequirementParser:
@@ -15,7 +14,7 @@ class MarkdownRequirementParser:
     Extracts structured requirements from markdown format.
     """
 
-    def parse(self, content: str) -> List[dict]:
+    def parse(self, content: str) -> list[dict]:
         """Parse markdown content into requirements."""
         requirements = []
 
@@ -80,7 +79,7 @@ class MarkdownRequirementParser:
             "tags": tags,
         }
 
-    def _extract_description(self, lines: List[str]) -> str:
+    def _extract_description(self, lines: list[str]) -> str:
         """Extract description from lines."""
         description_lines = []
         in_description = False
@@ -107,7 +106,7 @@ class MarkdownRequirementParser:
 
         return " ".join(description_lines).strip()
 
-    def _extract_list(self, lines: List[str], labels: List[str]) -> List[str]:
+    def _extract_list(self, lines: list[str], labels: list[str]) -> list[str]:
         """Extract list items following a label."""
         items = []
         collecting = False
@@ -148,7 +147,7 @@ class MarkdownRequirementParser:
 
         return items
 
-    def _extract_priority(self, lines: List[str]) -> str:
+    def _extract_priority(self, lines: list[str]) -> str:
         """Extract priority from lines."""
         for line in lines:
             if "priority:" in line.lower():
@@ -158,7 +157,7 @@ class MarkdownRequirementParser:
 
         return "medium"
 
-    def _extract_tags(self, lines: List[str]) -> List[str]:
+    def _extract_tags(self, lines: list[str]) -> list[str]:
         """Extract tags from lines."""
         for line in lines:
             if "tags:" in line.lower():

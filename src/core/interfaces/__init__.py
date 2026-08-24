@@ -1,7 +1,7 @@
 """Interfaces - Contracts for core components (SOLID DIP)"""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from src.core.entities.test_result import TestResult
 
@@ -22,12 +22,10 @@ class ITestRunner(ABC):
         Returns:
             TestResult object with execution details
         """
-        pass
 
     @abstractmethod
     async def cleanup(self) -> None:
         """Cleanup resources after test execution"""
-        pass
 
 
 class IHTTPClient(ABC):
@@ -36,22 +34,18 @@ class IHTTPClient(ABC):
     @abstractmethod
     async def get(self, url: str, **kwargs: Any) -> Any:
         """Perform GET request"""
-        pass
 
     @abstractmethod
-    async def post(self, url: str, data: Optional[Dict[str, Any]] = None, **kwargs: Any) -> Any:
+    async def post(self, url: str, data: dict[str, Any] | None = None, **kwargs: Any) -> Any:
         """Perform POST request"""
-        pass
 
     @abstractmethod
-    async def put(self, url: str, data: Optional[Dict[str, Any]] = None, **kwargs: Any) -> Any:
+    async def put(self, url: str, data: dict[str, Any] | None = None, **kwargs: Any) -> Any:
         """Perform PUT request"""
-        pass
 
     @abstractmethod
     async def delete(self, url: str, **kwargs: Any) -> Any:
         """Perform DELETE request"""
-        pass
 
 
 class IUIPage(ABC):
@@ -70,7 +64,6 @@ class IUIPage(ABC):
         Args:
             url: URL to navigate to
         """
-        pass
 
     @abstractmethod
     async def click(self, selector: str) -> None:
@@ -80,7 +73,6 @@ class IUIPage(ABC):
         Args:
             selector: CSS selector for the element
         """
-        pass
 
     @abstractmethod
     async def fill(self, selector: str, value: str) -> None:
@@ -91,7 +83,6 @@ class IUIPage(ABC):
             selector: CSS selector for the input
             value: Value to fill
         """
-        pass
 
     @abstractmethod
     async def wait_for_selector(self, selector: str, timeout: int = 30000) -> None:
@@ -102,7 +93,6 @@ class IUIPage(ABC):
             selector: CSS selector for the element
             timeout: Timeout in milliseconds (default: 30000)
         """
-        pass
 
     @abstractmethod
     async def get_text(self, selector: str) -> str:
@@ -115,7 +105,6 @@ class IUIPage(ABC):
         Returns:
             Text content of the element
         """
-        pass
 
     @abstractmethod
     async def is_visible(self, selector: str) -> bool:
@@ -128,7 +117,6 @@ class IUIPage(ABC):
         Returns:
             True if visible, False otherwise
         """
-        pass
 
     @abstractmethod
     async def screenshot(self, path: str) -> None:
@@ -138,31 +126,26 @@ class IUIPage(ABC):
         Args:
             path: Path to save the screenshot
         """
-        pass
 
     @abstractmethod
     async def close(self) -> None:
         """Close the browser/page."""
-        pass
 
 
 class IAssertion(ABC):
     """Interface for assertions (Interface Segregation Principle)"""
 
     @abstractmethod
-    def assert_equal(self, actual: Any, expected: Any, message: Optional[str] = None) -> None:
+    def assert_equal(self, actual: Any, expected: Any, message: str | None = None) -> None:
         """Assert two values are equal"""
-        pass
 
     @abstractmethod
-    def assert_true(self, condition: bool, message: Optional[str] = None) -> None:
+    def assert_true(self, condition: bool, message: str | None = None) -> None:
         """Assert condition is true"""
-        pass
 
     @abstractmethod
     def assert_status_code(self, response: Any, expected: int) -> None:
         """Assert HTTP status code"""
-        pass
 
 
 class IReporter(ABC):
@@ -175,7 +158,7 @@ class IReporter(ABC):
     """
 
     @abstractmethod
-    def start_test(self, test_name: str, description: Optional[str] = None) -> None:
+    def start_test(self, test_name: str, description: str | None = None) -> None:
         """
         Start reporting for a test case.
 
@@ -183,10 +166,9 @@ class IReporter(ABC):
             test_name: Name of the test case
             description: Optional test description
         """
-        pass
 
     @abstractmethod
-    def end_test(self, status: str, message: Optional[str] = None) -> None:
+    def end_test(self, status: str, message: str | None = None) -> None:
         """
         End reporting for current test case.
 
@@ -194,10 +176,9 @@ class IReporter(ABC):
             status: Test status (passed, failed, skipped, broken)
             message: Optional status message or error details
         """
-        pass
 
     @abstractmethod
-    def add_step(self, step_name: str, status: Optional[str] = None) -> None:
+    def add_step(self, step_name: str, status: str | None = None) -> None:
         """
         Add a step to the current test.
 
@@ -205,10 +186,9 @@ class IReporter(ABC):
             step_name: Name of the step
             status: Optional step status
         """
-        pass
 
     @abstractmethod
-    def attach_screenshot(self, screenshot_path: str, name: Optional[str] = None) -> None:
+    def attach_screenshot(self, screenshot_path: str, name: str | None = None) -> None:
         """
         Attach a screenshot to the current test report.
 
@@ -216,7 +196,6 @@ class IReporter(ABC):
             screenshot_path: Path to the screenshot file
             name: Optional name for the attachment
         """
-        pass
 
     @abstractmethod
     def attach_text(self, content: str, name: str) -> None:
@@ -227,10 +206,9 @@ class IReporter(ABC):
             content: Text content to attach
             name: Name of the attachment
         """
-        pass
 
     @abstractmethod
-    def attach_json(self, data: Dict[str, Any], name: str) -> None:
+    def attach_json(self, data: dict[str, Any], name: str) -> None:
         """
         Attach JSON data to the current test report.
 
@@ -238,7 +216,6 @@ class IReporter(ABC):
             data: Dictionary to serialize as JSON
             name: Name of the attachment
         """
-        pass
 
     @abstractmethod
     def add_tag(self, tag: str) -> None:
@@ -248,7 +225,6 @@ class IReporter(ABC):
         Args:
             tag: Tag to add
         """
-        pass
 
     @abstractmethod
     def add_severity(self, level: str) -> None:
@@ -258,7 +234,6 @@ class IReporter(ABC):
         Args:
             level: Severity level (blocker, critical, normal, minor, trivial)
         """
-        pass
 
     @abstractmethod
     def generate_report(self, output_dir: str, report_format: str = "html") -> str:
@@ -272,12 +247,10 @@ class IReporter(ABC):
         Returns:
             Path to the generated report
         """
-        pass
 
     @abstractmethod
     def cleanup(self) -> None:
         """Cleanup resources and close reporter"""
-        pass
 
 
 class IPerformanceClient(ABC):
@@ -291,7 +264,7 @@ class IPerformanceClient(ABC):
     @abstractmethod
     async def load_test(
         self, target_url: str, users: int, duration: int, ramp_up: int = 0
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Execute a load test against a target URL.
 
@@ -304,10 +277,9 @@ class IPerformanceClient(ABC):
         Returns:
             Dictionary with load test results including metrics
         """
-        pass
 
     @abstractmethod
-    async def benchmark(self, target_url: str, requests: int) -> Dict[str, Any]:
+    async def benchmark(self, target_url: str, requests: int) -> dict[str, Any]:
         """
         Execute a benchmark test with fixed number of requests.
 
@@ -318,12 +290,11 @@ class IPerformanceClient(ABC):
         Returns:
             Dictionary with benchmark results
         """
-        pass
 
     @abstractmethod
     async def stress_test(
         self, target_url: str, start_users: int, max_users: int, step_users: int, step_duration: int
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Execute a stress test with gradually increasing load.
 
@@ -337,12 +308,10 @@ class IPerformanceClient(ABC):
         Returns:
             Dictionary with stress test results
         """
-        pass
 
     @abstractmethod
     async def close(self) -> None:
         """Close the performance client and cleanup resources."""
-        pass
 
 
 class IMetricsCollector(ABC):
@@ -356,7 +325,6 @@ class IMetricsCollector(ABC):
     @abstractmethod
     def start_collection(self) -> None:
         """Start collecting metrics."""
-        pass
 
     @abstractmethod
     def record_response_time(self, response_time_ms: float) -> None:
@@ -366,7 +334,6 @@ class IMetricsCollector(ABC):
         Args:
             response_time_ms: Response time in milliseconds
         """
-        pass
 
     @abstractmethod
     def record_error(self, error_type: str, error_message: str) -> None:
@@ -377,7 +344,6 @@ class IMetricsCollector(ABC):
             error_type: Type of error (e.g., 'timeout', 'connection_error')
             error_message: Error message or description
         """
-        pass
 
     @abstractmethod
     def record_throughput(self, requests_count: int, time_window_ms: float) -> None:
@@ -388,10 +354,9 @@ class IMetricsCollector(ABC):
             requests_count: Number of requests in the time window
             time_window_ms: Time window in milliseconds
         """
-        pass
 
     @abstractmethod
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """
         Get collected metrics.
 
@@ -402,12 +367,10 @@ class IMetricsCollector(ABC):
             - error_rate: Percentage of failed requests
             - total_requests: Total number of requests
         """
-        pass
 
     @abstractmethod
     def reset(self) -> None:
         """Reset all collected metrics."""
-        pass
 
 
 class ISecurityClient(ABC):
@@ -421,7 +384,7 @@ class ISecurityClient(ABC):
     @abstractmethod
     async def test_sql_injection(
         self, target_url: str, parameter: str, method: str = "GET"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Test for SQL injection vulnerabilities.
 
@@ -433,12 +396,11 @@ class ISecurityClient(ABC):
         Returns:
             Dictionary with test results including vulnerabilities found
         """
-        pass
 
     @abstractmethod
     async def test_xss(
         self, target_url: str, parameter: str, method: str = "GET"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Test for Cross-Site Scripting (XSS) vulnerabilities.
 
@@ -450,10 +412,9 @@ class ISecurityClient(ABC):
         Returns:
             Dictionary with test results including vulnerabilities found
         """
-        pass
 
     @abstractmethod
-    async def test_authentication(self, target_url: str, test_cases: list) -> Dict[str, Any]:
+    async def test_authentication(self, target_url: str, test_cases: list) -> dict[str, Any]:
         """
         Test authentication mechanisms.
 
@@ -464,12 +425,11 @@ class ISecurityClient(ABC):
         Returns:
             Dictionary with authentication test results
         """
-        pass
 
     @abstractmethod
     async def test_rate_limiting(
         self, target_url: str, requests_count: int, time_window: int
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Test rate limiting implementation.
 
@@ -481,10 +441,9 @@ class ISecurityClient(ABC):
         Returns:
             Dictionary with rate limiting test results
         """
-        pass
 
     @abstractmethod
-    async def test_security_headers(self, target_url: str) -> Dict[str, Any]:
+    async def test_security_headers(self, target_url: str) -> dict[str, Any]:
         """
         Test for security headers presence and configuration.
 
@@ -494,12 +453,10 @@ class ISecurityClient(ABC):
         Returns:
             Dictionary with security headers analysis
         """
-        pass
 
     @abstractmethod
     async def close(self) -> None:
         """Close the security client and cleanup resources."""
-        pass
 
 
 class IDatabaseClient(ABC):
@@ -513,15 +470,13 @@ class IDatabaseClient(ABC):
     @abstractmethod
     async def connect(self) -> None:
         """Establish database connection."""
-        pass
 
     @abstractmethod
     async def disconnect(self) -> None:
         """Close database connection."""
-        pass
 
     @abstractmethod
-    async def execute_query(self, query: str, params: Optional[Dict] = None) -> Any:
+    async def execute_query(self, query: str, params: dict | None = None) -> Any:
         """
         Execute a SQL query.
 
@@ -532,10 +487,9 @@ class IDatabaseClient(ABC):
         Returns:
             Query results
         """
-        pass
 
     @abstractmethod
-    async def validate_query(self, query: str) -> Dict[str, Any]:
+    async def validate_query(self, query: str) -> dict[str, Any]:
         """
         Validate a SQL query for syntax and performance issues.
 
@@ -545,10 +499,9 @@ class IDatabaseClient(ABC):
         Returns:
             Dictionary with validation results
         """
-        pass
 
     @abstractmethod
-    async def test_data_integrity(self, table: str, constraints: List[Any]) -> Dict[str, Any]:
+    async def test_data_integrity(self, table: str, constraints: list[Any]) -> dict[str, Any]:
         """
         Test data integrity constraints.
 
@@ -559,12 +512,11 @@ class IDatabaseClient(ABC):
         Returns:
             Dictionary with integrity test results
         """
-        pass
 
     @abstractmethod
     async def test_migration(
-        self, migration_script: str, rollback_script: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, migration_script: str, rollback_script: str | None = None
+    ) -> dict[str, Any]:
         """
         Test database migration script.
 
@@ -575,17 +527,15 @@ class IDatabaseClient(ABC):
         Returns:
             Dictionary with migration test results
         """
-        pass
 
     @abstractmethod
-    async def get_schema_info(self) -> Dict[str, Any]:
+    async def get_schema_info(self) -> dict[str, Any]:
         """
         Get database schema information.
 
         Returns:
             Dictionary with schema details including tables, columns, indexes
         """
-        pass
 
 
 class ISQLValidator(ABC):
@@ -597,7 +547,7 @@ class ISQLValidator(ABC):
     """
 
     @abstractmethod
-    def validate_syntax(self, query: str) -> Dict[str, Any]:
+    def validate_syntax(self, query: str) -> dict[str, Any]:
         """
         Validate SQL query syntax.
 
@@ -607,10 +557,9 @@ class ISQLValidator(ABC):
         Returns:
             Dictionary with syntax validation results
         """
-        pass
 
     @abstractmethod
-    def check_performance_issues(self, query: str) -> Dict[str, Any]:
+    def check_performance_issues(self, query: str) -> dict[str, Any]:
         """
         Check for common SQL performance issues.
 
@@ -620,10 +569,9 @@ class ISQLValidator(ABC):
         Returns:
             Dictionary with performance issues found
         """
-        pass
 
     @abstractmethod
-    def check_security_issues(self, query: str) -> Dict[str, Any]:
+    def check_security_issues(self, query: str) -> dict[str, Any]:
         """
         Check for SQL security issues like injection vulnerabilities.
 
@@ -633,10 +581,9 @@ class ISQLValidator(ABC):
         Returns:
             Dictionary with security issues found
         """
-        pass
 
     @abstractmethod
-    def analyze_query_plan(self, query: str) -> Dict[str, Any]:
+    def analyze_query_plan(self, query: str) -> dict[str, Any]:
         """
         Analyze query execution plan.
 
@@ -646,4 +593,3 @@ class ISQLValidator(ABC):
         Returns:
             Dictionary with query plan analysis
         """
-        pass

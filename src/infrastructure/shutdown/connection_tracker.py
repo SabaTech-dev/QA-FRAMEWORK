@@ -6,7 +6,7 @@ import asyncio
 import uuid
 from collections import defaultdict
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from src.infrastructure.logger.logger import QALogger
 from src.infrastructure.shutdown.models import ConnectionInfo, ResourceType, ShutdownConfig
@@ -25,19 +25,19 @@ class ConnectionTracker:
     - Connection statistics
     """
 
-    def __init__(self, config: Optional[ShutdownConfig] = None):
+    def __init__(self, config: ShutdownConfig | None = None):
         self.config = config or ShutdownConfig()
-        self._connections: Dict[str, ConnectionInfo] = {}
-        self._connections_by_type: Dict[ResourceType, List[str]] = defaultdict(list)
-        self._request_counter: Dict[str, int] = defaultdict(int)
+        self._connections: dict[str, ConnectionInfo] = {}
+        self._connections_by_type: dict[ResourceType, list[str]] = defaultdict(list)
+        self._request_counter: dict[str, int] = defaultdict(int)
         self._lock = asyncio.Lock()
         self._is_accepting_new = True
 
     async def register_connection(
         self,
         resource_type: ResourceType,
-        connection_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        connection_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """
         Register a new connection.
@@ -179,7 +179,7 @@ class ConnectionTracker:
         async with self._lock:
             return sum(self._request_counter.values())
 
-    async def get_connections_by_type(self, resource_type: ResourceType) -> List[ConnectionInfo]:
+    async def get_connections_by_type(self, resource_type: ResourceType) -> list[ConnectionInfo]:
         """Get all connections of a specific type"""
         async with self._lock:
             conn_ids = self._connections_by_type.get(resource_type, [])
@@ -189,14 +189,14 @@ class ConnectionTracker:
                 if cid in self._connections and self._connections[cid].is_active
             ]
 
-    async def get_all_active_connections(self) -> List[ConnectionInfo]:
+    async def get_all_active_connections(self) -> list[ConnectionInfo]:
         """Get all active connections"""
         async with self._lock:
             return [c for c in self._connections.values() if c.is_active]
 
     async def drain_connections(
-        self, timeout: Optional[float] = None, check_interval: Optional[float] = None
-    ) -> Dict[str, int]:
+        self, timeout: float | None = None, check_interval: float | None = None
+    ) -> dict[str, int]:
         """
         Drain all active connections by waiting for in-flight requests.
 
@@ -280,7 +280,7 @@ class ConnectionTracker:
 
             return count
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get connection statistics"""
         return {
             "total_connections": len(self._connections),

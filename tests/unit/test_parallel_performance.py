@@ -17,7 +17,7 @@ Usage:
 """
 
 import time
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 
@@ -80,7 +80,7 @@ class TestParallelTiming:
     @pytest.mark.parallel_safe
     def test_measure_execution_time(
         self,
-        timer: Dict[str, float],
+        timer: dict[str, float],
     ) -> None:
         """
         Measure test execution time.
@@ -228,7 +228,7 @@ class TestParallelWithWorkers:
     def test_worker_distribution_1(
         self,
         worker_id: str,
-        execution_context: Dict[str, Any],
+        execution_context: dict[str, Any],
     ) -> None:
         """
         Test worker distribution - test 1.
@@ -244,7 +244,7 @@ class TestParallelWithWorkers:
     def test_worker_distribution_2(
         self,
         worker_id: str,
-        execution_context: Dict[str, Any],
+        execution_context: dict[str, Any],
     ) -> None:
         """Test worker distribution - test 2."""
         time.sleep(0.03)
@@ -254,7 +254,7 @@ class TestParallelWithWorkers:
     def test_worker_distribution_3(
         self,
         worker_id: str,
-        execution_context: Dict[str, Any],
+        execution_context: dict[str, Any],
     ) -> None:
         """Test worker distribution - test 3."""
         time.sleep(0.03)
@@ -264,7 +264,7 @@ class TestParallelWithWorkers:
     def test_worker_distribution_4(
         self,
         worker_id: str,
-        execution_context: Dict[str, Any],
+        execution_context: dict[str, Any],
     ) -> None:
         """Test worker distribution - test 4."""
         time.sleep(0.03)

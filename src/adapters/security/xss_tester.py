@@ -3,7 +3,7 @@
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class XSSType(Enum):
@@ -32,8 +32,8 @@ class XSSPayload:
     payload: str
     xss_type: XSSType
     description: str
-    expected_tags: List[str]
-    expected_events: List[str]
+    expected_tags: list[str]
+    expected_events: list[str]
     severity: str = "high"
 
 
@@ -59,7 +59,7 @@ class XSSTester:
     """
 
     # Common XSS payloads
-    DEFAULT_PAYLOADS: List[XSSPayload] = [
+    DEFAULT_PAYLOADS: list[XSSPayload] = [
         # Basic reflected XSS
         XSSPayload(
             payload="<script>alert('XSS')</script>",
@@ -152,7 +152,7 @@ class XSSTester:
         ),
     ]
 
-    def __init__(self, payloads: Optional[List[XSSPayload]] = None):
+    def __init__(self, payloads: list[XSSPayload] | None = None):
         """
         Initialize XSS tester.
 
@@ -160,11 +160,11 @@ class XSSTester:
             payloads: Custom list of payloads (uses defaults if None)
         """
         self.payloads = payloads or self.DEFAULT_PAYLOADS
-        self._results: List[Dict[str, Any]] = []
+        self._results: list[dict[str, Any]] = []
 
     async def test_parameter(
         self, http_client: Any, target_url: str, parameter: str, method: str = "GET"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Test a specific parameter for XSS vulnerabilities.
 
@@ -200,7 +200,7 @@ class XSSTester:
             "recommendations": self._get_recommendations(vulnerabilities),
         }
 
-    async def test_url_reflection(self, http_client: Any, target_url: str) -> Dict[str, Any]:
+    async def test_url_reflection(self, http_client: Any, target_url: str) -> dict[str, Any]:
         """
         Test if URL is reflected in page content.
 
@@ -235,8 +235,8 @@ class XSSTester:
             return {"url_reflection": False, "error": str(e), "severity": "info"}
 
     async def _make_request(
-        self, http_client: Any, url: str, method: str, params: Dict[str, str]
-    ) -> Dict[str, Any]:
+        self, http_client: Any, url: str, method: str, params: dict[str, str]
+    ) -> dict[str, Any]:
         """Make HTTP request and capture response."""
         try:
             if method.upper() == "GET":
@@ -261,7 +261,7 @@ class XSSTester:
 
     async def _test_payload(
         self, http_client: Any, target_url: str, parameter: str, method: str, payload: XSSPayload
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Test a single XSS payload.
 
@@ -355,7 +355,7 @@ class XSSTester:
 
         return False
 
-    def _get_recommendations(self, vulnerabilities: List[Dict[str, Any]]) -> List[str]:
+    def _get_recommendations(self, vulnerabilities: list[dict[str, Any]]) -> list[str]:
         """
         Generate security recommendations based on findings.
 
@@ -397,7 +397,7 @@ class XSSTester:
         """
         self.payloads.append(payload)
 
-    def get_payloads_by_type(self, xss_type: XSSType) -> List[XSSPayload]:
+    def get_payloads_by_type(self, xss_type: XSSType) -> list[XSSPayload]:
         """
         Get payloads filtered by XSS type.
 

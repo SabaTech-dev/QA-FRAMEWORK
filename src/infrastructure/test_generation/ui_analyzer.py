@@ -5,7 +5,6 @@ Analyzes UI automation code (Playwright/Cypress) for test generation.
 """
 
 import re
-from typing import List
 
 
 class PlaywrightAnalyzer:
@@ -22,7 +21,7 @@ class PlaywrightAnalyzer:
             "has_fixtures": self._has_fixtures(code),
         }
 
-    def extract_selectors(self, code: str) -> List[str]:
+    def extract_selectors(self, code: str) -> list[str]:
         """Extract selectors from Playwright code."""
         selectors = []
 
@@ -40,7 +39,7 @@ class PlaywrightAnalyzer:
 
         return list(set(selectors))
 
-    def extract_flows(self, code: str) -> List[dict]:
+    def extract_flows(self, code: str) -> list[dict]:
         """Extract user flows from Playwright code."""
         flows = []
 
@@ -74,7 +73,7 @@ class PlaywrightAnalyzer:
         """Check if code uses fixtures."""
         return "fixture" in code or "@pytest.fixture" in code
 
-    def _extract_test_steps(self, code: str, test_name: str) -> List[str]:
+    def _extract_test_steps(self, code: str, test_name: str) -> list[str]:
         """Extract steps from a test."""
         # Simplified extraction
         steps = []
@@ -109,7 +108,7 @@ class CypressAnalyzer:
             "has_custom_commands": self._has_custom_commands(code),
         }
 
-    def extract_selectors(self, code: str) -> List[str]:
+    def extract_selectors(self, code: str) -> list[str]:
         """Extract selectors from Cypress code."""
         selectors = []
 
@@ -125,7 +124,7 @@ class CypressAnalyzer:
 
         return list(set(selectors))
 
-    def extract_flows(self, code: str) -> List[dict]:
+    def extract_flows(self, code: str) -> list[dict]:
         """Extract user flows from Cypress code."""
         flows = []
 
@@ -157,7 +156,7 @@ class CypressAnalyzer:
         """Check if code uses custom commands."""
         return "Cypress.Commands.add" in code
 
-    def _extract_cypress_steps(self, code: str) -> List[str]:
+    def _extract_cypress_steps(self, code: str) -> list[str]:
         """Extract steps from Cypress code."""
         steps = []
 

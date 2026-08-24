@@ -13,7 +13,7 @@ the holdout; HF study: 6/11 ASR models memorize public test sets):
 """
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
@@ -342,7 +342,7 @@ class TestHoldoutSummary:
             pass_rate=0.8,
             average_score=0.85,
             hallucination_count=1,
-            evaluated_at=datetime.now(timezone.utc),
+            evaluated_at=datetime.now(UTC),
         )
         assert s.accuracy_level.value == "good"
         assert s.holdout_count == 10
@@ -353,7 +353,7 @@ class TestHoldoutSummary:
             pass_rate=0.6,
             average_score=0.7,
             hallucination_count=0,
-            evaluated_at=datetime(2026, 8, 23, 12, 0, tzinfo=timezone.utc),
+            evaluated_at=datetime(2026, 8, 23, 12, 0, tzinfo=UTC),
         )
         d = s.to_dict()
         assert set(d.keys()) == {
@@ -381,7 +381,7 @@ class TestHoldoutSummary:
                 pass_rate=bad[0],
                 average_score=bad[1],
                 hallucination_count=bad[3],
-                evaluated_at=datetime.now(timezone.utc),
+                evaluated_at=datetime.now(UTC),
             )
 
     def test_frozen(self):
@@ -496,7 +496,7 @@ class TestSessionHoldoutIntegration:
             pass_rate=1.0,
             average_score=0.95,
             hallucination_count=0,
-            evaluated_at=datetime.now(timezone.utc),
+            evaluated_at=datetime.now(UTC),
         )
         updated = session.with_holdout_summary(summary)
         assert updated is not session
@@ -509,7 +509,7 @@ class TestSessionHoldoutIntegration:
             pass_rate=1.0,
             average_score=1.0,
             hallucination_count=0,
-            evaluated_at=datetime.now(timezone.utc),
+            evaluated_at=datetime.now(UTC),
         )
         session = AccuracyTestSession(name="s").with_holdout_summary(summary)
         ev = AccuracyEvaluation(benchmark_id="b1")
@@ -522,7 +522,7 @@ class TestSessionHoldoutIntegration:
             pass_rate=0.0,
             average_score=0.2,
             hallucination_count=0,
-            evaluated_at=datetime.now(timezone.utc),
+            evaluated_at=datetime.now(UTC),
         )
         session = AccuracyTestSession(name="s").with_holdout_summary(summary)
         done = session.complete()

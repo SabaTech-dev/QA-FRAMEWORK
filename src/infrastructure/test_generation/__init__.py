@@ -10,9 +10,9 @@ from .requirement_parser import MarkdownRequirementParser
 from .ui_analyzer import CypressAnalyzer, PlaywrightAnalyzer
 
 __all__ = [
+    "CypressAnalyzer",
+    "EdgeCaseGeneratorImpl",
     "LLMTestGenerator",
     "MarkdownRequirementParser",
     "PlaywrightAnalyzer",
-    "CypressAnalyzer",
-    "EdgeCaseGeneratorImpl",
 ]

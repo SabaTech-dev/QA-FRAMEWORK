@@ -5,7 +5,7 @@ Analyzes requirements documents and generates test cases.
 """
 
 from dataclasses import dataclass
-from typing import List, Optional, Protocol
+from typing import Protocol
 
 from ..entities import GeneratedTest, TestGenerationSession, TestScenario
 from ..value_objects import (
@@ -22,7 +22,7 @@ from ..value_objects import (
 class RequirementParser(Protocol):
     """Protocol for parsing requirements documents."""
 
-    def parse(self, content: str) -> List[dict]:
+    def parse(self, content: str) -> list[dict]:
         """Parse requirements content into structured format."""
         ...
 
@@ -51,7 +51,7 @@ class GenerateFromRequirementsInput:
     content: str
     source_type: RequirementSource = RequirementSource.MARKDOWN
     framework: TestFramework = TestFramework.PYTEST
-    tenant_id: Optional[str] = None
+    tenant_id: str | None = None
     generate_edge_cases: bool = True
     min_confidence: float = 0.5
 
@@ -61,10 +61,10 @@ class GenerateFromRequirementsOutput:
     """Output from the GenerateFromRequirements use case."""
 
     session: TestGenerationSession
-    tests: List[GeneratedTest]
-    scenarios: List[TestScenario]
+    tests: list[GeneratedTest]
+    scenarios: list[TestScenario]
     success: bool
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
 
 class GenerateFromRequirements:
@@ -185,7 +185,7 @@ class GenerateFromRequirements:
             tenant_id=test.tenant_id,
         )
 
-    def _create_scenarios(self, requirements: List[dict]) -> List[TestScenario]:
+    def _create_scenarios(self, requirements: list[dict]) -> list[TestScenario]:
         """Create test scenarios from requirements."""
         scenarios = []
 

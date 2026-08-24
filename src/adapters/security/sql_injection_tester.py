@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class InjectionType(Enum):
@@ -31,8 +31,8 @@ class SQLInjectionPayload:
     payload: str
     injection_type: InjectionType
     description: str
-    expected_patterns: List[str]
-    database_types: List[str]
+    expected_patterns: list[str]
+    database_types: list[str]
 
 
 class SQLInjectionTester:
@@ -57,7 +57,7 @@ class SQLInjectionTester:
     """
 
     # Common SQL injection payloads
-    DEFAULT_PAYLOADS: List[SQLInjectionPayload] = [
+    DEFAULT_PAYLOADS: list[SQLInjectionPayload] = [
         # Error-based payloads
         SQLInjectionPayload(
             payload="'",
@@ -131,7 +131,7 @@ class SQLInjectionTester:
         ),
     ]
 
-    def __init__(self, payloads: Optional[List[SQLInjectionPayload]] = None):
+    def __init__(self, payloads: list[SQLInjectionPayload] | None = None):
         """
         Initialize SQL injection tester.
 
@@ -139,7 +139,7 @@ class SQLInjectionTester:
             payloads: Custom list of payloads (uses defaults if None)
         """
         self.payloads = payloads or self.DEFAULT_PAYLOADS
-        self._results: List[Dict[str, Any]] = []
+        self._results: list[dict[str, Any]] = []
 
     async def test_parameter(
         self,
@@ -148,7 +148,7 @@ class SQLInjectionTester:
         parameter: str,
         method: str = "GET",
         original_value: str = "test",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Test a specific parameter for SQL injection vulnerabilities.
 
@@ -193,8 +193,8 @@ class SQLInjectionTester:
         }
 
     async def _make_request(
-        self, http_client: Any, url: str, method: str, params: Dict[str, str]
-    ) -> Dict[str, Any]:
+        self, http_client: Any, url: str, method: str, params: dict[str, str]
+    ) -> dict[str, Any]:
         """
         Make HTTP request and capture response details.
 
@@ -235,8 +235,8 @@ class SQLInjectionTester:
         parameter: str,
         method: str,
         payload: SQLInjectionPayload,
-        baseline: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        baseline: dict[str, Any],
+    ) -> dict[str, Any]:
         """
         Test a single SQL injection payload.
 
@@ -303,7 +303,7 @@ class SQLInjectionTester:
             "database_types": payload.database_types,
         }
 
-    def _get_recommendations(self, vulnerabilities: List[Dict[str, Any]]) -> List[str]:
+    def _get_recommendations(self, vulnerabilities: list[dict[str, Any]]) -> list[str]:
         """
         Generate security recommendations based on findings.
 
@@ -345,7 +345,7 @@ class SQLInjectionTester:
         """
         self.payloads.append(payload)
 
-    def get_payloads_by_type(self, injection_type: InjectionType) -> List[SQLInjectionPayload]:
+    def get_payloads_by_type(self, injection_type: InjectionType) -> list[SQLInjectionPayload]:
         """
         Get payloads filtered by injection type.
 

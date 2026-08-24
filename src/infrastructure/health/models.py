@@ -1,8 +1,8 @@
 """Health check data models"""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -31,7 +31,7 @@ class ServiceType(str, Enum):
 
 def _utc_now() -> datetime:
     """Get current UTC time in a timezone-aware manner."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class HealthCheckResult(BaseModel):
@@ -44,9 +44,9 @@ class HealthCheckResult(BaseModel):
     last_check_timestamp: datetime = Field(
         default_factory=_utc_now, description="Timestamp of last check"
     )
-    error_details: Optional[str] = Field(None, description="Error message if unhealthy")
-    error_type: Optional[str] = Field(None, description="Type of error (timeout, connection, etc.)")
-    metadata: Dict[str, Any] = Field(
+    error_details: str | None = Field(None, description="Error message if unhealthy")
+    error_type: str | None = Field(None, description="Type of error (timeout, connection, etc.)")
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata about the service"
     )
 
@@ -61,10 +61,10 @@ class AggregatedHealthStatus(BaseModel):
 
     overall_status: HealthStatus = Field(..., description="Overall system health")
     timestamp: datetime = Field(default_factory=_utc_now, description="Timestamp of health check")
-    checks: List[HealthCheckResult] = Field(
+    checks: list[HealthCheckResult] = Field(
         default_factory=list, description="Individual health check results"
     )
-    summary: Dict[str, Any] = Field(default_factory=dict, description="Summary statistics")
+    summary: dict[str, Any] = Field(default_factory=dict, description="Summary statistics")
 
     model_config = ConfigDict(
         use_enum_values=True,
@@ -96,7 +96,7 @@ class DatabaseHealthCheckConfig(BaseModel):
     connection_string: str = Field(..., description="Database connection string")
     database_type: ServiceType = Field(..., description="Type of database")
     test_query: str = Field("SELECT 1", description="Query to test database connectivity")
-    pool_size: Optional[int] = Field(None, description="Connection pool size")
+    pool_size: int | None = Field(None, description="Connection pool size")
 
 
 class RedisHealthCheckConfig(BaseModel):
@@ -104,7 +104,7 @@ class RedisHealthCheckConfig(BaseModel):
 
     host: str = Field("localhost", description="Redis host")
     port: int = Field(6379, description="Redis port")
-    password: Optional[str] = Field(None, description="Redis password")
+    password: str | None = Field(None, description="Redis password")
     db: int = Field(0, description="Redis database number")
     socket_timeout: float = Field(5.0, description="Socket timeout in seconds")
     socket_connect_timeout: float = Field(5.0, description="Connection timeout in seconds")
@@ -116,10 +116,10 @@ class ExternalAPIHealthCheckConfig(BaseModel):
     name: str = Field(..., description="Name of the external API")
     url: str = Field(..., description="URL to check")
     method: str = Field("GET", description="HTTP method")
-    expected_status_codes: List[int] = Field(
+    expected_status_codes: list[int] = Field(
         default_factory=lambda: [200], description="Expected status codes"
     )
-    headers: Dict[str, str] = Field(
+    headers: dict[str, str] = Field(
         default_factory=dict, description="Headers to send with request"
     )
     timeout_seconds: float = Field(10.0, description="Request timeout")

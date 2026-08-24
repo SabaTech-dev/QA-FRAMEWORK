@@ -3,8 +3,8 @@
 import hashlib
 import secrets
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import uuid4
 
 from jose import JWTError, jwt
@@ -17,9 +17,9 @@ class TokenGenerator(ABC):
     def generate_access_token(
         self,
         user_id: str,
-        tenant_id: Optional[str] = None,
-        scopes: Optional[list] = None,
-        extra_claims: Optional[Dict[str, Any]] = None,
+        tenant_id: str | None = None,
+        scopes: list | None = None,
+        extra_claims: dict[str, Any] | None = None,
     ) -> str:
         """Generate an access token.
 
@@ -32,7 +32,6 @@ class TokenGenerator(ABC):
         Returns:
             Access token string
         """
-        pass
 
     @abstractmethod
     def generate_refresh_token(self, user_id: str) -> str:
@@ -44,7 +43,6 @@ class TokenGenerator(ABC):
         Returns:
             Refresh token string
         """
-        pass
 
     @abstractmethod
     def generate_verification_token(self, user_id: str) -> str:
@@ -56,7 +54,6 @@ class TokenGenerator(ABC):
         Returns:
             Verification token string
         """
-        pass
 
     @abstractmethod
     def generate_password_reset_token(self, user_id: str) -> str:
@@ -68,10 +65,9 @@ class TokenGenerator(ABC):
         Returns:
             Reset token string
         """
-        pass
 
     @abstractmethod
-    def decode_token(self, token: str) -> Optional[Dict[str, Any]]:
+    def decode_token(self, token: str) -> dict[str, Any] | None:
         """Decode and validate a token.
 
         Args:
@@ -80,7 +76,6 @@ class TokenGenerator(ABC):
         Returns:
             Decoded token payload or None if invalid
         """
-        pass
 
 
 class JWTokenGenerator(TokenGenerator):
@@ -115,12 +110,12 @@ class JWTokenGenerator(TokenGenerator):
     def generate_access_token(
         self,
         user_id: str,
-        tenant_id: Optional[str] = None,
-        scopes: Optional[list] = None,
-        extra_claims: Optional[Dict[str, Any]] = None,
+        tenant_id: str | None = None,
+        scopes: list | None = None,
+        extra_claims: dict[str, Any] | None = None,
     ) -> str:
         """Generate JWT access token."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expire = now + self._access_token_expire
 
         claims = {
@@ -147,7 +142,7 @@ class JWTokenGenerator(TokenGenerator):
 
     def generate_refresh_token(self, user_id: str) -> str:
         """Generate JWT refresh token."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expire = now + self._refresh_token_expire
 
         claims = {
@@ -171,7 +166,7 @@ class JWTokenGenerator(TokenGenerator):
 
     def generate_password_reset_token(self, user_id: str) -> str:
         """Generate password reset token."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expire = now + self._password_reset_token_expire
 
         claims = {
@@ -184,7 +179,7 @@ class JWTokenGenerator(TokenGenerator):
 
         return jwt.encode(claims, self._secret_key, algorithm=self._algorithm)
 
-    def decode_token(self, token: str) -> Optional[Dict[str, Any]]:
+    def decode_token(self, token: str) -> dict[str, Any] | None:
         """Decode and validate JWT token."""
         try:
             payload = jwt.decode(token, self._secret_key, algorithms=[self._algorithm])
@@ -205,7 +200,7 @@ class JWTokenGenerator(TokenGenerator):
         except Exception:
             return False
 
-    def get_token_expiry(self, token: str) -> Optional[datetime]:
+    def get_token_expiry(self, token: str) -> datetime | None:
         """Get token expiration datetime."""
         payload = self.decode_token(token)
         if payload and "exp" in payload:
@@ -216,15 +211,15 @@ class JWTokenGenerator(TokenGenerator):
         """Check if token is expired."""
         expiry = self.get_token_expiry(token)
         if expiry:
-            return datetime.now(timezone.utc) > expiry
+            return datetime.now(UTC) > expiry
         return True
 
 
 # Default token generator instance
-_default_token_generator: Optional[JWTokenGenerator] = None
+_default_token_generator: JWTokenGenerator | None = None
 
 
-def get_token_generator(secret_key: Optional[str] = None) -> JWTokenGenerator:
+def get_token_generator(secret_key: str | None = None) -> JWTokenGenerator:
     """Get or create default token generator."""
     global _default_token_generator
     if _default_token_generator is None:

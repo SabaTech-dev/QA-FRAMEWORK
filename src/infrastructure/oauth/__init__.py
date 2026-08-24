@@ -13,11 +13,11 @@ from .oauth_factory import OAuthProviderFactory
 
 __all__ = [
     "BaseOAuthProvider",
-    "GoogleOAuthProvider",
     "GitHubOAuthProvider",
-    "OAuthProviderFactory",
+    "GoogleOAuthProvider",
     "OAuthConfigurationError",
     "OAuthExchangeError",
-    "OAuthUserInfoError",
+    "OAuthProviderFactory",
     "OAuthRefreshError",
+    "OAuthUserInfoError",
 ]

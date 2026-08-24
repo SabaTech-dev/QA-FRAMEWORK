@@ -3,7 +3,7 @@ Interfaces for Flaky Test Detection Domain
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Optional, Protocol
+from typing import Protocol
 
 from .entities import FlakyTest, QuarantineEntry, TestRun
 from .value_objects import FlakinessScore, FlakyStatus, QuarantineReason, TestIdentifier
@@ -15,7 +15,7 @@ class IFlakyDetector(Protocol):
     def detect(
         self,
         test_identifier: TestIdentifier,
-        runs: List[TestRun],
+        runs: list[TestRun],
     ) -> FlakinessScore:
         """
         Detect if a test is flaky based on its run history.
@@ -31,8 +31,8 @@ class IFlakyDetector(Protocol):
 
     def batch_detect(
         self,
-        tests: List[tuple],  # List of (test_identifier, runs)
-    ) -> List[tuple]:  # List of (test_identifier, score)
+        tests: list[tuple],  # List of (test_identifier, runs)
+    ) -> list[tuple]:  # List of (test_identifier, score)
         """
         Detect flakiness for multiple tests.
 
@@ -53,42 +53,37 @@ class IQuarantineManager(ABC):
         self,
         test_identifier: TestIdentifier,
         reason: QuarantineReason,
-        description: Optional[str] = None,
-        expires_in_days: Optional[int] = None,
+        description: str | None = None,
+        expires_in_days: int | None = None,
     ) -> QuarantineEntry:
         """Quarantine a flaky test."""
-        pass
 
     @abstractmethod
     async def release(
         self,
         test_identifier: TestIdentifier,
-        notes: Optional[str] = None,
-    ) -> Optional[QuarantineEntry]:
+        notes: str | None = None,
+    ) -> QuarantineEntry | None:
         """Release a test from quarantine."""
-        pass
 
     @abstractmethod
     async def get_quarantined(
         self,
         tenant_id: str,
-    ) -> List[QuarantineEntry]:
+    ) -> list[QuarantineEntry]:
         """Get all quarantined tests for a tenant."""
-        pass
 
     @abstractmethod
     async def evaluate(
         self,
         test_identifier: TestIdentifier,
-        recent_runs: List[TestRun],
-    ) -> Optional[QuarantineEntry]:
+        recent_runs: list[TestRun],
+    ) -> QuarantineEntry | None:
         """Evaluate if a quarantined test can be released."""
-        pass
 
     @abstractmethod
-    async def get_expired(self) -> List[QuarantineEntry]:
+    async def get_expired(self) -> list[QuarantineEntry]:
         """Get quarantined tests that have expired."""
-        pass
 
 
 class ITestRunRepository(ABC):
@@ -99,32 +94,28 @@ class ITestRunRepository(ABC):
         self,
         test_identifier: TestIdentifier,
         limit: int = 100,
-    ) -> List[TestRun]:
+    ) -> list[TestRun]:
         """Get recent runs for a test."""
-        pass
 
     @abstractmethod
     async def save_run(self, run: TestRun) -> TestRun:
         """Save a test run."""
-        pass
 
     @abstractmethod
     async def get_runs_for_suite(
         self,
         suite_id: str,
         limit: int = 1000,
-    ) -> List[TestRun]:
+    ) -> list[TestRun]:
         """Get runs for all tests in a suite."""
-        pass
 
     @abstractmethod
     async def get_recent_failures(
         self,
         tenant_id: str,
         limit: int = 100,
-    ) -> List[TestRun]:
+    ) -> list[TestRun]:
         """Get recent failed tests."""
-        pass
 
 
 class IFlakyTestRepository(ABC):
@@ -134,14 +125,12 @@ class IFlakyTestRepository(ABC):
     async def get_by_identifier(
         self,
         test_identifier: TestIdentifier,
-    ) -> Optional[FlakyTest]:
+    ) -> FlakyTest | None:
         """Get flaky test by identifier."""
-        pass
 
     @abstractmethod
     async def save(self, flaky_test: FlakyTest) -> FlakyTest:
         """Save flaky test data."""
-        pass
 
     @abstractmethod
     async def get_by_status(
@@ -149,17 +138,15 @@ class IFlakyTestRepository(ABC):
         status: FlakyStatus,
         tenant_id: str,
         limit: int = 100,
-    ) -> List[FlakyTest]:
+    ) -> list[FlakyTest]:
         """Get flaky tests by status."""
-        pass
 
     @abstractmethod
     async def get_all_flaky(
         self,
         tenant_id: str,
-    ) -> List[FlakyTest]:
+    ) -> list[FlakyTest]:
         """Get all confirmed flaky tests."""
-        pass
 
 
 class IRootCauseAnalyzer(Protocol):
@@ -168,7 +155,7 @@ class IRootCauseAnalyzer(Protocol):
     def analyze(
         self,
         test_identifier: TestIdentifier,
-        runs: List[TestRun],
+        runs: list[TestRun],
     ) -> dict:
         """
         Analyze root causes of flakiness.

@@ -10,7 +10,7 @@ pytest.importorskip(
     reason="src.infrastructure.migration module not available. This test requires the migration system.",
 )
 
-from src.infrastructure.migration import (  # noqa: E402  # import tras setup de entorno
+from src.infrastructure.migration import (  # import tras setup de entorno
     DataMigrator,
     MigrationReportGenerator,
     TestMigrator,

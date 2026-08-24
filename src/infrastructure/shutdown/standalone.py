@@ -6,8 +6,9 @@ in standalone applications (not FastAPI).
 """
 
 import asyncio
+from collections.abc import Callable
 from contextlib import contextmanager
-from typing import Any, Callable, Optional
+from typing import Any
 
 from src.infrastructure.logger.logger import QALogger
 from src.infrastructure.shutdown.models import ResourceType, ShutdownConfig
@@ -42,7 +43,7 @@ class StandaloneShutdown:
         await shutdown.wait_and_cleanup()
     """
 
-    def __init__(self, config: Optional[ShutdownConfig] = None):
+    def __init__(self, config: ShutdownConfig | None = None):
         self.manager = ShutdownManager(config)
         self._cleanup_done = False
 
@@ -85,7 +86,7 @@ class StandaloneShutdown:
         name: str,
         instance: Any,
         resource_type: ResourceType = ResourceType.CUSTOM,
-        close_handler: Optional[str] = None,
+        close_handler: str | None = None,
         priority: int = 100,
     ) -> None:
         """
@@ -116,7 +117,7 @@ class StandaloneShutdown:
         return self.is_shutting_down()
 
     async def wait_and_cleanup(
-        self, timeout: Optional[float] = None, reason: str = "Application shutdown"
+        self, timeout: float | None = None, reason: str = "Application shutdown"
     ) -> None:
         """
         Wait for shutdown signal and cleanup.
@@ -154,7 +155,7 @@ class StandaloneShutdown:
 
 
 @contextmanager
-def shutdown_context(setup_signals: bool = True, manager: Optional[ShutdownManager] = None):
+def shutdown_context(setup_signals: bool = True, manager: ShutdownManager | None = None):
     """
     Context manager for shutdown handling.
 
@@ -243,7 +244,7 @@ class BackgroundTaskManager:
                         logger.info(f"Task cancelled: name={name}")
                         break
                     except Exception as e:
-                        logger.error(f"Task failed: name={name}, error={str(e)}")
+                        logger.error(f"Task failed: name={name}, error={e!s}")
                         if not restart_on_failure:
                             raise
                         logger.info(f"Restarting task: name={name}")
@@ -278,7 +279,7 @@ class BackgroundTaskManager:
             try:
                 await asyncio.wait_for(task, timeout=timeout)
                 return True
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning(f"Task stop timeout: name={name}, timeout={timeout}")
                 return False
             except asyncio.CancelledError:
@@ -300,7 +301,7 @@ class BackgroundTaskManager:
         logger.info("All background tasks stopped")
 
 
-def create_shutdown_decorator(manager: Optional[ShutdownManager] = None):
+def create_shutdown_decorator(manager: ShutdownManager | None = None):
     """
     Create a decorator for functions that should be aware of shutdown.
 
@@ -342,7 +343,7 @@ def create_shutdown_decorator(manager: Optional[ShutdownManager] = None):
 
 
 async def run_with_shutdown(
-    coro: Any, manager: Optional[ShutdownManager] = None, shutdown_timeout: float = 30.0
+    coro: Any, manager: ShutdownManager | None = None, shutdown_timeout: float = 30.0
 ) -> Any:
     """
     Run a coroutine with shutdown handling.

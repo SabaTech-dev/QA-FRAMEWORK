@@ -20,7 +20,7 @@ import base64
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 
 class MobilePlatform(Enum):
@@ -102,17 +102,17 @@ class MobileCapabilities:
     platform_name: MobilePlatform
     platform_version: str
     device_name: str
-    app: Optional[str] = None
-    app_package: Optional[str] = None
-    app_activity: Optional[str] = None
-    automation_name: Optional[str] = None
+    app: str | None = None
+    app_package: str | None = None
+    app_activity: str | None = None
+    automation_name: str | None = None
     auto_grant_permissions: bool = True
     no_reset: bool = False
     full_reset: bool = False
     new_command_timeout: int = 300
-    additional_caps: Dict[str, Any] = None
+    additional_caps: dict[str, Any] = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to Appium capabilities dictionary."""
         caps = {
             "platformName": self.platform_name.value,
@@ -154,34 +154,28 @@ class IMobileDriver(ABC):
     @abstractmethod
     def find_element(self, locator: str, locator_type: str = "id") -> Any:
         """Find a mobile element."""
-        pass
 
     @abstractmethod
-    def find_elements(self, locator: str, locator_type: str = "id") -> List[Any]:
+    def find_elements(self, locator: str, locator_type: str = "id") -> list[Any]:
         """Find multiple mobile elements."""
-        pass
 
     @abstractmethod
     def tap(self, x: int, y: int) -> None:
         """Tap at coordinates."""
-        pass
 
     @abstractmethod
     def swipe(
         self, start_x: int, start_y: int, end_x: int, end_y: int, duration: int = 800
     ) -> None:
         """Swipe from start to end coordinates."""
-        pass
 
     @abstractmethod
-    def get_screenshot(self, filename: Optional[str] = None) -> Union[bytes, str]:
+    def get_screenshot(self, filename: str | None = None) -> bytes | str:
         """Capture screenshot."""
-        pass
 
     @abstractmethod
     def get_page_source(self) -> str:
         """Get current page XML source."""
-        pass
 
 
 class AppiumDriver(IMobileDriver):
@@ -201,8 +195,8 @@ class AppiumDriver(IMobileDriver):
     ):
         self.capabilities = capabilities
         self.server_url = appium_server_url
-        self._driver: Optional[Any] = None
-        self._session_id: Optional[str] = None
+        self._driver: Any | None = None
+        self._session_id: str | None = None
 
     def start(self) -> "AppiumDriver":
         """Start the Appium session."""
@@ -265,7 +259,7 @@ class AppiumDriver(IMobileDriver):
         by = by_map.get(locator_type.lower(), AppiumBy.ID)
         return self.driver.find_element(by, locator)
 
-    def find_elements(self, locator: str, locator_type: str = "id") -> List[Any]:
+    def find_elements(self, locator: str, locator_type: str = "id") -> list[Any]:
         """Find multiple elements."""
         from appium.webdriver.common.appiumby import AppiumBy
 
@@ -304,7 +298,7 @@ class AppiumDriver(IMobileDriver):
         action = TouchAction(self.driver)
         action.tap(x=x, y=y).perform()
 
-    def tap_element(self, element: Union[Any, MobileElement]) -> None:
+    def tap_element(self, element: Any | MobileElement) -> None:
         """Tap on an element."""
         if isinstance(element, MobileElement):
             elem = self.find_element(element.locator, element.locator_type)
@@ -332,7 +326,7 @@ class AppiumDriver(IMobileDriver):
         """Swipe from start to end coordinates."""
         self.driver.swipe(start_x, start_y, end_x, end_y, duration)
 
-    def swipe_direction(self, direction: Tuple[int, int], duration: int = 800) -> None:
+    def swipe_direction(self, direction: tuple[int, int], duration: int = 800) -> None:
         """Swipe in a direction using screen center."""
         size = self.get_screen_size()
         center_x = size.width // 2
@@ -431,7 +425,7 @@ class AppiumDriver(IMobileDriver):
         size = self.driver.get_window_size()
         return Size(width=size["width"], height=size["height"])
 
-    def get_device_info(self) -> Dict[str, Any]:
+    def get_device_info(self) -> dict[str, Any]:
         """Get device information."""
         return {
             "platform": self.capabilities.platform_name.value,
@@ -442,7 +436,7 @@ class AppiumDriver(IMobileDriver):
 
     # Screenshots and Recording
 
-    def get_screenshot(self, filename: Optional[str] = None) -> Union[bytes, str]:
+    def get_screenshot(self, filename: str | None = None) -> bytes | str:
         """Capture screenshot."""
         screenshot = self.driver.get_screenshot_as_png()
 
@@ -476,7 +470,7 @@ class AppiumDriver(IMobileDriver):
 
     # Context Management
 
-    def get_contexts(self) -> List[str]:
+    def get_contexts(self) -> list[str]:
         """Get available contexts (NATIVE_APP, WEBVIEW, etc.)."""
         return self.driver.contexts
 
@@ -571,13 +565,13 @@ class MobileTestBuilder:
     """
 
     def __init__(self):
-        self._platform: Optional[MobilePlatform] = None
-        self._platform_version: Optional[str] = None
-        self._device_name: Optional[str] = None
-        self._app: Optional[str] = None
-        self._app_package: Optional[str] = None
-        self._app_activity: Optional[str] = None
-        self._additional_caps: Dict[str, Any] = {}
+        self._platform: MobilePlatform | None = None
+        self._platform_version: str | None = None
+        self._device_name: str | None = None
+        self._app: str | None = None
+        self._app_package: str | None = None
+        self._app_activity: str | None = None
+        self._additional_caps: dict[str, Any] = {}
         self._server_url: str = "http://localhost:4723"
 
     def with_android_capabilities(self, version: str, device: str) -> "MobileTestBuilder":
@@ -689,9 +683,9 @@ class MobileElementActions:
 def create_android_driver(
     version: str,
     device: str,
-    app_path: Optional[str] = None,
-    app_package: Optional[str] = None,
-    app_activity: Optional[str] = None,
+    app_path: str | None = None,
+    app_package: str | None = None,
+    app_activity: str | None = None,
     server_url: str = "http://localhost:4723",
 ) -> AppiumDriver:
     """Factory function for creating Android driver."""
@@ -710,7 +704,7 @@ def create_android_driver(
 def create_ios_driver(
     version: str,
     device: str,
-    app_path: Optional[str] = None,
+    app_path: str | None = None,
     server_url: str = "http://localhost:4723",
 ) -> AppiumDriver:
     """Factory function for creating iOS driver."""

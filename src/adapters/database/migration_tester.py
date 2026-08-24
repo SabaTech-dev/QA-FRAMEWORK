@@ -3,7 +3,7 @@
 import os
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class MigrationStatus(Enum):
@@ -34,10 +34,10 @@ class MigrationResult:
     migration_name: str
     status: MigrationStatus
     execution_time: float
-    error_message: Optional[str] = None
-    warnings: Optional[List[str]] = None
-    changes_applied: Optional[List[str]] = None
-    rollback_successful: Optional[bool] = None
+    error_message: str | None = None
+    warnings: list[str] | None = None
+    changes_applied: list[str] | None = None
+    rollback_successful: bool | None = None
 
     def __post_init__(self) -> None:
         if self.warnings is None:
@@ -75,13 +75,13 @@ class MigrationTester:
             database_client: Database client with query execution capability
         """
         self.db = database_client
-        self._results: List[MigrationResult] = []
+        self._results: list[MigrationResult] = []
 
     async def test_migration(
         self,
         migration_script: str,
-        rollback_script: Optional[str] = None,
-        test_data_script: Optional[str] = None,
+        rollback_script: str | None = None,
+        test_data_script: str | None = None,
         validate_after: bool = True,
     ) -> MigrationResult:
         """
@@ -180,7 +180,7 @@ class MigrationTester:
             self._results.append(result)
             return result
 
-    async def test_migration_chain(self, migrations: List[Dict[str, str]]) -> Dict[str, Any]:
+    async def test_migration_chain(self, migrations: list[dict[str, str]]) -> dict[str, Any]:
         """
         Test a chain of dependent migrations.
 
@@ -222,7 +222,7 @@ class MigrationTester:
             "results": results,
         }
 
-    async def validate_migration_idempotency(self, migration_script: str) -> Dict[str, Any]:
+    async def validate_migration_idempotency(self, migration_script: str) -> dict[str, Any]:
         """
         Test if migration is idempotent (can be run multiple times safely).
 
@@ -275,8 +275,8 @@ class MigrationTester:
             return {"is_idempotent": False, "error": str(e)}
 
     async def check_migration_compatibility(
-        self, migration_script: str, existing_schema: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, migration_script: str, existing_schema: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Check if migration is compatible with existing schema.
 
@@ -365,7 +365,7 @@ class MigrationTester:
         except Exception:
             return False
 
-    async def _validate_migration(self, migration_sql: str) -> Dict[str, Any]:
+    async def _validate_migration(self, migration_sql: str) -> dict[str, Any]:
         """Validate migration results."""
         warnings = []
 
@@ -378,7 +378,7 @@ class MigrationTester:
 
         return {"warnings": warnings}
 
-    def _parse_migration_changes(self, sql: str) -> List[str]:
+    def _parse_migration_changes(self, sql: str) -> list[str]:
         """Parse migration SQL to identify changes."""
         changes = []
         sql_upper = sql.upper()
@@ -402,7 +402,7 @@ class MigrationTester:
 
         return changes
 
-    def _extract_tables_from_migration(self, sql: str) -> List[str]:
+    def _extract_tables_from_migration(self, sql: str) -> list[str]:
         """Extract table names from migration SQL."""
         import re
 
@@ -416,7 +416,7 @@ class MigrationTester:
 
         return list(set(tables))
 
-    def _extract_column_changes(self, sql: str) -> List[Dict[str, str]]:
+    def _extract_column_changes(self, sql: str) -> list[dict[str, str]]:
         """Extract column modifications from migration."""
         import re
 
@@ -431,7 +431,7 @@ class MigrationTester:
 
         return changes
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """
         Get summary of all migration tests.
 

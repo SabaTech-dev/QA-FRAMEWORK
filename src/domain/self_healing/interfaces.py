@@ -5,7 +5,7 @@ Abstract interfaces defining contracts for the self-healing system.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Optional, Protocol
+from typing import Protocol
 
 from .entities import HealingResult, HealingSession, Selector
 from .value_objects import HealingContext, SelectorType
@@ -54,9 +54,9 @@ class IConfidenceScorer(Protocol):
 
     def score_candidates(
         self,
-        selectors: List[Selector],
+        selectors: list[Selector],
         context: HealingContext,
-    ) -> List[tuple]:
+    ) -> list[tuple]:
         """
         Score multiple candidate selectors.
 
@@ -74,31 +74,27 @@ class ISelectorRepository(ABC):
     """Abstract repository for selector persistence."""
 
     @abstractmethod
-    async def get_by_id(self, selector_id: str) -> Optional[Selector]:
+    async def get_by_id(self, selector_id: str) -> Selector | None:
         """Retrieve a selector by ID."""
-        pass
 
     @abstractmethod
     async def get_by_value(
         self,
         value: str,
         selector_type: SelectorType,
-    ) -> Optional[Selector]:
+    ) -> Selector | None:
         """Retrieve a selector by its value and type."""
-        pass
 
     @abstractmethod
     async def get_alternatives(
         self,
         selector_id: str,
-    ) -> List[Selector]:
+    ) -> list[Selector]:
         """Get alternative selectors for a given selector."""
-        pass
 
     @abstractmethod
     async def save(self, selector: Selector) -> Selector:
         """Save a selector (create or update)."""
-        pass
 
     @abstractmethod
     async def save_alternative(
@@ -107,7 +103,6 @@ class ISelectorRepository(ABC):
         alternative: Selector,
     ) -> None:
         """Save an alternative selector for a parent."""
-        pass
 
     @abstractmethod
     async def get_low_confidence(
@@ -115,9 +110,8 @@ class ISelectorRepository(ABC):
         tenant_id: str,
         threshold: float = 0.5,
         limit: int = 100,
-    ) -> List[Selector]:
+    ) -> list[Selector]:
         """Get selectors with confidence below threshold."""
-        pass
 
     @abstractmethod
     async def record_usage(
@@ -126,38 +120,33 @@ class ISelectorRepository(ABC):
         success: bool,
     ) -> None:
         """Record a usage event for a selector."""
-        pass
 
 
 class IHealingSessionRepository(ABC):
     """Abstract repository for healing session persistence."""
 
     @abstractmethod
-    async def get_by_id(self, session_id: str) -> Optional[HealingSession]:
+    async def get_by_id(self, session_id: str) -> HealingSession | None:
         """Retrieve a healing session by ID."""
-        pass
 
     @abstractmethod
     async def get_by_test_run(
         self,
         test_run_id: str,
-    ) -> Optional[HealingSession]:
+    ) -> HealingSession | None:
         """Retrieve a healing session by test run ID."""
-        pass
 
     @abstractmethod
     async def save(self, session: HealingSession) -> HealingSession:
         """Save a healing session."""
-        pass
 
     @abstractmethod
     async def get_recent(
         self,
         tenant_id: str,
         limit: int = 10,
-    ) -> List[HealingSession]:
+    ) -> list[HealingSession]:
         """Get recent healing sessions for a tenant."""
-        pass
 
 
 class ISelectorGenerator(Protocol):
@@ -166,22 +155,22 @@ class ISelectorGenerator(Protocol):
     def generate_from_attributes(
         self,
         attributes: dict,
-        element_text: Optional[str],
-    ) -> List[Selector]:
+        element_text: str | None,
+    ) -> list[Selector]:
         """Generate candidate selectors from element attributes."""
         ...
 
     def generate_from_context(
         self,
         context: HealingContext,
-    ) -> List[Selector]:
+    ) -> list[Selector]:
         """Generate candidate selectors from page context."""
         ...
 
     def generate_composite(
         self,
-        selectors: List[Selector],
-    ) -> List[Selector]:
+        selectors: list[Selector],
+    ) -> list[Selector]:
         """Generate composite selectors from multiple candidates."""
         ...
 
@@ -192,14 +181,14 @@ class IPageAnalyzer(Protocol):
     def get_element_at_selector(
         self,
         selector: Selector,
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """Get element info at the given selector."""
         ...
 
     def find_similar_elements(
         self,
         context: HealingContext,
-    ) -> List[dict]:
+    ) -> list[dict]:
         """Find elements similar to the target element."""
         ...
 

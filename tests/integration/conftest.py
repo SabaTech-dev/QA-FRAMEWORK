@@ -8,8 +8,8 @@ the QA framework core and the dashboard backend.
 import asyncio
 import os
 import sys
-from datetime import datetime, timezone
-from typing import AsyncGenerator, Generator, Optional
+from collections.abc import AsyncGenerator, Generator
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -193,10 +193,10 @@ def mock_redis():
     cache_data = {}
 
     class MockRedis:
-        async def get(self, key: str) -> Optional[bytes]:
+        async def get(self, key: str) -> bytes | None:
             return cache_data.get(key)
 
-        async def set(self, key: str, value: bytes, ex: Optional[int] = None) -> bool:
+        async def set(self, key: str, value: bytes, ex: int | None = None) -> bool:
             cache_data[key] = value
             return True
 
@@ -372,7 +372,7 @@ def test_id():
 @pytest.fixture
 def test_timestamp():
     """Provide current timestamp for test data."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 # =============================================================================

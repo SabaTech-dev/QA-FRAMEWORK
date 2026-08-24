@@ -4,8 +4,9 @@ Main Shutdown Manager for graceful shutdown of QA-FRAMEWORK services
 
 import asyncio
 import signal
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Optional
 
 from src.infrastructure.logger.logger import QALogger
 from src.infrastructure.shutdown.connection_tracker import ConnectionTracker
@@ -52,14 +53,14 @@ class ShutdownManager:
 
     _instance: Optional["ShutdownManager"] = None
 
-    def __new__(cls, config: Optional[ShutdownConfig] = None):
+    def __new__(cls, config: ShutdownConfig | None = None):
         """Singleton pattern for global shutdown manager"""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self, config: Optional[ShutdownConfig] = None):
+    def __init__(self, config: ShutdownConfig | None = None):
         """Initialize shutdown manager"""
         if self._initialized:
             return
@@ -68,8 +69,8 @@ class ShutdownManager:
         self.connection_tracker = ConnectionTracker(self.config)
 
         # Resources to manage
-        self._resources: Dict[str, ResourceInfo] = {}
-        self._resources_by_priority: List[str] = []
+        self._resources: dict[str, ResourceInfo] = {}
+        self._resources_by_priority: list[str] = []
 
         # Shutdown state
         self._progress = ShutdownProgress()
@@ -77,11 +78,11 @@ class ShutdownManager:
         self._shutdown_complete = asyncio.Event()
 
         # Hooks
-        self._pre_shutdown_hooks: List[Callable] = []
-        self._post_shutdown_hooks: List[Callable] = []
+        self._pre_shutdown_hooks: list[Callable] = []
+        self._post_shutdown_hooks: list[Callable] = []
 
         # Signal handlers
-        self._original_handlers: Dict[signal.Signals, Any] = {}
+        self._original_handlers: dict[signal.Signals, Any] = {}
         self._signal_handlers_installed = False
 
         self._initialized = True
@@ -99,9 +100,9 @@ class ShutdownManager:
         name: str,
         resource_type: ResourceType,
         instance: Any,
-        close_handler: Optional[str] = None,
+        close_handler: str | None = None,
         priority: int = 100,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """
         Register a resource to be closed during shutdown.
@@ -220,7 +221,7 @@ class ShutdownManager:
         logger.info("Signal handlers restored")
 
     async def shutdown(
-        self, reason: str = "Manual shutdown", timeout: Optional[float] = None
+        self, reason: str = "Manual shutdown", timeout: float | None = None
     ) -> ShutdownResult:
         """
         Execute graceful shutdown.
@@ -284,7 +285,7 @@ class ShutdownManager:
                 message=f"Shutdown completed in {duration:.2f}s",
             )
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # Handle timeout
             logger.error(f"Shutdown timeout exceeded: timeout_seconds={timeout}")
 
@@ -303,7 +304,7 @@ class ShutdownManager:
 
         except Exception as e:
             # Handle errors
-            logger.error(f"Shutdown failed: error={str(e)}")
+            logger.error(f"Shutdown failed: error={e!s}")
 
             self._progress.phase = ShutdownPhase.FORCED
             self._progress.completed_at = datetime.now()
@@ -315,20 +316,20 @@ class ShutdownManager:
             return ShutdownResult(
                 status=ShutdownStatus.FAILED,
                 progress=self._progress,
-                message=f"Shutdown failed: {str(e)}",
+                message=f"Shutdown failed: {e!s}",
             )
 
-    async def _run_hooks(self, hooks: List[Callable], phase: str) -> None:
+    async def _run_hooks(self, hooks: list[Callable], phase: str) -> None:
         """Run shutdown hooks"""
         for hook in hooks:
             try:
                 result = hook()
                 if asyncio.iscoroutine(result):
                     await asyncio.wait_for(result, timeout=self.config.resource_close_timeout)
-                logger.debug(f"{phase} hook completed: hook={str(hook)}")
+                logger.debug(f"{phase} hook completed: hook={hook!s}")
             except Exception as e:
-                logger.error(f"{phase} hook failed: hook={str(hook)}, error={str(e)}")
-                self._progress.warnings.append(f"{phase} hook error: {str(e)}")
+                logger.error(f"{phase} hook failed: hook={hook!s}, error={e!s}")
+                self._progress.warnings.append(f"{phase} hook error: {e!s}")
 
     async def _phase_stop_new_connections(self) -> None:
         """Phase 1: Stop accepting new connections"""
@@ -378,9 +379,9 @@ class ShutdownManager:
                         f"Resource closed: name={resource_name}, type={resource_info.resource_type.value}"
                     )
             except Exception as e:
-                error_msg = f"Failed to close {resource_name}: {str(e)}"
+                error_msg = f"Failed to close {resource_name}: {e!s}"
                 self._progress.errors.append(error_msg)
-                logger.error(f"Failed to close resource: name={resource_name}, error={str(e)}")
+                logger.error(f"Failed to close resource: name={resource_name}, error={e!s}")
 
         return closed_count
 
@@ -411,13 +412,13 @@ class ShutdownManager:
             if asyncio.iscoroutine(result):
                 await asyncio.wait_for(result, timeout=self.config.resource_close_timeout)
             return True
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error(
                 f"Resource close timeout: name={resource_info.name}, timeout={self.config.resource_close_timeout}"
             )
             raise
         except Exception as e:
-            logger.error(f"Error closing resource: name={resource_info.name}, error={str(e)}")
+            logger.error(f"Error closing resource: name={resource_info.name}, error={e!s}")
             raise
 
     async def _phase_flush_buffers(self) -> None:
@@ -430,7 +431,6 @@ class ShutdownManager:
         # - Flushing log buffers
         # - Flushing metric buffers
         # - Flushing any queued messages
-        pass
 
     async def _force_close_all(self) -> None:
         """Force close all connections and resources"""
@@ -449,7 +449,7 @@ class ShutdownManager:
                 if hasattr(instance, "close"):
                     instance.close()
             except Exception as e:
-                logger.error(f"Error force closing resource: name={resource_name}, error={str(e)}")
+                logger.error(f"Error force closing resource: name={resource_name}, error={e!s}")
 
     def get_progress(self) -> ShutdownProgress:
         """Get current shutdown progress"""
@@ -459,7 +459,7 @@ class ShutdownManager:
         """Check if shutdown is in progress"""
         return self._is_shutting_down
 
-    async def wait_for_shutdown(self, timeout: Optional[float] = None) -> bool:
+    async def wait_for_shutdown(self, timeout: float | None = None) -> bool:
         """
         Wait for shutdown to complete.
 
@@ -472,10 +472,10 @@ class ShutdownManager:
         try:
             await asyncio.wait_for(self._shutdown_complete.wait(), timeout=timeout)
             return True
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return False
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get shutdown manager statistics"""
         return {
             "is_shutting_down": self._is_shutting_down,

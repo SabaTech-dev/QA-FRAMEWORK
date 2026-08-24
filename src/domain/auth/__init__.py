@@ -5,8 +5,8 @@ from .interfaces import OAuthProvider
 from .value_objects import AuthProvider
 
 __all__ = [
-    "OAuthUser",
-    "Token",
     "AuthProvider",
     "OAuthProvider",
+    "OAuthUser",
+    "Token",
 ]

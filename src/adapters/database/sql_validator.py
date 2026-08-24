@@ -3,7 +3,7 @@
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List
+from typing import Any
 
 
 class ValidationSeverity(Enum):
@@ -45,9 +45,9 @@ class SQLValidationResult:
     """
 
     is_valid: bool
-    issues: List[SQLIssue]
-    warnings: List[SQLIssue]
-    suggestions: List[SQLIssue]
+    issues: list[SQLIssue]
+    warnings: list[SQLIssue]
+    suggestions: list[SQLIssue]
 
     def has_errors(self) -> bool:
         """Check if result has any errors."""
@@ -109,9 +109,9 @@ class SQLValidator:
 
     def __init__(self) -> None:
         """Initialize SQL validator."""
-        self._issues: List[SQLIssue] = []
-        self._warnings: List[SQLIssue] = []
-        self._suggestions: List[SQLIssue] = []
+        self._issues: list[SQLIssue] = []
+        self._warnings: list[SQLIssue] = []
+        self._suggestions: list[SQLIssue] = []
 
     def validate_syntax(self, query: str) -> SQLValidationResult:
         """
@@ -329,7 +329,7 @@ class SQLValidator:
 
         return SQLValidationResult(is_valid, self._issues, self._warnings, self._suggestions)
 
-    def analyze_query_plan(self, query: str) -> Dict[str, Any]:
+    def analyze_query_plan(self, query: str) -> dict[str, Any]:
         """
         Analyze query execution plan (simplified version).
 
@@ -342,7 +342,7 @@ class SQLValidator:
         Returns:
             Dictionary with query plan analysis
         """
-        analysis: Dict[str, Any] = {
+        analysis: dict[str, Any] = {
             "query_type": None,
             "tables": [],
             "columns": [],

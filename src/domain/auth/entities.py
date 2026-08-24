@@ -1,8 +1,7 @@
 """OAuth Domain Entities."""
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 
 @dataclass(frozen=True)
@@ -11,8 +10,8 @@ class OAuthUser:
 
     id: str
     email: str
-    name: Optional[str] = None
-    avatar: Optional[str] = None
+    name: str | None = None
+    avatar: str | None = None
     provider: str = ""
     provider_id: str = ""
 
@@ -29,8 +28,8 @@ class Token:
     """Entity representing OAuth tokens."""
 
     access_token: str
-    refresh_token: Optional[str] = None
-    expires_at: Optional[datetime] = None
+    refresh_token: str | None = None
+    expires_at: datetime | None = None
     token_type: str = "Bearer"
 
     def __post_init__(self):
@@ -43,12 +42,12 @@ class Token:
         """Check if token is expired."""
         if self.expires_at is None:
             return False
-        return datetime.now(timezone.utc) >= self.expires_at
+        return datetime.now(UTC) >= self.expires_at
 
     @property
-    def expires_in(self) -> Optional[int]:
+    def expires_in(self) -> int | None:
         """Get seconds until expiration."""
         if self.expires_at is None:
             return None
-        delta = self.expires_at - datetime.now(timezone.utc)
+        delta = self.expires_at - datetime.now(UTC)
         return max(0, int(delta.total_seconds()))

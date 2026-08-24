@@ -10,7 +10,6 @@ Reference:
 """
 
 import logging
-from typing import Optional, Set
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -18,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # Default allowlist of trusted domains for production use.
 # Override via environment variable SSRF_ALLOWED_DOMAINS (comma-separated).
-DEFAULT_ALLOWED_DOMAINS: Set[str] = {
+DEFAULT_ALLOWED_DOMAINS: set[str] = {
     # Standard OAuth providers
     "accounts.google.com",
     "github.com",
@@ -48,10 +47,8 @@ DEFAULT_ALLOWED_DOMAINS: Set[str] = {
 class URLValidationError(Exception):
     """Raised when a URL fails allowlist validation."""
 
-    pass
 
-
-def is_allowed_url(url: str, allowed_domains: Optional[Set[str]] = None) -> bool:
+def is_allowed_url(url: str, allowed_domains: set[str] | None = None) -> bool:
     """
     Check whether the given URL is in the allowed domains set.
 
@@ -99,7 +96,7 @@ def is_allowed_url(url: str, allowed_domains: Optional[Set[str]] = None) -> bool
 
 def validate_url(
     url: str,
-    allowed_domains: Optional[Set[str]] = None,
+    allowed_domains: set[str] | None = None,
     raise_on_error: bool = True,
 ) -> bool:
     """

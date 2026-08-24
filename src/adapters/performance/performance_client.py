@@ -1,6 +1,6 @@
 """Main performance testing client"""
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from src.adapters.performance.benchmark_runner import BenchmarkRunner
 from src.adapters.performance.load_test_runner import (
@@ -45,7 +45,7 @@ class PerformanceClient(IPerformanceClient):
         await client.close()
     """
 
-    def __init__(self, tool: str = "auto", http_client: Optional[Any] = None):
+    def __init__(self, tool: str = "auto", http_client: Any | None = None):
         """
         Initialize performance client.
 
@@ -55,7 +55,7 @@ class PerformanceClient(IPerformanceClient):
         """
         self.tool = tool
         self.http_client = http_client
-        self._load_runner: Optional[LoadTestRunner] = None
+        self._load_runner: LoadTestRunner | None = None
         self._benchmark_runner = BenchmarkRunner()
         self._metrics_collector = MetricsCollector()
         self._closed = False
@@ -103,7 +103,7 @@ class PerformanceClient(IPerformanceClient):
 
     async def load_test(
         self, target_url: str, users: int, duration: int, ramp_up: int = 0
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Execute a load test against a target URL.
 
@@ -130,7 +130,7 @@ class PerformanceClient(IPerformanceClient):
             target_url=target_url, users=users, duration=duration, ramp_up=ramp_up
         )
 
-    async def benchmark(self, target_url: str, requests: int) -> Dict[str, Any]:
+    async def benchmark(self, target_url: str, requests: int) -> dict[str, Any]:
         """
         Execute a benchmark test with fixed number of requests.
 
@@ -156,7 +156,7 @@ class PerformanceClient(IPerformanceClient):
 
     async def stress_test(
         self, target_url: str, start_users: int, max_users: int, step_users: int, step_duration: int
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Execute a stress test with gradually increasing load.
 
@@ -205,8 +205,8 @@ class PerformanceClient(IPerformanceClient):
         }
 
     async def run_comparison(
-        self, target_url: str, configs: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+        self, target_url: str, configs: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """
         Run multiple load tests and compare results.
 

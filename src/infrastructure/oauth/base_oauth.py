@@ -3,8 +3,8 @@
 import logging
 import os
 from abc import abstractmethod
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional, Set
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import httpx
 
@@ -18,35 +18,25 @@ logger = logging.getLogger(__name__)
 class OAuthError(Exception):
     """Base exception for OAuth errors."""
 
-    pass
-
 
 class OAuthConfigurationError(OAuthError):
     """Raised when OAuth provider is not properly configured."""
-
-    pass
 
 
 class OAuthExchangeError(OAuthError):
     """Raised when code exchange fails."""
 
-    pass
-
 
 class OAuthUserInfoError(OAuthError):
     """Raised when fetching user info fails."""
-
-    pass
 
 
 class OAuthRefreshError(OAuthError):
     """Raised when token refresh fails."""
 
-    pass
-
 
 # Default OAuth-specific allowed domains (extends the standard allowlist)
-OAUTH_ALLOWED_DOMAINS: Set[str] = DEFAULT_ALLOWED_DOMAINS | {
+OAUTH_ALLOWED_DOMAINS: set[str] = DEFAULT_ALLOWED_DOMAINS | {
     "accounts.google.com",
     "github.com",
     "api.github.com",
@@ -83,11 +73,11 @@ class BaseOAuthProvider(OAuthProvider):
 
     def __init__(
         self,
-        client_id: Optional[str] = None,
-        client_secret: Optional[str] = None,
-        redirect_uri: Optional[str] = None,
+        client_id: str | None = None,
+        client_secret: str | None = None,
+        redirect_uri: str | None = None,
         ssrf_enabled: bool = True,
-        allowed_domains: Optional[Set[str]] = None,
+        allowed_domains: set[str] | None = None,
     ):
         """Initialize OAuth provider with optional SSRF protection.
 
@@ -101,7 +91,7 @@ class BaseOAuthProvider(OAuthProvider):
         self._client_id = client_id
         self._client_secret = client_secret
         self._redirect_uri = redirect_uri
-        self._http_client: Optional[httpx.AsyncClient] = None
+        self._http_client: httpx.AsyncClient | None = None
         self._ssrf_enabled = ssrf_enabled
         self._allowed_domains = (
             allowed_domains if allowed_domains is not None else OAUTH_ALLOWED_DOMAINS
@@ -151,9 +141,9 @@ class BaseOAuthProvider(OAuthProvider):
         self,
         method: str,
         url: str,
-        headers: Optional[Dict[str, str]] = None,
-        data: Optional[Dict[str, Any]] = None,
-        json_data: Optional[Dict[str, Any]] = None,
+        headers: dict[str, str] | None = None,
+        data: dict[str, Any] | None = None,
+        json_data: dict[str, Any] | None = None,
     ) -> httpx.Response:
         """Make HTTP request with SSRF validation and error handling."""
         # SSRF protection: validate the target URL before making the request
@@ -176,7 +166,7 @@ class BaseOAuthProvider(OAuthProvider):
         except httpx.RequestError as e:
             raise OAuthError(f"HTTP request failed: {e}") from e
 
-    def _build_url(self, base_url: str, params: Dict[str, str]) -> str:
+    def _build_url(self, base_url: str, params: dict[str, str]) -> str:
         """Build URL with query parameters."""
         from urllib.parse import urlencode
 
@@ -184,12 +174,12 @@ class BaseOAuthProvider(OAuthProvider):
         separator = "&" if "?" in base_url else "?"
         return f"{base_url}{separator}{query}"
 
-    def _parse_token_response(self, data: Dict[str, Any]) -> Token:
+    def _parse_token_response(self, data: dict[str, Any]) -> Token:
         """Parse OAuth token response."""
         expires_in = data.get("expires_in")
         expires_at = None
         if expires_in:
-            expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
+            expires_at = datetime.now(UTC) + timedelta(seconds=expires_in)
 
         return Token(
             access_token=data["access_token"],
@@ -201,7 +191,7 @@ class BaseOAuthProvider(OAuthProvider):
     async def get_authorization_url(
         self,
         state: str,
-        redirect_uri: Optional[str] = None,
+        redirect_uri: str | None = None,
     ) -> str:
         """Get OAuth authorization URL."""
         if not self.is_configured():
@@ -219,7 +209,7 @@ class BaseOAuthProvider(OAuthProvider):
     async def exchange_code(
         self,
         code: str,
-        redirect_uri: Optional[str] = None,
+        redirect_uri: str | None = None,
     ) -> Token:
         """Exchange authorization code for token."""
         if not self.is_configured():
@@ -271,30 +261,25 @@ class BaseOAuthProvider(OAuthProvider):
     @abstractmethod
     def name(self) -> str:
         """Provider identifier."""
-        pass
 
     @property
     @abstractmethod
     def display_name(self) -> str:
         """Human-readable provider name."""
-        pass
 
     @property
     @abstractmethod
     def _authorization_url(self) -> str:
         """OAuth authorization endpoint URL."""
-        pass
 
     @property
     @abstractmethod
     def _token_url(self) -> str:
         """OAuth token endpoint URL."""
-        pass
 
     @abstractmethod
-    def _get_authorization_params(self, state: str, redirect_uri: str) -> Dict[str, str]:
+    def _get_authorization_params(self, state: str, redirect_uri: str) -> dict[str, str]:
         """Build authorization URL parameters."""
-        pass
 
     @abstractmethod
     async def _exchange_code_impl(
@@ -303,14 +288,11 @@ class BaseOAuthProvider(OAuthProvider):
         redirect_uri: str,
     ) -> httpx.Response:
         """Implement the actual token exchange HTTP call."""
-        pass
 
     @abstractmethod
     async def _refresh_token_impl(self, refresh_token: str) -> httpx.Response:
         """Implement the actual token refresh HTTP call."""
-        pass
 
     @abstractmethod
     async def get_user_info(self, token: Token) -> OAuthUser:
         """Fetch user info using the access token."""
-        pass

@@ -5,7 +5,7 @@ Provides a facade similar to SecurityClient for easy integration.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from src.adapters.vuln.nuclei_scanner import NucleiScanner
 from src.adapters.vuln.vuln_parser import UnifiedVulnParser, VulnScanResult
@@ -55,12 +55,12 @@ class VulnClient:
         target: str,
         use_nuclei: bool = True,
         use_wstg: bool = True,
-        nuclei_templates: Optional[List[str]] = None,
-        wstg_categories: Optional[List[str]] = None,
-        severity_filter: Optional[str] = None,
-        auth_token: Optional[str] = None,
+        nuclei_templates: list[str] | None = None,
+        wstg_categories: list[str] | None = None,
+        severity_filter: str | None = None,
+        auth_token: str | None = None,
         rate_limit: int = 150,
-        timeout: Optional[int] = None,
+        timeout: int | None = None,
     ) -> VulnScanResult:
         """Run a comprehensive web vulnerability scan.
 
@@ -130,10 +130,10 @@ class VulnClient:
     async def scan_network(
         self,
         target: str,
-        templates: Optional[List[str]] = None,
-        severity_filter: Optional[str] = None,
+        templates: list[str] | None = None,
+        severity_filter: str | None = None,
         rate_limit: int = 500,
-        timeout: Optional[int] = None,
+        timeout: int | None = None,
     ) -> VulnScanResult:
         """Run a network vulnerability scan.
 
@@ -162,7 +162,7 @@ class VulnClient:
         self,
         target: str,
         scanner: str = "nuclei",
-        templates: Optional[List[str]] = None,
+        templates: list[str] | None = None,
     ) -> VulnScanResult:
         """Run a scan using a single specified scanner.
 
@@ -182,8 +182,8 @@ class VulnClient:
             raise ValueError(f"Unknown scanner: {scanner}. Use 'nuclei' or 'wstg'.")
 
     def generate_report(
-        self, result: VulnScanResult, base_name: Optional[str] = None
-    ) -> Dict[str, str]:
+        self, result: VulnScanResult, base_name: str | None = None
+    ) -> dict[str, str]:
         """Generate vulnerability report in all formats.
 
         Args:
@@ -198,7 +198,7 @@ class VulnClient:
 
         return self._reporter.generate_all(result, base_name=base_name)
 
-    async def list_nuclei_templates(self) -> List[Dict[str, Any]]:
+    async def list_nuclei_templates(self) -> list[dict[str, Any]]:
         """List available Nuclei templates."""
         return await self._nuclei.list_templates()
 
@@ -206,7 +206,7 @@ class VulnClient:
         """Update Nuclei templates to latest."""
         return await self._nuclei.update_templates()
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Check health of all scanners.
 
         Returns:

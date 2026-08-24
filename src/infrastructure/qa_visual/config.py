@@ -11,7 +11,6 @@ never stored in this repository.
 """
 
 import os
-from typing import Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -38,7 +37,7 @@ class QAVisualConfig(BaseModel):
     model: str = Field(default=DEFAULT_MODEL, description="Vision model id (C4: overridable)")
     gateway_url: str = Field(default=DEFAULT_GATEWAY_URL)
     user_agent: str = Field(default=BROWSER_USER_AGENT)
-    api_key: Optional[str] = Field(default=None, description="From env only, never committed")
+    api_key: str | None = Field(default=None, description="From env only, never committed")
 
     # C1: thinking disabled by default for QA loops.
     thinking_enabled: bool = Field(default=False)

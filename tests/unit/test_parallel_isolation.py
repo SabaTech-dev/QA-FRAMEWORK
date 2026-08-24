@@ -12,7 +12,7 @@ Usage:
 
 import threading
 import time
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 
@@ -24,7 +24,7 @@ class TestParallelIsolation:
     def test_thread_safety_with_lock(
         self,
         resource_lock: threading.Lock,
-        isolated_test_data: Dict[str, Any],
+        isolated_test_data: dict[str, Any],
     ) -> None:
         """
         Test thread-safe operations using resource lock.
@@ -44,7 +44,7 @@ class TestParallelIsolation:
     @pytest.mark.parallel_safe
     def test_concurrent_counter_independence(
         self,
-        isolated_test_data: Dict[str, Any],
+        isolated_test_data: dict[str, Any],
     ) -> None:
         """
         Test that counters in different tests are independent.
@@ -70,7 +70,7 @@ class TestParallelIsolation:
     @pytest.mark.parallel_safe
     def test_process_isolation(
         self,
-        execution_context: Dict[str, Any],
+        execution_context: dict[str, Any],
     ) -> None:
         """
         Test process-level isolation in parallel execution.
@@ -137,7 +137,7 @@ class TestCompleteIsolation:
     @pytest.mark.skip(reason="Timing issues in full suite")
     def test_completely_isolated_1(
         self,
-        isolated_test_data: Dict[str, Any],
+        isolated_test_data: dict[str, Any],
         worker_temp_dir: Any,
     ) -> None:
         """
@@ -164,7 +164,7 @@ class TestCompleteIsolation:
     @pytest.mark.skip(reason="Timing issues in full suite")
     def test_completely_isolated_2(
         self,
-        isolated_test_data: Dict[str, Any],
+        isolated_test_data: dict[str, Any],
         worker_temp_dir: Any,
     ) -> None:
         """
@@ -248,7 +248,7 @@ class TestResourceCleanup:
     @pytest.mark.parallel_safe
     def test_resource_cleanup_on_success(
         self,
-        isolated_test_data: Dict[str, Any],
+        isolated_test_data: dict[str, Any],
     ) -> None:
         """
         Test that resources are cleaned up after test success.
@@ -268,7 +268,7 @@ class TestResourceCleanup:
     @pytest.mark.parallel_safe
     def test_resource_cleanup_verification(
         self,
-        isolated_test_data: Dict[str, Any],
+        isolated_test_data: dict[str, Any],
     ) -> None:
         """
         Verify previous test's resources were cleaned up.

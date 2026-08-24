@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class ConstraintType(Enum):
@@ -32,10 +32,10 @@ class IntegrityConstraint:
 
     constraint_type: ConstraintType
     column: str
-    reference_table: Optional[str] = None
-    reference_column: Optional[str] = None
-    condition: Optional[str] = None
-    error_message: Optional[str] = None
+    reference_table: str | None = None
+    reference_column: str | None = None
+    condition: str | None = None
+    error_message: str | None = None
 
 
 @dataclass
@@ -53,8 +53,8 @@ class IntegrityTestResult:
 
     constraint: IntegrityConstraint
     passed: bool
-    violations: List[Dict[str, Any]]
-    sample_violations: List[Dict[str, Any]]
+    violations: list[dict[str, Any]]
+    sample_violations: list[dict[str, Any]]
     total_records: int
 
     @property
@@ -105,11 +105,11 @@ class DataIntegrityTester:
             database_client: Database client with query execution capability
         """
         self.db = database_client
-        self._results: List[IntegrityTestResult] = []
+        self._results: list[IntegrityTestResult] = []
 
     async def test_data_integrity(
-        self, table: str, constraints: List[IntegrityConstraint]
-    ) -> Dict[str, Any]:
+        self, table: str, constraints: list[IntegrityConstraint]
+    ) -> dict[str, Any]:
         """
         Test data integrity constraints on a table.
 
@@ -405,7 +405,7 @@ class DataIntegrityTester:
         except Exception:
             return 0
 
-    def _get_recommendations(self, failed_tests: List[IntegrityTestResult]) -> List[str]:
+    def _get_recommendations(self, failed_tests: list[IntegrityTestResult]) -> list[str]:
         """Generate recommendations for failed tests."""
         if not failed_tests:
             return ["All data integrity constraints passed. Good job!"]
@@ -448,7 +448,7 @@ class DataIntegrityTester:
 
     async def check_orphan_records(
         self, table: str, column: str, reference_table: str, reference_column: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Check for orphan records in foreign key relationships.
 

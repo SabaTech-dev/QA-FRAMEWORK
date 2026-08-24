@@ -14,7 +14,7 @@ import hashlib
 import hmac
 import json
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -22,7 +22,7 @@ import pytest
 # Skip all tests in this file if stripe is not installed
 pytest.importorskip("stripe", reason="stripe not installed. Install with: pip install stripe")
 
-import stripe  # noqa: E402  # import tras setup de entorno
+import stripe  # import tras setup de entorno
 
 # Stripe test cards
 STRIPE_TEST_CARDS = {
@@ -91,8 +91,8 @@ def stripe_test_subscription():
         "id": "sub_test_e2e_123",
         "customer": "cus_test_e2e_123",
         "status": "active",
-        "current_period_start": int(datetime.now(timezone.utc).timestamp()),
-        "current_period_end": int(datetime.now(timezone.utc).timestamp()) + 2592000,  # +30 days
+        "current_period_start": int(datetime.now(UTC).timestamp()),
+        "current_period_end": int(datetime.now(UTC).timestamp()) + 2592000,  # +30 days
         "items": {
             "data": [
                 {"id": "si_test_123", "price": {"id": "price_pro_monthly", "product": "prod_pro"}}
@@ -170,8 +170,8 @@ def webhook_payload_subscription_updated():
                 "id": "sub_test_e2e_123",
                 "customer": "cus_test_e2e_123",
                 "status": "active",
-                "current_period_start": int(datetime.now(timezone.utc).timestamp()),
-                "current_period_end": int(datetime.now(timezone.utc).timestamp()) + 2592000,
+                "current_period_start": int(datetime.now(UTC).timestamp()),
+                "current_period_end": int(datetime.now(UTC).timestamp()) + 2592000,
             }
         },
     }

@@ -6,7 +6,6 @@ AI-powered selector healing that automatically repairs broken selectors.
 
 import asyncio
 import time
-from typing import List, Optional
 
 from src.domain.self_healing.entities import HealingResult, Selector
 from src.domain.self_healing.interfaces import (
@@ -35,7 +34,7 @@ class SelectorHealer:
         confidence_scorer: IConfidenceScorer,
         selector_generator: ISelectorGenerator,
         page_analyzer: IPageAnalyzer,
-        selector_repository: Optional[ISelectorRepository] = None,
+        selector_repository: ISelectorRepository | None = None,
         max_attempts: int = 5,
         min_confidence: float = 0.5,
     ):
@@ -124,7 +123,7 @@ class SelectorHealer:
         self,
         broken_selector: Selector,
         context: HealingContext,
-    ) -> tuple[Optional[Selector], float, int]:
+    ) -> tuple[Selector | None, float, int]:
         """Try existing alternative selectors."""
         best_selector = None
         best_confidence = 0.0
@@ -151,7 +150,7 @@ class SelectorHealer:
         self,
         broken_selector: Selector,
         context: HealingContext,
-    ) -> tuple[Optional[Selector], float, int]:
+    ) -> tuple[Selector | None, float, int]:
         """Generate and evaluate new candidate selectors."""
         # Generate from attributes
         attr_candidates = self.selector_generator.generate_from_attributes(
@@ -188,7 +187,7 @@ class SelectorHealer:
         self,
         broken_selector: Selector,
         context: HealingContext,
-    ) -> tuple[Optional[Selector], float, int]:
+    ) -> tuple[Selector | None, float, int]:
         """Try generating composite selectors."""
         # Get similar elements from page
         similar = self.page_analyzer.find_similar_elements(context)
@@ -224,9 +223,9 @@ class SelectorHealer:
 
     def batch_heal(
         self,
-        selectors: List[Selector],
+        selectors: list[Selector],
         context_factory: callable,
-    ) -> List[HealingResult]:
+    ) -> list[HealingResult]:
         """
         Heal multiple selectors in batch.
 

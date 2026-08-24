@@ -2,8 +2,9 @@
 
 import asyncio
 import time
-from datetime import datetime, timedelta, timezone
-from typing import Any, Callable, Dict, List, Optional
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from src.infrastructure.health.checks import (
     check_database_health,
@@ -63,7 +64,7 @@ class HealthChecker:
         print(f"Overall status: {status.overall_status}")
     """
 
-    def __init__(self, config: Optional[HealthCheckConfig] = None):
+    def __init__(self, config: HealthCheckConfig | None = None):
         """
         Initialize health checker.
 
@@ -74,15 +75,15 @@ class HealthChecker:
         self.logger = QALogger.get_logger("health-checker")
 
         # Registered health checks
-        self._database_checks: Dict[str, DatabaseHealthCheckConfig] = {}
-        self._redis_checks: Dict[str, RedisHealthCheckConfig] = {}
-        self._external_api_checks: Dict[str, ExternalAPIHealthCheckConfig] = {}
-        self._internal_service_checks: Dict[str, InternalServiceHealthCheckConfig] = {}
-        self._custom_checks: Dict[str, Callable[[], HealthCheckResult]] = {}
+        self._database_checks: dict[str, DatabaseHealthCheckConfig] = {}
+        self._redis_checks: dict[str, RedisHealthCheckConfig] = {}
+        self._external_api_checks: dict[str, ExternalAPIHealthCheckConfig] = {}
+        self._internal_service_checks: dict[str, InternalServiceHealthCheckConfig] = {}
+        self._custom_checks: dict[str, Callable[[], HealthCheckResult]] = {}
 
         # Cached results
-        self._cached_results: Optional[AggregatedHealthStatus] = None
-        self._cache_timestamp: Optional[datetime] = None
+        self._cached_results: AggregatedHealthStatus | None = None
+        self._cache_timestamp: datetime | None = None
 
     def add_database_check(
         self,
@@ -116,7 +117,7 @@ class HealthChecker:
         name: str,
         host: str = "localhost",
         port: int = 6379,
-        password: Optional[str] = None,
+        password: str | None = None,
         db: int = 0,
     ) -> "HealthChecker":
         """
@@ -146,8 +147,8 @@ class HealthChecker:
         name: str,
         url: str,
         method: str = "GET",
-        expected_status_codes: Optional[List[int]] = None,
-        headers: Optional[Dict[str, str]] = None,
+        expected_status_codes: list[int] | None = None,
+        headers: dict[str, str] | None = None,
         timeout_seconds: float = 10.0,
         required: bool = True,
     ) -> "HealthChecker":
@@ -339,7 +340,7 @@ class HealthChecker:
                     results.append(e)
 
         # Process results
-        health_results: List[HealthCheckResult] = []
+        health_results: list[HealthCheckResult] = []
         for name, result in zip(check_names, results):
             if isinstance(result, Exception):
                 health_results.append(
@@ -364,14 +365,14 @@ class HealthChecker:
         # Create aggregated status
         aggregated = AggregatedHealthStatus(
             overall_status=overall_status,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             checks=health_results,
             summary=summary,
         )
 
         # Cache results
         self._cached_results = aggregated
-        self._cache_timestamp = datetime.now(timezone.utc)
+        self._cache_timestamp = datetime.now(UTC)
 
         self.logger.info(
             f"Health checks completed: {overall_status} "
@@ -382,7 +383,7 @@ class HealthChecker:
 
     async def _run_with_retry(self, check_func: Callable, *args, **kwargs) -> HealthCheckResult:
         """Run a health check with retry logic."""
-        last_error: Optional[Exception] = None
+        last_error: Exception | None = None
 
         for attempt in range(self.config.retry_count):
             try:
@@ -427,12 +428,12 @@ class HealthChecker:
         if self._cached_results is None or self._cache_timestamp is None:
             return False
 
-        cache_age = datetime.now(timezone.utc) - self._cache_timestamp
+        cache_age = datetime.now(UTC) - self._cache_timestamp
         return cache_age < timedelta(seconds=self.config.cache_results_seconds)
 
     def _calculate_overall_status(
         self,
-        results: List[HealthCheckResult],
+        results: list[HealthCheckResult],
     ) -> HealthStatus:
         """Calculate overall health status from individual results."""
         if not results:
@@ -460,9 +461,9 @@ class HealthChecker:
 
     def _build_summary(
         self,
-        results: List[HealthCheckResult],
+        results: list[HealthCheckResult],
         total_time: float,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Build summary statistics from results."""
         status_counts = {
             HealthStatus.HEALTHY: 0,
@@ -472,7 +473,7 @@ class HealthChecker:
         }
 
         total_response_time = 0.0
-        services_by_type: Dict[str, List[str]] = {}
+        services_by_type: dict[str, list[str]] = {}
 
         for result in results:
             status_counts[result.status] += 1
@@ -502,7 +503,7 @@ class HealthChecker:
             "services_by_type": services_by_type,
         }
 
-    def get_registered_checks(self) -> Dict[str, List[str]]:
+    def get_registered_checks(self) -> dict[str, list[str]]:
         """Get list of all registered health checks."""
         return {
             "database": list(self._database_checks.keys()),
@@ -520,7 +521,7 @@ class HealthChecker:
 
 
 # Singleton instance for convenience
-_default_health_checker: Optional[HealthChecker] = None
+_default_health_checker: HealthChecker | None = None
 
 
 def get_health_checker() -> HealthChecker:

@@ -5,8 +5,8 @@ Provides fixtures for the framework core components including test runners,
 adapters, and result entities.
 """
 
-from datetime import datetime, timezone
-from typing import Any, Dict, List
+from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -32,7 +32,7 @@ def test_result_factory():
             duration=kwargs.get("duration", 1.5),
             error_message=kwargs.get("error_message", None),
             metadata=kwargs.get("metadata", {}),
-            timestamp=kwargs.get("timestamp", datetime.now(timezone.utc)),
+            timestamp=kwargs.get("timestamp", datetime.now(UTC)),
             suite_id=kwargs.get("suite_id", 1),
             case_id=kwargs.get("case_id", 1),
         )
@@ -108,7 +108,7 @@ def mock_http_adapter():
         instance.request = AsyncMock(
             return_value={"status_code": 200, "json": {"success": True}, "text": "OK"}
         )
-        instance.get = AsyncMock(return_value={"status_code": 200, "json": lambda: {}})
+        instance.get = AsyncMock(return_value={"status_code": 200, "json": dict})
         instance.post = AsyncMock(return_value={"status_code": 201, "json": lambda: {"id": 1}})
         instance.close = AsyncMock()
         yield instance
@@ -232,7 +232,7 @@ def execution_context():
         "execution_id": "exec_001",
         "suite_id": 1,
         "environment": "test",
-        "start_time": datetime.now(timezone.utc),
+        "start_time": datetime.now(UTC),
         "user_id": "user_001",
         "parameters": {"parallel": False, "timeout": 300},
     }
@@ -247,16 +247,16 @@ def framework_event_stream():
         def __init__(self):
             self.events = events
 
-        def add_event(self, event_type: str, data: Dict[str, Any]):
+        def add_event(self, event_type: str, data: dict[str, Any]):
             self.events.append(
                 {
                     "type": event_type,
                     "data": data,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 }
             )
 
-        def get_events(self) -> List[Dict]:
+        def get_events(self) -> list[dict]:
             return self.events
 
         def clear(self):
@@ -275,4 +275,3 @@ def cleanup_framework_state():
     """Cleanup framework state after each test."""
     yield
     # Cleanup any global state
-    pass

@@ -4,7 +4,7 @@ Confidence Scorer Implementation
 Calculates confidence scores for selector candidates based on multiple factors.
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 from src.domain.self_healing.entities import Selector
 from src.domain.self_healing.value_objects import HealingContext, SelectorType
@@ -39,7 +39,7 @@ class ConfidenceScorer:
 
     def __init__(
         self,
-        type_weights: Dict[SelectorType, float] = None,
+        type_weights: dict[SelectorType, float] = None,
         specificity_weight: float = 0.25,
         history_weight: float = 0.35,
         context_weight: float = 0.20,
@@ -99,9 +99,9 @@ class ConfidenceScorer:
 
     def score_candidates(
         self,
-        selectors: List[Selector],
+        selectors: list[Selector],
         context: HealingContext,
-    ) -> List[tuple]:
+    ) -> list[tuple]:
         """
         Score multiple candidates and return sorted by score.
 
@@ -257,7 +257,7 @@ class AIConfidenceScorer(ConfidenceScorer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._learning_data: Dict[str, Any] = {}
+        self._learning_data: dict[str, Any] = {}
 
     def record_outcome(
         self,

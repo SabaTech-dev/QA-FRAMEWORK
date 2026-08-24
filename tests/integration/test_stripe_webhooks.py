@@ -19,8 +19,8 @@ import hashlib
 import hmac
 import json
 import time
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from unittest.mock import Mock
 
 import pytest
@@ -33,13 +33,9 @@ import pytest
 class MockStripeSignatureVerificationError(Exception):
     """Mock Stripe SignatureVerificationError."""
 
-    pass
-
 
 class MockStripeValueError(Exception):
     """Mock Stripe ValueError."""
-
-    pass
 
 
 # ============================================================================
@@ -60,8 +56,8 @@ class StripeWebhookGenerator:
         amount: int = 9900,  # in cents
         currency: str = "usd",
         status: str = "succeeded",
-        timestamp: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        timestamp: int | None = None,
+    ) -> dict[str, Any]:
         """
         Generate a Stripe webhook event payload.
 
@@ -290,8 +286,8 @@ class MockUser:
         self.subscription_status = "active"
         self.stripe_customer_id = None
         self.stripe_subscription_id = None
-        self.subscription_current_period_start = datetime.now(timezone.utc)
-        self.subscription_current_period_end = datetime.now(timezone.utc) + timedelta(days=30)
+        self.subscription_current_period_start = datetime.now(UTC)
+        self.subscription_current_period_end = datetime.now(UTC) + timedelta(days=30)
         self.tenant_id = None
 
     def to_dict(self):
@@ -330,7 +326,6 @@ class MockAsyncSession:
 
     async def refresh(self, obj):
         """Mock refresh."""
-        pass
 
 
 # ============================================================================
@@ -463,7 +458,7 @@ class TestTimestampTolerance:
     def test_accept_recent_timestamp(self, webhook_generator, webhook_secret):
         """Should accept webhook with recent timestamp (< 5 minutes)."""
         # Generate event with timestamp 2 minutes ago
-        recent_timestamp = int((datetime.now(timezone.utc) - timedelta(minutes=2)).timestamp())
+        recent_timestamp = int((datetime.now(UTC) - timedelta(minutes=2)).timestamp())
 
         event = webhook_generator.generate_event(
             "invoice.payment_succeeded", timestamp=recent_timestamp, amount=9900
@@ -479,7 +474,7 @@ class TestTimestampTolerance:
     def test_reject_old_timestamp(self, webhook_generator, webhook_secret):
         """Should reject webhook with old timestamp (> 5 minutes)."""
         # Generate event with timestamp 10 minutes ago
-        old_timestamp = int((datetime.now(timezone.utc) - timedelta(minutes=10)).timestamp())
+        old_timestamp = int((datetime.now(UTC) - timedelta(minutes=10)).timestamp())
 
         event = webhook_generator.generate_event(
             "invoice.payment_succeeded", timestamp=old_timestamp, amount=9900
@@ -497,7 +492,7 @@ class TestTimestampTolerance:
     def test_reject_future_timestamp(self, webhook_generator, webhook_secret):
         """Should reject webhook with future timestamp."""
         # Generate event with timestamp 10 minutes in future
-        future_timestamp = int((datetime.now(timezone.utc) + timedelta(minutes=10)).timestamp())
+        future_timestamp = int((datetime.now(UTC) + timedelta(minutes=10)).timestamp())
 
         event = webhook_generator.generate_event(
             "invoice.payment_succeeded", timestamp=future_timestamp, amount=9900
@@ -515,7 +510,7 @@ class TestTimestampTolerance:
     def test_exactly_five_minutes_boundary(self, webhook_generator, webhook_secret):
         """Test boundary case: exactly 5 minutes old."""
         # Generate event with timestamp exactly 5 minutes ago
-        boundary_timestamp = int((datetime.now(timezone.utc) - timedelta(minutes=5)).timestamp())
+        boundary_timestamp = int((datetime.now(UTC) - timedelta(minutes=5)).timestamp())
 
         event = webhook_generator.generate_event(
             "invoice.payment_succeeded", timestamp=boundary_timestamp, amount=9900

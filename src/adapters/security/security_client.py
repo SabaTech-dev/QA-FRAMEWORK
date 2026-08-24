@@ -1,6 +1,6 @@
 """Main security testing client"""
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from src.adapters.security.auth_tester import AuthTester
 from src.adapters.security.rate_limit_tester import RateLimitTester
@@ -59,7 +59,7 @@ class SecurityClient(ISecurityClient):
 
     async def test_sql_injection(
         self, target_url: str, parameter: str, method: str = "GET"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Test for SQL injection vulnerabilities.
 
@@ -80,7 +80,7 @@ class SecurityClient(ISecurityClient):
 
     async def test_xss(
         self, target_url: str, parameter: str, method: str = "GET"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Test for Cross-Site Scripting (XSS) vulnerabilities.
 
@@ -99,7 +99,7 @@ class SecurityClient(ISecurityClient):
             http_client=self.http_client, target_url=target_url, parameter=parameter, method=method
         )
 
-    async def test_authentication(self, target_url: str, test_cases: list) -> Dict[str, Any]:
+    async def test_authentication(self, target_url: str, test_cases: list) -> dict[str, Any]:
         """
         Test authentication mechanisms.
 
@@ -119,7 +119,7 @@ class SecurityClient(ISecurityClient):
 
     async def test_common_credentials(
         self, login_url: str, username_field: str = "username", password_field: str = "password"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Test for common/default credentials.
 
@@ -143,7 +143,7 @@ class SecurityClient(ISecurityClient):
 
     async def test_brute_force_protection(
         self, login_url: str, valid_username: str, attempts: int = 10
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Test for brute force protection.
 
@@ -167,7 +167,7 @@ class SecurityClient(ISecurityClient):
 
     async def test_rate_limiting(
         self, target_url: str, requests_count: int, time_window: int
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Test rate limiting implementation.
 
@@ -189,7 +189,7 @@ class SecurityClient(ISecurityClient):
             time_window=time_window,
         )
 
-    async def test_security_headers(self, target_url: str) -> Dict[str, Any]:
+    async def test_security_headers(self, target_url: str) -> dict[str, Any]:
         """
         Test for security headers presence and configuration.
 
@@ -298,8 +298,8 @@ class SecurityClient(ISecurityClient):
             }
 
     async def run_full_security_scan(
-        self, target_url: str, parameters: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
+        self, target_url: str, parameters: list[str] | None = None
+    ) -> dict[str, Any]:
         """
         Run a comprehensive security scan.
 
@@ -310,7 +310,7 @@ class SecurityClient(ISecurityClient):
         Returns:
             Dictionary with complete security scan results
         """
-        results: Dict[str, Any] = {
+        results: dict[str, Any] = {
             "target_url": target_url,
             "scan_timestamp": None,  # Would be datetime.now()
             "tests": {},
@@ -358,7 +358,7 @@ class SecurityClient(ISecurityClient):
         else:
             return "F"
 
-    def _get_header_recommendations(self, missing_required: List[str]) -> List[str]:
+    def _get_header_recommendations(self, missing_required: list[str]) -> list[str]:
         """Generate recommendations for missing headers."""
         if not missing_required:
             return ["All required security headers are present. Good job!"]

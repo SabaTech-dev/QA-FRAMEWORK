@@ -63,8 +63,7 @@ from src.infrastructure.shutdown.models import (  # Enums; Data classes
     ShutdownResult,
     ShutdownStatus,
 )
-from src.infrastructure.shutdown.shutdown_manager import shutdown_manager  # Global instance
-from src.infrastructure.shutdown.shutdown_manager import ShutdownManager
+from src.infrastructure.shutdown.shutdown_manager import ShutdownManager, shutdown_manager
 from src.infrastructure.shutdown.standalone import (
     BackgroundTaskManager,
     StandaloneShutdown,

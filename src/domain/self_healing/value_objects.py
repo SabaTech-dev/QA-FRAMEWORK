@@ -5,9 +5,8 @@ Defines the core value objects used in the self-healing system.
 """
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Optional
 
 
 class SelectorType(str, Enum):
@@ -62,10 +61,10 @@ class SelectorMetadata:
     """Immutable metadata about a selector."""
 
     created_at: datetime
-    updated_at: Optional[datetime]
+    updated_at: datetime | None
     usage_count: int
     success_rate: float
-    last_successful: Optional[datetime]
+    last_successful: datetime | None
     source: str  # 'manual', 'generated', 'healed'
 
     def with_update(self, success: bool) -> "SelectorMetadata":
@@ -76,10 +75,10 @@ class SelectorMetadata:
         ) / new_count
         return SelectorMetadata(
             created_at=self.created_at,
-            updated_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(UTC),
             usage_count=new_count,
             success_rate=new_success_rate,
-            last_successful=datetime.now(timezone.utc) if success else self.last_successful,
+            last_successful=datetime.now(UTC) if success else self.last_successful,
             source=self.source,
         )
 
@@ -89,12 +88,12 @@ class HealingContext:
     """Context information for a healing operation."""
 
     page_url: str
-    page_title: Optional[str]
-    screenshot_path: Optional[str]
-    html_snapshot: Optional[str]
-    surrounding_text: Optional[str]
+    page_title: str | None
+    screenshot_path: str | None
+    html_snapshot: str | None
+    surrounding_text: str | None
     element_attributes: dict
-    parent_selector: Optional[str]
+    parent_selector: str | None
     sibling_selectors: list
 
     @classmethod

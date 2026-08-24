@@ -14,7 +14,6 @@ core and the Dashboard backend, including:
 import asyncio
 import json
 import time
-from typing import List
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -44,7 +43,7 @@ class TestFrameworkToDashboardIntegration:
         4. Dashboard displays results correctly
         """
         # Arrange: Create test results from framework
-        results: List[TestResult] = [
+        results: list[TestResult] = [
             test_result_factory(
                 test_id="test_001", test_name="Test Login", status=TestStatus.PASSED, duration=1.5
             ),

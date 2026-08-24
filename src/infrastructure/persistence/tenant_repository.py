@@ -7,7 +7,6 @@ This module provides:
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Optional
 from uuid import UUID
 
 from src.domain.entities.tenant import Tenant, TenantPlan, TenantStatus
@@ -32,10 +31,9 @@ class TenantRepositoryInterface(ABC):
         Returns:
             Created tenant with generated ID
         """
-        pass
 
     @abstractmethod
-    async def get_by_id(self, tenant_id: UUID) -> Optional[Tenant]:
+    async def get_by_id(self, tenant_id: UUID) -> Tenant | None:
         """
         Get tenant by ID.
 
@@ -45,10 +43,9 @@ class TenantRepositoryInterface(ABC):
         Returns:
             Tenant if found, None otherwise
         """
-        pass
 
     @abstractmethod
-    async def get_by_slug(self, slug: str) -> Optional[Tenant]:
+    async def get_by_slug(self, slug: str) -> Tenant | None:
         """
         Get tenant by slug (URL-friendly identifier).
 
@@ -58,7 +55,6 @@ class TenantRepositoryInterface(ABC):
         Returns:
             Tenant if found, None otherwise
         """
-        pass
 
     @abstractmethod
     async def update(self, tenant: Tenant) -> Tenant:
@@ -71,7 +67,6 @@ class TenantRepositoryInterface(ABC):
         Returns:
             Updated tenant
         """
-        pass
 
     @abstractmethod
     async def delete(self, tenant_id: UUID) -> bool:
@@ -84,10 +79,9 @@ class TenantRepositoryInterface(ABC):
         Returns:
             True if deleted, False if not found
         """
-        pass
 
     @abstractmethod
-    async def list_all(self, skip: int = 0, limit: int = 100) -> List[Tenant]:
+    async def list_all(self, skip: int = 0, limit: int = 100) -> list[Tenant]:
         """
         List all tenants with pagination.
 
@@ -98,10 +92,9 @@ class TenantRepositoryInterface(ABC):
         Returns:
             List of tenants
         """
-        pass
 
     @abstractmethod
-    async def find_by_status(self, status: TenantStatus) -> List[Tenant]:
+    async def find_by_status(self, status: TenantStatus) -> list[Tenant]:
         """
         Find tenants by status.
 
@@ -111,7 +104,6 @@ class TenantRepositoryInterface(ABC):
         Returns:
             List of tenants with matching status
         """
-        pass
 
 
 class SQLAlchemyTenantRepository(TenantRepositoryInterface):
@@ -152,7 +144,7 @@ class SQLAlchemyTenantRepository(TenantRepositoryInterface):
 
         return self._map_to_entity(db_tenant)
 
-    async def get_by_id(self, tenant_id: UUID) -> Optional[Tenant]:
+    async def get_by_id(self, tenant_id: UUID) -> Tenant | None:
         """Get tenant by ID from database"""
         from sqlalchemy import select
 
@@ -167,7 +159,7 @@ class SQLAlchemyTenantRepository(TenantRepositoryInterface):
 
         return self._map_to_entity(db_tenant)
 
-    async def get_by_slug(self, slug: str) -> Optional[Tenant]:
+    async def get_by_slug(self, slug: str) -> Tenant | None:
         """Get tenant by slug from database"""
         from sqlalchemy import select
 
@@ -226,7 +218,7 @@ class SQLAlchemyTenantRepository(TenantRepositoryInterface):
 
         return True
 
-    async def list_all(self, skip: int = 0, limit: int = 100) -> List[Tenant]:
+    async def list_all(self, skip: int = 0, limit: int = 100) -> list[Tenant]:
         """List all tenants with pagination"""
         from sqlalchemy import select
 
@@ -238,7 +230,7 @@ class SQLAlchemyTenantRepository(TenantRepositoryInterface):
 
         return [self._map_to_entity(db_tenant) for db_tenant in db_tenants]
 
-    async def find_by_status(self, status: TenantStatus) -> List[Tenant]:
+    async def find_by_status(self, status: TenantStatus) -> list[Tenant]:
         """Find tenants by status"""
         from sqlalchemy import select
 
@@ -289,11 +281,11 @@ class InMemoryTenantRepository(TenantRepositoryInterface):
         self._tenants[tenant.id] = tenant
         return tenant
 
-    async def get_by_id(self, tenant_id: UUID) -> Optional[Tenant]:
+    async def get_by_id(self, tenant_id: UUID) -> Tenant | None:
         """Get tenant from memory by ID"""
         return self._tenants.get(tenant_id)
 
-    async def get_by_slug(self, slug: str) -> Optional[Tenant]:
+    async def get_by_slug(self, slug: str) -> Tenant | None:
         """Get tenant from memory by slug"""
         for tenant in self._tenants.values():
             if tenant.slug == slug:
@@ -314,11 +306,11 @@ class InMemoryTenantRepository(TenantRepositoryInterface):
         del self._tenants[tenant_id]
         return True
 
-    async def list_all(self, skip: int = 0, limit: int = 100) -> List[Tenant]:
+    async def list_all(self, skip: int = 0, limit: int = 100) -> list[Tenant]:
         """List all tenants from memory with pagination"""
         tenants = list(self._tenants.values())
         return tenants[skip : skip + limit]
 
-    async def find_by_status(self, status: TenantStatus) -> List[Tenant]:
+    async def find_by_status(self, status: TenantStatus) -> list[Tenant]:
         """Find tenants by status in memory"""
         return [t for t in self._tenants.values() if t.status == status]

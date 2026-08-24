@@ -14,7 +14,7 @@ import logging
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +102,7 @@ class VulnCategory(str, Enum):
     UNKNOWN = "unknown"
 
     @classmethod
-    def from_nuclei_template(cls, template_name: str, tags: List[str]) -> "VulnCategory":
+    def from_nuclei_template(cls, template_name: str, tags: list[str]) -> "VulnCategory":
         """Map Nuclei template info to a vulnerability category."""
         template_lower = template_name.lower()
         tags_lower = [t.lower() for t in tags]
@@ -165,33 +165,33 @@ class VulnerabilityFinding:
     target: str  # URL or IP
 
     # Location (optional)
-    endpoint: Optional[str] = None  # Specific path or parameter
-    method: Optional[str] = None  # HTTP method if applicable
-    port: Optional[int] = None
+    endpoint: str | None = None  # Specific path or parameter
+    method: str | None = None  # HTTP method if applicable
+    port: int | None = None
 
     # Source details
-    template_name: Optional[str] = None
-    template_id: Optional[str] = None
+    template_name: str | None = None
+    template_id: str | None = None
 
     # Evidence
-    evidence: Optional[str] = None  # Proof of vulnerability
-    request: Optional[str] = None  # HTTP request used
-    response: Optional[str] = None  # HTTP response received
-    curl_command: Optional[str] = None
+    evidence: str | None = None  # Proof of vulnerability
+    request: str | None = None  # HTTP request used
+    response: str | None = None  # HTTP response received
+    curl_command: str | None = None
 
     # Remediation
-    remediation: Optional[str] = None
-    references: List[str] = field(default_factory=list)
-    cve_id: Optional[str] = None
-    cwe_id: Optional[str] = None
-    cvss_score: Optional[float] = None
+    remediation: str | None = None
+    references: list[str] = field(default_factory=list)
+    cve_id: str | None = None
+    cwe_id: str | None = None
+    cvss_score: float | None = None
 
     # Metadata
-    raw_data: Optional[Dict[str, Any]] = None
-    tags: List[str] = field(default_factory=list)
+    raw_data: dict[str, Any] | None = None
+    tags: list[str] = field(default_factory=list)
     timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         result = {}
         for k, v in asdict(self).items():
@@ -213,16 +213,16 @@ class VulnScanResult:
     start_time: str
     end_time: str
     duration_seconds: float
-    findings: List[VulnerabilityFinding] = field(default_factory=list)
+    findings: list[VulnerabilityFinding] = field(default_factory=list)
     total_findings: int = 0
     critical_count: int = 0
     high_count: int = 0
     medium_count: int = 0
     low_count: int = 0
     info_count: int = 0
-    raw_output: Optional[str] = None
-    error: Optional[str] = None
-    scan_metadata: Dict[str, Any] = field(default_factory=dict)
+    raw_output: str | None = None
+    error: str | None = None
+    scan_metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         """Auto-calculate counts from findings."""
@@ -242,7 +242,7 @@ class VulnScanResult:
         self.findings.append(finding)
         self._recalc_counts()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         result = {
             "scan_id": self.scan_id,
@@ -267,11 +267,11 @@ class VulnScanResult:
             result["error"] = self.error
         return result
 
-    def get_findings_by_severity(self, severity: VulnSeverity) -> List[VulnerabilityFinding]:
+    def get_findings_by_severity(self, severity: VulnSeverity) -> list[VulnerabilityFinding]:
         """Get findings filtered by severity level."""
         return [f for f in self.findings if f.severity == severity]
 
-    def get_findings_by_category(self, category: VulnCategory) -> List[VulnerabilityFinding]:
+    def get_findings_by_category(self, category: VulnCategory) -> list[VulnerabilityFinding]:
         """Get findings filtered by category."""
         return [f for f in self.findings if f.category == category]
 
@@ -281,7 +281,7 @@ class UnifiedVulnParser:
 
     @staticmethod
     def parse_nuclei_json(
-        json_data: Union[str, List[Dict], Dict],
+        json_data: str | list[dict] | dict,
         scan_id: str,
         target: str,
         scan_type: str = "web",
@@ -428,7 +428,7 @@ class UnifiedVulnParser:
 
     @staticmethod
     def parse_wstg_json(
-        json_data: Union[str, List[Dict], Dict],
+        json_data: str | list[dict] | dict,
         scan_id: str,
         target: str,
         scan_type: str = "web",
@@ -569,7 +569,7 @@ class UnifiedVulnParser:
         return VulnCategory.UNKNOWN
 
     @staticmethod
-    def merge_results(results: List[VulnScanResult]) -> VulnScanResult:
+    def merge_results(results: list[VulnScanResult]) -> VulnScanResult:
         """Merge multiple scan results into one combined result.
 
         Useful for combining Nuclei + WSTG results.
@@ -608,7 +608,7 @@ class UnifiedVulnParser:
         return merged
 
     @staticmethod
-    def to_owasp_format(result: VulnScanResult) -> Dict[str, Any]:
+    def to_owasp_format(result: VulnScanResult) -> dict[str, Any]:
         """Convert to OWASP Risk Rating format.
 
         Suitable for generating OWASP-compatible reports.

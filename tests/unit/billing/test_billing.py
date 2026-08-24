@@ -6,9 +6,8 @@ Tests for billing entities, services, and Stripe integration.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import List, Optional
 from uuid import uuid4
 
 import pytest
@@ -46,7 +45,7 @@ class MockPlan:
     name: str
     price: int  # in cents
     interval: str = "month"
-    features: List[str] = field(default_factory=list)
+    features: list[str] = field(default_factory=list)
 
     def to_dict(self):
         return {
@@ -66,11 +65,11 @@ class MockSubscription:
     user_id: str = ""
     plan_id: str = "free"
     status: SubscriptionStatus = SubscriptionStatus.ACTIVE
-    stripe_subscription_id: Optional[str] = None
-    stripe_customer_id: Optional[str] = None
+    stripe_subscription_id: str | None = None
+    stripe_customer_id: str | None = None
     current_period_start: datetime = field(default_factory=datetime.utcnow)
     current_period_end: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc) + timedelta(days=30)
+        default_factory=lambda: datetime.now(UTC) + timedelta(days=30)
     )
     cancel_at_period_end: bool = False
     created_at: datetime = field(default_factory=datetime.utcnow)
@@ -100,12 +99,12 @@ class MockInvoice:
 
     id: str = field(default_factory=lambda: str(uuid4()))
     user_id: str = ""
-    subscription_id: Optional[str] = None
+    subscription_id: str | None = None
     amount: int = 0  # in cents
     currency: str = "usd"
     status: str = "draft"
-    stripe_invoice_id: Optional[str] = None
-    paid_at: Optional[datetime] = None
+    stripe_invoice_id: str | None = None
+    paid_at: datetime | None = None
     created_at: datetime = field(default_factory=datetime.utcnow)
 
     def is_paid(self) -> bool:
@@ -130,12 +129,12 @@ class MockPaymentMethod:
 
     id: str = field(default_factory=lambda: str(uuid4()))
     user_id: str = ""
-    stripe_payment_method_id: Optional[str] = None
+    stripe_payment_method_id: str | None = None
     type: str = "card"
-    last4: Optional[str] = None
-    brand: Optional[str] = None
-    exp_month: Optional[int] = None
-    exp_year: Optional[int] = None
+    last4: str | None = None
+    brand: str | None = None
+    exp_month: int | None = None
+    exp_year: int | None = None
     is_default: bool = False
     created_at: datetime = field(default_factory=datetime.utcnow)
 
@@ -192,11 +191,11 @@ class MockBillingService:
         self.invoices: dict = {}
         self.payment_methods: dict = {}
 
-    def get_plan(self, plan_id: str) -> Optional[MockPlan]:
+    def get_plan(self, plan_id: str) -> MockPlan | None:
         """Get a plan by ID."""
         return self.PLANS.get(plan_id)
 
-    def list_plans(self) -> List[MockPlan]:
+    def list_plans(self) -> list[MockPlan]:
         """List all available plans."""
         return list(self.PLANS.values())
 
@@ -204,7 +203,7 @@ class MockBillingService:
         self,
         user_id: str,
         plan_id: str,
-        stripe_customer_id: Optional[str] = None,
+        stripe_customer_id: str | None = None,
     ) -> MockSubscription:
         """Create a new subscription."""
         subscription = MockSubscription(
@@ -216,34 +215,34 @@ class MockBillingService:
         self.subscriptions[subscription.id] = subscription
         return subscription
 
-    def get_subscription(self, user_id: str) -> Optional[MockSubscription]:
+    def get_subscription(self, user_id: str) -> MockSubscription | None:
         """Get subscription for a user."""
         for sub in self.subscriptions.values():
             if sub.user_id == user_id:
                 return sub
         return None
 
-    def cancel_subscription(self, user_id: str) -> Optional[MockSubscription]:
+    def cancel_subscription(self, user_id: str) -> MockSubscription | None:
         """Cancel a subscription."""
         sub = self.get_subscription(user_id)
         if sub:
             sub.cancel_at_period_end = True
-            sub.updated_at = datetime.now(timezone.utc)
+            sub.updated_at = datetime.now(UTC)
         return sub
 
-    def update_subscription(self, user_id: str, new_plan_id: str) -> Optional[MockSubscription]:
+    def update_subscription(self, user_id: str, new_plan_id: str) -> MockSubscription | None:
         """Update subscription plan."""
         sub = self.get_subscription(user_id)
         if sub:
             sub.plan_id = new_plan_id
-            sub.updated_at = datetime.now(timezone.utc)
+            sub.updated_at = datetime.now(UTC)
         return sub
 
     def create_invoice(
         self,
         user_id: str,
         amount: int,
-        subscription_id: Optional[str] = None,
+        subscription_id: str | None = None,
     ) -> MockInvoice:
         """Create an invoice."""
         invoice = MockInvoice(
@@ -254,12 +253,12 @@ class MockBillingService:
         self.invoices[invoice.id] = invoice
         return invoice
 
-    def pay_invoice(self, invoice_id: str) -> Optional[MockInvoice]:
+    def pay_invoice(self, invoice_id: str) -> MockInvoice | None:
         """Pay an invoice."""
         invoice = self.invoices.get(invoice_id)
         if invoice:
             invoice.status = "paid"
-            invoice.paid_at = datetime.now(timezone.utc)
+            invoice.paid_at = datetime.now(UTC)
         return invoice
 
     def add_payment_method(
@@ -282,7 +281,7 @@ class MockBillingService:
         self.payment_methods[pm.id] = pm
         return pm
 
-    def get_payment_methods(self, user_id: str) -> List[MockPaymentMethod]:
+    def get_payment_methods(self, user_id: str) -> list[MockPaymentMethod]:
         """Get payment methods for a user."""
         return [pm for pm in self.payment_methods.values() if pm.user_id == user_id]
 

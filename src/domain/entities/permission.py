@@ -1,7 +1,6 @@
 """Permission entity - Domain model for RBAC permissions"""
 
 from dataclasses import dataclass
-from typing import Set
 
 
 @dataclass(frozen=True)
@@ -92,7 +91,7 @@ class Permission:
 
 
 # Predefined permissions
-PERMISSIONS: Set[str] = {
+PERMISSIONS: set[str] = {
     # Tests
     "tests:read",
     "tests:write",

@@ -2,7 +2,7 @@
 
 import logging
 import os
-from typing import Any, Dict, Optional, Set
+from typing import Any
 
 import httpx
 
@@ -12,7 +12,7 @@ from src.core.security.url_validator import DEFAULT_ALLOWED_DOMAINS, validate_ur
 logger = logging.getLogger(__name__)
 
 
-def _load_allowed_domains() -> Set[str]:
+def _load_allowed_domains() -> set[str]:
     """
     Load allowed domains from environment variable or use defaults.
 
@@ -41,8 +41,8 @@ class HTTPXClient(IHTTPClient):
         self,
         base_url: str,
         timeout: int = 30,
-        headers: Optional[Dict[str, str]] = None,
-        allowed_domains: Optional[Set[str]] = None,
+        headers: dict[str, str] | None = None,
+        allowed_domains: set[str] | None = None,
         ssrf_enabled: bool = True,
     ):
         """
@@ -59,7 +59,7 @@ class HTTPXClient(IHTTPClient):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.default_headers = headers or {}
-        self._client: Optional[httpx.AsyncClient] = None
+        self._client: httpx.AsyncClient | None = None
         self._ssrf_enabled = ssrf_enabled
         self._allowed_domains = (
             allowed_domains if allowed_domains is not None else _load_allowed_domains()
@@ -124,7 +124,7 @@ class HTTPXClient(IHTTPClient):
         response = await client.get(url, **kwargs)
         return response
 
-    async def post(self, url: str, data: Optional[Dict[str, Any]] = None, **kwargs: Any) -> Any:
+    async def post(self, url: str, data: dict[str, Any] | None = None, **kwargs: Any) -> Any:
         """
         Perform POST request with SSRF validation.
 
@@ -144,7 +144,7 @@ class HTTPXClient(IHTTPClient):
         response = await client.post(url, json=data, **kwargs)
         return response
 
-    async def put(self, url: str, data: Optional[Dict[str, Any]] = None, **kwargs: Any) -> Any:
+    async def put(self, url: str, data: dict[str, Any] | None = None, **kwargs: Any) -> Any:
         """
         Perform PUT request with SSRF validation.
 

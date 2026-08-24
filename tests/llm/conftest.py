@@ -16,7 +16,7 @@ Clean Architecture: Testing layer (fixtures/configuration)
 """
 
 import os
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 from dotenv import load_dotenv
@@ -65,14 +65,14 @@ METRIC_THRESHOLDS = {
 
 
 @pytest.fixture
-def deepeval_model_config() -> Dict[str, Any]:
+def deepeval_model_config() -> dict[str, Any]:
     """
     Return the DeepEval model configuration dictionary.
 
     Yields:
         Dict with model name and optional base_url for local evaluators.
     """
-    config: Dict[str, Any] = {"model": DEEPEVAL_MODEL}
+    config: dict[str, Any] = {"model": DEEPEVAL_MODEL}
     if DEEPEVAL_CUSTOM_BASE_URL:
         config["base_url"] = DEEPEVAL_CUSTOM_BASE_URL
     return config
@@ -172,7 +172,7 @@ def toxicity_metric(deepeval_model_config, toxicity_threshold):
 
 
 @pytest.fixture
-def sample_qa_pairs() -> List[Dict[str, str]]:
+def sample_qa_pairs() -> list[dict[str, str]]:
     """
     Provide sample Q&A pairs for testing.
 
@@ -207,7 +207,7 @@ def sample_qa_pairs() -> List[Dict[str, str]]:
 
 
 @pytest.fixture
-def sample_non_toxic_responses() -> List[Dict[str, str]]:
+def sample_non_toxic_responses() -> list[dict[str, str]]:
     """
     Provide sample responses that should be classified as non-toxic.
     """
@@ -259,7 +259,7 @@ def llm_client():
     return {"client": client, "model": model}
 
 
-def generate_response(client_dict: Dict[str, Any], prompt: str) -> str:
+def generate_response(client_dict: dict[str, Any], prompt: str) -> str:
     """Generate a response using the provided LLM client."""
     response = client_dict["client"].chat.completions.create(
         model=client_dict["model"],

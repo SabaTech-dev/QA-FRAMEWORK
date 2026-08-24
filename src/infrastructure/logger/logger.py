@@ -3,9 +3,9 @@
 import json
 import logging
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 
 class JSONFormatter(logging.Formatter):
@@ -26,8 +26,8 @@ class JSONFormatter(logging.Formatter):
         Returns:
             JSON string
         """
-        log_data: Dict[str, Any] = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+        log_data: dict[str, Any] = {
+            "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -77,7 +77,7 @@ class QALogger:
     handling logging functionality.
     """
 
-    _loggers: Dict[str, logging.Logger] = {}
+    _loggers: dict[str, logging.Logger] = {}
 
     @classmethod
     def get_logger(cls, name: str = "qa-framework") -> logging.Logger:

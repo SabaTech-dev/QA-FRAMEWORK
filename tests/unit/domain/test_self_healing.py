@@ -4,7 +4,7 @@ Unit Tests for Self-Healing Domain
 Tests for entities, value objects, and interfaces in the self-healing module.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -23,7 +23,7 @@ class TestSelectorMetadata:
 
     def test_create_metadata(self):
         """Test creating selector metadata."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         metadata = SelectorMetadata(
             created_at=now,
             updated_at=None,
@@ -40,7 +40,7 @@ class TestSelectorMetadata:
 
     def test_with_update_success(self):
         """Test updating metadata with successful usage."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         metadata = SelectorMetadata(
             created_at=now - timedelta(days=1),
             updated_at=now,
@@ -59,7 +59,7 @@ class TestSelectorMetadata:
 
     def test_with_update_failure(self):
         """Test updating metadata with failed usage."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         metadata = SelectorMetadata(
             created_at=now - timedelta(days=1),
             updated_at=now,
@@ -135,11 +135,11 @@ class TestSelector:
         selector = Selector(
             value=".button",
             metadata=SelectorMetadata(
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
                 updated_at=None,
                 usage_count=10,
                 success_rate=0.9,
-                last_successful=datetime.now(timezone.utc),
+                last_successful=datetime.now(UTC),
                 source="manual",
             ),
         )

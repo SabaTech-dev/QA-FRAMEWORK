@@ -15,7 +15,6 @@ import json
 import logging
 import re
 from pathlib import Path
-from typing import Optional, Union
 
 from src.infrastructure.qa_visual.analyzer import QAVisualAnalyzer
 from src.infrastructure.qa_visual.models import AnalyzeResponse
@@ -41,8 +40,8 @@ class QAVisualHook:
         self,
         page,
         test_name: str,
-        report_path: Optional[Union[str, Path]] = None,
-    ) -> Optional[AnalyzeResponse]:
+        report_path: str | Path | None = None,
+    ) -> AnalyzeResponse | None:
         """Capture, analyze and record. Never raises.
 
         Args:

@@ -5,7 +5,7 @@ Analyzes requirements and generates edge case test scenarios.
 """
 
 from dataclasses import dataclass
-from typing import List, Optional, Protocol
+from typing import Protocol
 
 from ..entities import EdgeCase, GeneratedTest, TestGenerationSession
 from ..value_objects import GenerationStatus, TestFramework
@@ -14,7 +14,7 @@ from ..value_objects import GenerationStatus, TestFramework
 class EdgeCaseGenerator(Protocol):
     """Protocol for generating edge cases."""
 
-    def generate_from_requirement(self, requirement: dict) -> List[EdgeCase]:
+    def generate_from_requirement(self, requirement: dict) -> list[EdgeCase]:
         """Generate edge cases from a requirement."""
         ...
 
@@ -43,10 +43,10 @@ class LLMAdapter(Protocol):
 class GenerateEdgeCasesInput:
     """Input for the GenerateEdgeCases use case."""
 
-    requirements: List[dict]
+    requirements: list[dict]
     framework: TestFramework = TestFramework.PYTEST
-    tenant_id: Optional[str] = None
-    categories: List[str] = None  # None = all categories
+    tenant_id: str | None = None
+    categories: list[str] = None  # None = all categories
     max_per_requirement: int = 5
     generate_tests: bool = True
     min_risk_level: str = "medium"
@@ -57,12 +57,12 @@ class GenerateEdgeCasesOutput:
     """Output from the GenerateEdgeCases use case."""
 
     session: TestGenerationSession
-    edge_cases: List[EdgeCase]
-    tests: List[GeneratedTest]
+    edge_cases: list[EdgeCase]
+    tests: list[GeneratedTest]
     by_category: dict
     high_risk_count: int
     success: bool
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
 
 class GenerateEdgeCases:

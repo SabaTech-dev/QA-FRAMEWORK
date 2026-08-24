@@ -1,7 +1,6 @@
 """Password hashing utilities using bcrypt."""
 
 from abc import ABC, abstractmethod
-from typing import Optional
 
 import bcrypt
 
@@ -21,7 +20,6 @@ class PasswordHasher(ABC):
         Returns:
             Hashed password string
         """
-        pass
 
     @abstractmethod
     def verify(self, plain_password: str, hashed_password: str) -> bool:
@@ -34,7 +32,6 @@ class PasswordHasher(ABC):
         Returns:
             True if password matches, False otherwise
         """
-        pass
 
     @abstractmethod
     def needs_rehash(self, hashed_password: str) -> bool:
@@ -46,7 +43,6 @@ class PasswordHasher(ABC):
         Returns:
             True if rehashing is recommended
         """
-        pass
 
 
 class BCryptPasswordHasher(PasswordHasher):
@@ -130,7 +126,7 @@ class BCryptPasswordHasher(PasswordHasher):
 
 
 # Global hasher instance (use this for all password operations)
-_default_hasher: Optional[BCryptPasswordHasher] = None
+_default_hasher: BCryptPasswordHasher | None = None
 
 
 def get_password_hasher() -> BCryptPasswordHasher:

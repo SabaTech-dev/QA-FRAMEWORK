@@ -10,8 +10,8 @@ from .selector_healer import SelectorHealer
 from .selector_repository import InMemorySelectorRepository
 
 __all__ = [
-    "SelectorHealer",
     "ConfidenceScorer",
     "InMemorySelectorRepository",
     "SelectorGenerator",
+    "SelectorHealer",
 ]

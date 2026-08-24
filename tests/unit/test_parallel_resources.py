@@ -11,7 +11,7 @@ Usage:
 
 import time
 from queue import Empty, Queue
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 
@@ -103,7 +103,7 @@ class TestWorkerResourceTracking:
     @pytest.mark.parallel_safe
     def test_resource_tracking_basic(
         self,
-        test_resource_tracker: Dict[str, Any],
+        test_resource_tracker: dict[str, Any],
         worker_id: str,
     ) -> None:
         """
@@ -124,7 +124,7 @@ class TestWorkerResourceTracking:
     @pytest.mark.parallel_safe
     def test_resource_tracking_multiple(
         self,
-        test_resource_tracker: Dict[str, Any],
+        test_resource_tracker: dict[str, Any],
     ) -> None:
         """
         Test tracking multiple resources.
@@ -142,7 +142,7 @@ class TestWorkerResourceTracking:
     @pytest.mark.parallel_safe
     def test_resource_tracking_independence(
         self,
-        test_resource_tracker: Dict[str, Any],
+        test_resource_tracker: dict[str, Any],
     ) -> None:
         """
         Test resource tracking independence between tests.
@@ -186,7 +186,7 @@ class TestFakerParallel:
     def test_faker_consistency(
         self,
         faker_factory: Any,
-        isolated_test_data: Dict[str, Any],
+        isolated_test_data: dict[str, Any],
     ) -> None:
         """
         Test faker consistency within same worker.
@@ -284,7 +284,7 @@ class TestConcurrentDataStructures:
     @pytest.mark.parallel_safe
     def test_concurrent_list_operations(
         self,
-        isolated_test_data: Dict[str, Any],
+        isolated_test_data: dict[str, Any],
     ) -> None:
         """
         Test list operations in parallel context.
@@ -305,7 +305,7 @@ class TestConcurrentDataStructures:
     @pytest.mark.parallel_safe
     def test_concurrent_dict_operations(
         self,
-        isolated_test_data: Dict[str, Any],
+        isolated_test_data: dict[str, Any],
     ) -> None:
         """
         Test dict operations in parallel context.
@@ -327,7 +327,7 @@ class TestConcurrentDataStructures:
     @pytest.mark.parallel_safe
     def test_nested_data_structures(
         self,
-        isolated_test_data: Dict[str, Any],
+        isolated_test_data: dict[str, Any],
     ) -> None:
         """
         Test nested data structures in parallel context.

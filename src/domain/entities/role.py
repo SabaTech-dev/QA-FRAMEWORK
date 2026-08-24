@@ -1,14 +1,14 @@
 """Role entity - Domain model for RBAC roles"""
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Set
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 from src.domain.entities.permission import Permission, validate_permission
 
 # Predefined role permissions mapping
-ROLE_PERMISSIONS: Dict[str, List[str]] = {
+ROLE_PERMISSIONS: dict[str, list[str]] = {
     "owner": ["admin:*"],
     "admin": ["tests:*", "projects:*", "users:read", "settings:*"],
     "member": ["tests:*", "projects:read", "projects:write"],
@@ -34,16 +34,16 @@ class Role:
     """
 
     id: UUID = field(default_factory=uuid4)
-    tenant_id: Optional[UUID] = None
+    tenant_id: UUID | None = None
     name: str = ""
-    permissions: List[str] = field(default_factory=list)
+    permissions: list[str] = field(default_factory=list)
     is_default: bool = False
-    created_at: Optional[datetime] = None
+    created_at: datetime | None = None
 
     def __post_init__(self) -> None:
         """Initialize default values"""
         if self.created_at is None:
-            self.created_at = datetime.now(timezone.utc)
+            self.created_at = datetime.now(UTC)
         if self.permissions is None:
             self.permissions = []
 
@@ -79,7 +79,7 @@ class Role:
 
         return False
 
-    def has_any_permission(self, required_permissions: List[str]) -> bool:
+    def has_any_permission(self, required_permissions: list[str]) -> bool:
         """
         Check if role has any of the specified permissions.
 
@@ -91,7 +91,7 @@ class Role:
         """
         return any(self.has_permission(perm) for perm in required_permissions)
 
-    def has_all_permissions(self, required_permissions: List[str]) -> bool:
+    def has_all_permissions(self, required_permissions: list[str]) -> bool:
         """
         Check if role has all specified permissions.
 
@@ -134,7 +134,7 @@ class Role:
             return True
         return False
 
-    def get_permissions(self) -> Set[Permission]:
+    def get_permissions(self) -> set[Permission]:
         """
         Get all permissions as Permission objects.
 
@@ -158,7 +158,7 @@ class Role:
         """Check if this is an admin role or higher"""
         return self.name in ["owner", "admin"]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert role entity to dictionary"""
         return {
             "id": str(self.id),
@@ -170,7 +170,7 @@ class Role:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Role":
+    def from_dict(cls, data: dict[str, Any]) -> "Role":
         """
         Create a Role instance from a dictionary.
 
@@ -203,7 +203,7 @@ class Role:
 
     @classmethod
     def create_default_role(
-        cls, tenant_id: UUID, name: str, permissions: Optional[List[str]] = None
+        cls, tenant_id: UUID, name: str, permissions: list[str] | None = None
     ) -> "Role":
         """
         Create a role with predefined permissions.

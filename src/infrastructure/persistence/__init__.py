@@ -12,10 +12,10 @@ from .tenant_repository import (
 )
 
 __all__ = [
-    "TenantRepositoryInterface",
-    "SQLAlchemyTenantRepository",
+    "InMemoryRoleRepository",
     "InMemoryTenantRepository",
     "RoleRepositoryInterface",
     "SQLAlchemyRoleRepository",
-    "InMemoryRoleRepository",
+    "SQLAlchemyTenantRepository",
+    "TenantRepositoryInterface",
 ]

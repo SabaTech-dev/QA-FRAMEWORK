@@ -11,9 +11,10 @@ Implements sophisticated testing patterns:
 
 import functools
 import time
+from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, TypeVar
+from typing import Any, TypeVar
 from unittest.mock import MagicMock
 
 import pytest
@@ -29,7 +30,7 @@ class TestStep:
     name: str
     action: Callable[..., Any]
     description: str = ""
-    expected_result: Optional[Any] = None
+    expected_result: Any | None = None
 
 
 @dataclass
@@ -38,10 +39,10 @@ class TestScenario:
 
     name: str
     description: str
-    steps: List[TestStep] = field(default_factory=list)
-    setup: Optional[Callable[..., Any]] = None
-    teardown: Optional[Callable[..., Any]] = None
-    tags: List[str] = field(default_factory=list)
+    steps: list[TestStep] = field(default_factory=list)
+    setup: Callable[..., Any] | None = None
+    teardown: Callable[..., Any] | None = None
+    tags: list[str] = field(default_factory=list)
 
 
 class AAAPattern:
@@ -52,9 +53,9 @@ class AAAPattern:
 
     def __init__(self, test_name: str = ""):
         self.test_name = test_name
-        self._arranged_data: Dict[str, Any] = {}
+        self._arranged_data: dict[str, Any] = {}
         self._action_result: Any = None
-        self._assertions: List[Dict[str, Any]] = []
+        self._assertions: list[dict[str, Any]] = []
 
     def arrange(self, **kwargs: Any) -> "AAAPattern":
         """
@@ -118,10 +119,10 @@ class GivenWhenThen:
 
     def __init__(self, scenario_name: str = ""):
         self.scenario_name = scenario_name
-        self._context: Dict[str, Any] = {}
-        self._given_statements: List[str] = []
-        self._when_statements: List[str] = []
-        self._then_statements: List[str] = []
+        self._context: dict[str, Any] = {}
+        self._given_statements: list[str] = []
+        self._when_statements: list[str] = []
+        self._then_statements: list[str] = []
 
     def given(self, description: str, **context: Any) -> "GivenWhenThen":
         """
@@ -134,7 +135,7 @@ class GivenWhenThen:
     def when(
         self,
         description: str,
-        action: Optional[Callable[..., Any]] = None,
+        action: Callable[..., Any] | None = None,
         *args: Any,
         **kwargs: Any,
     ) -> "GivenWhenThen":
@@ -152,7 +153,7 @@ class GivenWhenThen:
     def then(
         self,
         description: str,
-        assertion: Optional[Callable[..., bool]] = None,
+        assertion: Callable[..., bool] | None = None,
         *args: Any,
         **kwargs: Any,
     ) -> "GivenWhenThen":
@@ -171,7 +172,7 @@ class GivenWhenThen:
         """Additional step (and)."""
         return self.then(description)
 
-    def get_context(self) -> Dict[str, Any]:
+    def get_context(self) -> dict[str, Any]:
         """Get the test context."""
         return self._context.copy()
 
@@ -199,8 +200,8 @@ class TestCase:
     input_data: Any
     expected: Any
     description: str = ""
-    should_raise: Optional[type] = None
-    tags: List[str] = field(default_factory=list)
+    should_raise: type | None = None
+    tags: list[str] = field(default_factory=list)
 
 
 class TableDrivenTests:
@@ -210,7 +211,7 @@ class TableDrivenTests:
     """
 
     def __init__(self):
-        self._test_cases: List[TestCase] = []
+        self._test_cases: list[TestCase] = []
 
     def add_case(
         self,
@@ -218,8 +219,8 @@ class TableDrivenTests:
         input_data: Any,
         expected: Any,
         description: str = "",
-        should_raise: Optional[type] = None,
-        tags: Optional[List[str]] = None,
+        should_raise: type | None = None,
+        tags: list[str] | None = None,
     ) -> "TableDrivenTests":
         """Add a test case."""
         self._test_cases.append(
@@ -234,7 +235,7 @@ class TableDrivenTests:
         )
         return self
 
-    def run(self, test_function: Callable[[Any], Any]) -> List[Dict[str, Any]]:
+    def run(self, test_function: Callable[[Any], Any]) -> list[dict[str, Any]]:
         """
         Run all test cases against the test function.
         Returns results for each case.
@@ -267,7 +268,7 @@ class TableDrivenTests:
 
         return results
 
-    def to_pytest_params(self) -> List[tuple]:
+    def to_pytest_params(self) -> list[tuple]:
         """Convert test cases to pytest parametrize format."""
         return [
             pytest.param(
@@ -287,9 +288,9 @@ class TestDataTable:
     Similar to Cucumber data tables.
     """
 
-    def __init__(self, headers: Optional[List[str]] = None):
+    def __init__(self, headers: list[str] | None = None):
         self.headers = headers or []
-        self.rows: List[Dict[str, Any]] = []
+        self.rows: list[dict[str, Any]] = []
 
     def add_row(self, **values: Any) -> "TestDataTable":
         """Add a row to the table."""
@@ -300,25 +301,25 @@ class TestDataTable:
         self.rows.append(row)
         return self
 
-    def add_rows(self, *rows: Dict[str, Any]) -> "TestDataTable":
+    def add_rows(self, *rows: dict[str, Any]) -> "TestDataTable":
         """Add multiple rows."""
         for row in rows:
             self.add_row(**row)
         return self
 
-    def get_row(self, index: int) -> Dict[str, Any]:
+    def get_row(self, index: int) -> dict[str, Any]:
         """Get row by index."""
         return self.rows[index]
 
-    def get_column(self, header: str) -> List[Any]:
+    def get_column(self, header: str) -> list[Any]:
         """Get all values for a column."""
         return [row.get(header) for row in self.rows]
 
-    def filter(self, **conditions: Any) -> List[Dict[str, Any]]:
+    def filter(self, **conditions: Any) -> list[dict[str, Any]]:
         """Filter rows by conditions."""
         return [row for row in self.rows if all(row.get(k) == v for k, v in conditions.items())]
 
-    def to_list(self) -> List[Dict[str, Any]]:
+    def to_list(self) -> list[dict[str, Any]]:
         """Convert table to list of dictionaries."""
         return self.rows.copy()
 
@@ -330,9 +331,9 @@ class TestIsolationManager:
     """
 
     def __init__(self):
-        self._setup_hooks: List[Callable[..., Any]] = []
-        self._teardown_hooks: List[Callable[..., Any]] = []
-        self._resources: List[Any] = []
+        self._setup_hooks: list[Callable[..., Any]] = []
+        self._teardown_hooks: list[Callable[..., Any]] = []
+        self._resources: list[Any] = []
 
     def on_setup(self, hook: Callable[..., Any]) -> "TestIsolationManager":
         """Register setup hook."""
@@ -390,7 +391,7 @@ class RetryPattern:
         Execute function with retry logic.
         """
         current_delay = self.delay
-        last_exception: Optional[Exception] = None
+        last_exception: Exception | None = None
 
         for attempt in range(self.max_retries + 1):
             try:
@@ -435,7 +436,7 @@ class TestDoubleFactory:
     @staticmethod
     def spy(func: Callable[..., T]) -> tuple:
         """Create a spy that wraps a function."""
-        calls: List[tuple] = []
+        calls: list[tuple] = []
 
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> T:
@@ -452,12 +453,12 @@ class ParameterizedTestBuilder:
     """
 
     def __init__(self):
-        self._parameters: List[tuple] = []
-        self._ids: List[str] = []
-        self._marks: List[List[Any]] = []
+        self._parameters: list[tuple] = []
+        self._ids: list[str] = []
+        self._marks: list[list[Any]] = []
 
     def add_case(
-        self, *args: Any, id: Optional[str] = None, marks: Optional[List[Any]] = None
+        self, *args: Any, id: str | None = None, marks: list[Any] | None = None
     ) -> "ParameterizedTestBuilder":
         """Add a test case."""
         self._parameters.append(args)
@@ -484,9 +485,9 @@ class TestSuiteBuilder:
 
     def __init__(self, name: str = ""):
         self.name = name
-        self._tests: List[Callable[..., Any]] = []
-        self._setup: Optional[Callable[..., Any]] = None
-        self._teardown: Optional[Callable[..., Any]] = None
+        self._tests: list[Callable[..., Any]] = []
+        self._setup: Callable[..., Any] | None = None
+        self._teardown: Callable[..., Any] | None = None
 
     def add_test(self, test_func: Callable[..., Any]) -> "TestSuiteBuilder":
         """Add a test to the suite."""
@@ -503,7 +504,7 @@ class TestSuiteBuilder:
         self._teardown = teardown_func
         return self
 
-    def run(self) -> Dict[str, Any]:
+    def run(self) -> dict[str, Any]:
         """Run all tests in the suite."""
         results = {
             "suite_name": self.name,
@@ -551,7 +552,7 @@ def using_bdd(scenario_name: str = "") -> GivenWhenThen:
     return GivenWhenThen(scenario_name)
 
 
-def create_test_table(headers: Optional[List[str]] = None) -> TestDataTable:
+def create_test_table(headers: list[str] | None = None) -> TestDataTable:
     """Factory function for test data table."""
     return TestDataTable(headers)
 

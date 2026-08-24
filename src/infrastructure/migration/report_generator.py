@@ -2,8 +2,8 @@
 
 import json
 import logging
-from datetime import datetime, timezone
-from typing import Any, Dict, List
+from datetime import UTC, datetime
+from typing import Any
 
 from .migrator import DataMigrator
 
@@ -28,10 +28,10 @@ class MigrationReportGenerator:
 
     def generate(
         self,
-        migrators: List[DataMigrator],
+        migrators: list[DataMigrator],
         overall_status: DataMigrator.MigrationStatus,
         execution_time: float,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate a comprehensive migration report.
 
@@ -48,7 +48,7 @@ class MigrationReportGenerator:
                 "overall_status": overall_status.value,
                 "execution_time_seconds": round(execution_time, 2),
                 "started_at": self._get_first_start_time(migrators),
-                "completed_at": datetime.now(timezone.utc).isoformat(),
+                "completed_at": datetime.now(UTC).isoformat(),
             },
             "total_records": self._calculate_total_records(migrators),
             "migrated_records": self._calculate_migrated_records(migrators),
@@ -63,7 +63,7 @@ class MigrationReportGenerator:
         logger.info("Migration report generated")
         return self._report
 
-    def _get_first_start_time(self, migrators: List[DataMigrator]) -> str:
+    def _get_first_start_time(self, migrators: list[DataMigrator]) -> str:
         """Get the first start time from all migrators."""
         start_times = [
             stats.get("started_at")
@@ -72,7 +72,7 @@ class MigrationReportGenerator:
         ]
         return min(start_times) if start_times else None
 
-    def _calculate_total_records(self, migrators: List[DataMigrator]) -> int:
+    def _calculate_total_records(self, migrators: list[DataMigrator]) -> int:
         """Calculate total records across all migrators."""
         return sum(
             stats.get("total_records", 0)
@@ -80,7 +80,7 @@ class MigrationReportGenerator:
             if (stats := migrator.get_stats())
         )
 
-    def _calculate_migrated_records(self, migrators: List[DataMigrator]) -> int:
+    def _calculate_migrated_records(self, migrators: list[DataMigrator]) -> int:
         """Calculate total migrated records across all migrators."""
         return sum(
             stats.get("migrated_records", 0)
@@ -88,7 +88,7 @@ class MigrationReportGenerator:
             if (stats := migrator.get_stats())
         )
 
-    def _calculate_failed_records(self, migrators: List[DataMigrator]) -> int:
+    def _calculate_failed_records(self, migrators: list[DataMigrator]) -> int:
         """Calculate total failed records across all migrators."""
         return sum(
             stats.get("failed_records", 0)
@@ -96,7 +96,7 @@ class MigrationReportGenerator:
             if (stats := migrator.get_stats())
         )
 
-    def _collect_all_warnings(self, migrators: List[DataMigrator]) -> List[str]:
+    def _collect_all_warnings(self, migrators: list[DataMigrator]) -> list[str]:
         """Collect all warnings from all migrators."""
         warnings = []
         for migrator in migrators:
@@ -104,7 +104,7 @@ class MigrationReportGenerator:
                 warnings.extend(stats.get("warnings", []))
         return warnings
 
-    def _collect_all_errors(self, migrators: List[DataMigrator]) -> List[str]:
+    def _collect_all_errors(self, migrators: list[DataMigrator]) -> list[str]:
         """Collect all errors from all migrators."""
         errors = []
         for migrator in migrators:
@@ -112,7 +112,7 @@ class MigrationReportGenerator:
                 errors.extend(stats.get("errors", []))
         return errors
 
-    def _group_by_component(self, migrators: List[DataMigrator]) -> Dict[str, Dict[str, Any]]:
+    def _group_by_component(self, migrators: list[DataMigrator]) -> dict[str, dict[str, Any]]:
         """Group migration stats by component."""
 
         by_component = {}
@@ -130,8 +130,8 @@ class MigrationReportGenerator:
         return by_component
 
     def _generate_recommendations(
-        self, overall_status: DataMigrator.MigrationStatus, migrators: List[DataMigrator]
-    ) -> List[str]:
+        self, overall_status: DataMigrator.MigrationStatus, migrators: list[DataMigrator]
+    ) -> list[str]:
         """
         Generate recommendations based on migration status.
 
@@ -173,7 +173,7 @@ class MigrationReportGenerator:
 
         return recommendations
 
-    def _generate_component_details(self, migrators: List[DataMigrator]) -> Dict[str, Any]:
+    def _generate_component_details(self, migrators: list[DataMigrator]) -> dict[str, Any]:
         """Generate detailed information for each component."""
         details = {}
 
@@ -201,7 +201,7 @@ class MigrationReportGenerator:
 
         return details
 
-    def save_to_file(self, report: Dict[str, Any], filepath: str) -> None:
+    def save_to_file(self, report: dict[str, Any], filepath: str) -> None:
         """
         Save migration report to JSON file.
 
@@ -214,10 +214,10 @@ class MigrationReportGenerator:
                 json.dump(report, f, indent=2, default=str)
             logger.info(f"Migration report saved to: {filepath}")
         except Exception as e:
-            logger.error(f"Failed to save migration report: {str(e)}")
+            logger.error(f"Failed to save migration report: {e!s}")
             raise
 
-    def print_console(self, report: Dict[str, Any]) -> None:
+    def print_console(self, report: dict[str, Any]) -> None:
         """
         Print migration report to console.
 
@@ -280,7 +280,7 @@ class MigrationReportGenerator:
 
         print("\n" + "=" * 80 + "\n")
 
-    def to_json_string(self, report: Dict[str, Any]) -> str:
+    def to_json_string(self, report: dict[str, Any]) -> str:
         """
         Convert report to JSON string.
 
@@ -292,7 +292,7 @@ class MigrationReportGenerator:
         """
         return json.dumps(report, indent=2, default=str)
 
-    def get_summary(self, report: Dict[str, Any]) -> str:
+    def get_summary(self, report: dict[str, Any]) -> str:
         """
         Get a concise summary of the migration report.
 
