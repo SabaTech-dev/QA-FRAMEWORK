@@ -7,11 +7,7 @@ from typing import Any, Dict, Optional, Set
 import httpx
 
 from src.core.interfaces import IHTTPClient
-from src.core.security.url_validator import (
-    validate_url,
-    DEFAULT_ALLOWED_DOMAINS,
-)
-
+from src.core.security.url_validator import DEFAULT_ALLOWED_DOMAINS, validate_url
 
 logger = logging.getLogger(__name__)
 

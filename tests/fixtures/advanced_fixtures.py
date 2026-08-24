@@ -15,10 +15,10 @@ import tempfile
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import datetime
 from multiprocessing import Queue
-from typing import Any, AsyncGenerator, Callable, Dict, Generator, List, Optional
-from unittest.mock import AsyncMock, MagicMock, Mock
+from typing import Any, AsyncGenerator, Callable, Dict, Generator, List
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 import pytest_asyncio
@@ -39,7 +39,6 @@ from tests.fixtures.patterns import (
     TestIsolationManager,
     create_test_table,
 )
-
 
 # ============================================================================
 # CORE LAYER FIXTURES

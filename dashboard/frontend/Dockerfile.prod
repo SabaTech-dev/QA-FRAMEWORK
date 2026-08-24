@@ -1,6 +1,6 @@
 # QA-FRAMEWORK Frontend - Production Dockerfile (Coolify)
 # Multi-stage build optimized for Coolify with base_directory: "/"
-FROM node:18-alpine AS builder
+FROM node:26-alpine AS builder
 
 WORKDIR /app
 
@@ -8,7 +8,13 @@ WORKDIR /app
 COPY dashboard/frontend/package*.json ./
 
 # Install ALL dependencies (including devDependencies for build)
-RUN npm ci
+# npm 12: enforce del allowlist de install scripts (allowScripts en package.json)
+RUN npm ci --strict-allow-scripts
+
+# Smoke post-install: fallar el build si el binario nativo no carga
+# (npm 12 bloquea scripts por defecto con exit 0 silencioso)
+COPY dashboard/frontend/scripts/smoke-install.mjs ./scripts/smoke-install.mjs
+RUN node scripts/smoke-install.mjs
 
 # Copy source code
 COPY dashboard/frontend/ ./
@@ -23,12 +29,13 @@ RUN npm run build
 # Production stage
 FROM node:18-alpine
 
+WORKDIR /app
+
 # Create non-root user for security (F-002 FIX)
+# WORKDIR antes del chown: /app debe existir (bug preexistente, fix card 0c00d7eb)
 RUN addgroup -g 1001 -S appuser && \
     adduser -S -D -H -u 1001 -s /sbin/nologin -G appuser appuser && \
-    chown -R appuser:appuser /app
-
-WORKDIR /app
+    chown appuser:appuser /app
 
 # Install serve for production
 RUN npm install -g serve

@@ -1,9 +1,9 @@
 """Database migration testing module"""
 
 import os
-from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class MigrationStatus(Enum):
@@ -257,13 +257,17 @@ class MigrationTester:
                 "first_run": result1.status.value,
                 "second_run": result2.status.value,
                 "recommendations": [
-                    "Use IF NOT EXISTS for CREATE statements"
-                    if not is_idempotent
-                    else "Migration appears to be idempotent",
+                    (
+                        "Use IF NOT EXISTS for CREATE statements"
+                        if not is_idempotent
+                        else "Migration appears to be idempotent"
+                    ),
                     "Use IF EXISTS for DROP statements" if not is_idempotent else "",
-                    "Consider adding guards to prevent duplicate execution"
-                    if not is_idempotent
-                    else "",
+                    (
+                        "Consider adding guards to prevent duplicate execution"
+                        if not is_idempotent
+                        else ""
+                    ),
                 ],
             }
 
@@ -315,12 +319,14 @@ class MigrationTester:
                 "issues": issues,
                 "warnings": warnings,
                 "tables_affected": tables_to_create,
-                "recommendations": [
-                    "Review existing schema before applying migration",
-                    "Create backup before running destructive changes",
-                ]
-                if issues or warnings
-                else ["Migration appears compatible with existing schema"],
+                "recommendations": (
+                    [
+                        "Review existing schema before applying migration",
+                        "Create backup before running destructive changes",
+                    ]
+                    if issues or warnings
+                    else ["Migration appears compatible with existing schema"]
+                ),
             }
 
         except Exception as e:
@@ -452,5 +458,7 @@ class MigrationTester:
             "success_rate": len(successful) / len(self._results),
             "average_execution_time": round(total_time / len(self._results), 3),
             "total_warnings": sum(len(r.warnings) if r.warnings else 0 for r in self._results),
-            "total_changes": sum(len(r.changes_applied) if r.changes_applied else 0 for r in self._results),
+            "total_changes": sum(
+                len(r.changes_applied) if r.changes_applied else 0 for r in self._results
+            ),
         }

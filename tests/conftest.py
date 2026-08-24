@@ -30,7 +30,7 @@ import uuid
 from contextlib import contextmanager
 from pathlib import Path
 from queue import Queue
-from typing import Any, Dict, Generator, List, Optional
+from typing import Any, Dict, Generator, Optional
 
 import pytest
 
@@ -38,7 +38,6 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from src.infrastructure.config.config_manager import ConfigManager, QAConfig
-from src.infrastructure.logger.logger import QALogger
 
 # Import advanced fixtures
 pytest_plugins = [

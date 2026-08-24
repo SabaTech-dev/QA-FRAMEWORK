@@ -47,6 +47,7 @@ DEFAULT_ALLOWED_DOMAINS: Set[str] = {
 
 class URLValidationError(Exception):
     """Raised when a URL fails allowlist validation."""
+
     pass
 
 

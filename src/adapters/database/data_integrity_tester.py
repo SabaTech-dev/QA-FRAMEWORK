@@ -1,8 +1,8 @@
 """Data integrity testing module"""
 
-from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class ConstraintType(Enum):
@@ -481,9 +481,11 @@ class DataIntegrityTester:
                 "orphan_count": len(orphan_list),
                 "has_orphans": len(orphan_list) > 0,
                 "sample_orphans": orphan_list[:10],
-                "recommendation": "Delete orphan records or fix foreign key references"
-                if orphan_list
-                else "No orphan records found",
+                "recommendation": (
+                    "Delete orphan records or fix foreign key references"
+                    if orphan_list
+                    else "No orphan records found"
+                ),
             }
         except Exception as e:
             return {"table": table, "column": column, "error": str(e)}

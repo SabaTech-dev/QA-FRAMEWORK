@@ -16,7 +16,7 @@ Clean Architecture: Testing layer (fixtures/configuration)
 """
 
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import pytest
 from dotenv import load_dotenv
@@ -62,6 +62,7 @@ METRIC_THRESHOLDS = {
 # =============================================================================
 # FIXTURES — Metric Initialization
 # =============================================================================
+
 
 @pytest.fixture
 def deepeval_model_config() -> Dict[str, Any]:
@@ -169,6 +170,7 @@ def toxicity_metric(deepeval_model_config, toxicity_threshold):
 # FIXTURES — Test Case Factories
 # =============================================================================
 
+
 @pytest.fixture
 def sample_qa_pairs() -> List[Dict[str, str]]:
     """
@@ -228,6 +230,7 @@ def sample_non_toxic_responses() -> List[Dict[str, str]]:
 # =============================================================================
 # FIXTURES — LLM Client (for integration tests with live model)
 # =============================================================================
+
 
 @pytest.fixture
 def llm_client():

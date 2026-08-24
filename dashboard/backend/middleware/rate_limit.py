@@ -167,7 +167,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.rate_limiter = rate_limiter or RateLimiter()
         
-        # Paths to skip rate limiting
+        # Paths to skip rate limiting.
+        # NOTE (card f90a8079): FastAPI redirect_slashes 307-redirects /metrics to
+        # /metrics/, so this middleware sees the TRAILING-SLASH variant. Compare
+        # with trailing slashes stripped on BOTH sides; the request path itself
+        # is never mutated.
         self.skip_paths = {
             "/metrics",
             "/health",
@@ -176,12 +180,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             "/redoc",
             "/openapi.json"
         }
-    
+        self._skip_paths_norm = {p.rstrip("/") for p in self.skip_paths}
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request with rate limiting"""
-        
-        # Skip rate limiting for certain paths
-        if request.url.path in self.skip_paths:
+
+        # Skip rate limiting for certain paths (trailing-slash tolerant)
+        if request.url.path.rstrip("/") in self._skip_paths_norm:
             return await call_next(request)
         
         # Get identifier (user_id or IP)

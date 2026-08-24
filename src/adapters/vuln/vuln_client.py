@@ -7,15 +7,9 @@ Provides a facade similar to SecurityClient for easy integration.
 import logging
 from typing import Any, Dict, List, Optional
 
-from src.adapters.vuln import (
-    VulnScanResult,
-    VulnerabilityFinding,
-    VulnSeverity,
-    VulnCategory,
-    UnifiedVulnParser,
-    VulnReportGenerator,
-)
 from src.adapters.vuln.nuclei_scanner import NucleiScanner
+from src.adapters.vuln.vuln_parser import UnifiedVulnParser, VulnScanResult
+from src.adapters.vuln.vuln_report import VulnReportGenerator
 from src.adapters.vuln.wstg_scanner import WSTGScanner
 
 logger = logging.getLogger(__name__)
@@ -29,13 +23,13 @@ class VulnClient:
 
     Usage:
         client = VulnClient()
-        
+
         # Web scan
         result = await client.scan_web("https://example.com")
-        
-        # Network scan  
+
+        # Network scan
         result = await client.scan_network("10.0.0.1/24")
-        
+
         # Generate report
         paths = client.generate_report(result)
     """

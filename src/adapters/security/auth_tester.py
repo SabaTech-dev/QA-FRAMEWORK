@@ -1,8 +1,8 @@
 """Authentication and authorization testing module"""
 
-from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, List
 
 
 class AuthTestType(Enum):
@@ -233,9 +233,11 @@ class AuthTester:
             "vulnerable": not has_rate_limiting,
             "results": results,
             "recommendations": [
-                "Implement account lockout after failed attempts"
-                if not has_rate_limiting
-                else "Rate limiting appears to be implemented",
+                (
+                    "Implement account lockout after failed attempts"
+                    if not has_rate_limiting
+                    else "Rate limiting appears to be implemented"
+                ),
                 "Consider CAPTCHA after multiple failed attempts",
                 "Implement exponential backoff for failed logins",
             ],
@@ -302,9 +304,11 @@ class AuthTester:
             "vulnerable": len(weak_accepted) > 0,
             "results": results,
             "recommendations": [
-                "Enforce minimum password length (8+ characters)"
-                if any(r["description"] == "Too short" and r["accepted"] for r in results)
-                else None,
+                (
+                    "Enforce minimum password length (8+ characters)"
+                    if any(r["description"] == "Too short" and r["accepted"] for r in results)
+                    else None
+                ),
                 "Require mixed case, numbers, and special characters",
                 "Check against common password dictionaries",
                 "Implement password strength meter",

@@ -5,9 +5,8 @@ Provides fixtures for the framework core components including test runners,
 adapters, and result entities.
 """
 
-import asyncio
 from datetime import datetime, timezone
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, Dict, List
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -15,7 +14,6 @@ import pytest_asyncio
 
 from src.core.entities.test_result import TestResult, TestStatus
 from src.core.use_cases.test_runner import TestRunner
-
 
 # =============================================================================
 # Core Entity Fixtures
@@ -251,7 +249,11 @@ def framework_event_stream():
 
         def add_event(self, event_type: str, data: Dict[str, Any]):
             self.events.append(
-                {"type": event_type, "data": data, "timestamp": datetime.now(timezone.utc).isoformat()}
+                {
+                    "type": event_type,
+                    "data": data,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                }
             )
 
         def get_events(self) -> List[Dict]:

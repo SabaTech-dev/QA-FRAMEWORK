@@ -1,10 +1,11 @@
 """API Key generation and validation utilities."""
-import secrets
+
 import hashlib
 import hmac
+import secrets
 from datetime import datetime
 from typing import Optional, Tuple
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from src.domain.auth.entities import APIKey
 
@@ -37,7 +38,7 @@ class APIKeyGenerator:
         name: str,
         scopes: list[str],
         tenant_id: Optional[UUID] = None,
-        expires_at: Optional[datetime] = None
+        expires_at: Optional[datetime] = None,
     ) -> Tuple[APIKey, str]:
         """Generate a new API key.
 
@@ -68,7 +69,7 @@ class APIKeyGenerator:
             tenant_id=tenant_id,
             scopes=scopes,
             expires_at=expires_at,
-            is_active=True
+            is_active=True,
         )
 
         return api_key, plaintext_key
@@ -83,7 +84,7 @@ class APIKeyGenerator:
         Returns:
             SHA-256 hash of the key
         """
-        return hashlib.sha256(plaintext_key.encode('utf-8')).hexdigest()
+        return hashlib.sha256(plaintext_key.encode("utf-8")).hexdigest()
 
     @staticmethod
     def verify_api_key(plaintext_key: str, stored_hash: str) -> bool:
@@ -110,7 +111,7 @@ class APIKeyGenerator:
         Returns:
             Key ID prefix for identification
         """
-        parts = plaintext_key.split('_')
+        parts = plaintext_key.split("_")
         if len(parts) >= 4:
             # Return qa_v1_live_{first_8_chars}
             return f"{parts[0]}_{parts[1]}_{parts[2]}_{parts[3][:8]}..."
@@ -129,7 +130,7 @@ class APIKeyGenerator:
         if not key:
             return False
 
-        parts = key.split('_')
+        parts = key.split("_")
         if len(parts) < 4:
             return False
 

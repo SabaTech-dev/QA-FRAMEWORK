@@ -14,6 +14,7 @@ from uuid import uuid4
 
 class ResourceType(str, Enum):
     """Types of resources that can be tracked."""
+
     API_CALLS = "api_calls"
     TEST_EXECUTIONS = "test_executions"
     AI_GENERATIONS = "ai_generations"
@@ -23,6 +24,7 @@ class ResourceType(str, Enum):
 
 class BillingPeriod(str, Enum):
     """Billing period types."""
+
     DAILY = "daily"
     WEEKLY = "weekly"
     MONTHLY = "monthly"
@@ -32,6 +34,7 @@ class BillingPeriod(str, Enum):
 @dataclass
 class UsageRecord:
     """Single usage record for tracking resource consumption."""
+
     id: str = field(default_factory=lambda: str(uuid4()))
     user_id: str = ""
     organization_id: Optional[str] = None
@@ -40,7 +43,7 @@ class UsageRecord:
     unit: str = "count"
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     metadata: dict = field(default_factory=dict)
-    
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,
@@ -57,20 +60,21 @@ class UsageRecord:
 @dataclass
 class UsageSummary:
     """Aggregated usage summary for a billing period."""
+
     id: str = field(default_factory=lambda: str(uuid4()))
     user_id: str = ""
     organization_id: Optional[str] = None
     period_start: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     period_end: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     billing_period: BillingPeriod = BillingPeriod.MONTHLY
-    
+
     # Resource usage counts
     api_calls: int = 0
     test_executions: int = 0
     ai_generations: int = 0
     storage_mb: float = 0.0
     bandwidth_mb: float = 0.0
-    
+
     # Calculated costs (in cents)
     api_calls_cost: int = 0
     test_executions_cost: int = 0
@@ -81,18 +85,18 @@ class UsageSummary:
 
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    
+
     def calculate_total(self) -> int:
         """Calculate total cost in cents."""
         self.total_cost = (
-            self.api_calls_cost +
-            self.test_executions_cost +
-            self.ai_generations_cost +
-            self.storage_cost +
-            self.bandwidth_cost
+            self.api_calls_cost
+            + self.test_executions_cost
+            + self.ai_generations_cost
+            + self.storage_cost
+            + self.bandwidth_cost
         )
         return self.total_cost
-    
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,
@@ -120,22 +124,23 @@ class UsageSummary:
 @dataclass
 class UsageLimit:
     """Usage limits for a subscription plan."""
+
     plan_name: str = "free"
-    
+
     # Resource limits
     max_api_calls: int = 1000
     max_test_executions: int = 100
     max_ai_generations: int = 10
     max_storage_mb: int = 100
     max_bandwidth_mb: int = 1000
-    
+
     # Pricing per unit (in cents)
     api_call_price: int = 1  # $0.01 per call
     test_execution_price: int = 5  # $0.05 per execution
     ai_generation_price: int = 50  # $0.50 per generation
     storage_price_per_mb: int = 10  # $0.10 per MB
     bandwidth_price_per_mb: int = 1  # $0.01 per MB
-    
+
     def get_limit(self, resource_type: ResourceType) -> int:
         """Get the limit for a specific resource type."""
         limits = {
@@ -146,7 +151,7 @@ class UsageLimit:
             ResourceType.BANDWIDTH_MB: self.max_bandwidth_mb,
         }
         return limits.get(resource_type, 0)
-    
+
     def get_price(self, resource_type: ResourceType) -> int:
         """Get the price per unit for a specific resource type."""
         prices = {
@@ -157,7 +162,7 @@ class UsageLimit:
             ResourceType.BANDWIDTH_MB: self.bandwidth_price_per_mb,
         }
         return prices.get(resource_type, 0)
-    
+
     def to_dict(self) -> dict:
         return {
             "plan_name": self.plan_name,

@@ -20,7 +20,7 @@ Sistema completo de monitoreo y alertas para el QA-Framework Dashboard utilizand
 │  /health/*      │              ▼
 └─────────────────┘     ┌─────────────────┐
                         │  Notifications  │
-                        │ (Email/Slack)   │
+                        │ (Telegram)      │
                         └─────────────────┘
 ```
 
@@ -41,7 +41,7 @@ Sistema completo de monitoreo y alertas para el QA-Framework Dashboard utilizand
 ### 3. Alertmanager (Puerto 9093)
 - Gestión de alertas
 - Enrutamiento según severidad
-- Notificaciones via Email y Slack
+- Notificaciones via Telegram (bot token como docker secret — ver Configuración)
 - Deduplicación y agrupamiento de alertas
 
 ### 4. Exporters
@@ -155,14 +155,30 @@ Añade estas variables a tu archivo `.env`:
 # Grafana
 GRAFANA_ADMIN_USER=admin
 GRAFANA_ADMIN_PASSWORD=your-secure-password
-
-# Alertmanager (opcional)
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
-ALERT_EMAIL=admin@yourdomain.com
-SMTP_HOST=smtp.yourdomain.com:587
-SMTP_USER=your-smtp-user
-SMTP_PASSWORD=your-smtp-password
 ```
+
+> Las notificaciones de alertas ya NO usan variables de entorno ni Slack/SMTP:
+> el canal es Telegram-only vía docker secret (siguiente sección).
+
+### Notificaciones Telegram (Alertmanager)
+
+El bot token se inyecta como docker secret — nunca va en `.env` ni en el repo:
+
+```bash
+# 1. Copiar el template y rellenar el token real del bot
+mkdir -p dashboard/monitoring/alertmanager/.secrets
+cp dashboard/monitoring/alertmanager/telegram_token.example \
+   dashboard/monitoring/alertmanager/.secrets/telegram_token
+chmod 600 dashboard/monitoring/alertmanager/.secrets/telegram_token
+# editar .secrets/telegram_token → "<bot_id>:<secret>" (una línea)
+
+# 2. docker-compose.unified.yml monta ese archivo en el contenedor como
+#    /run/secrets/alertmanager_telegram_token (referenciado por bot_token_file
+#    en alertmanager.yml, receivers default/critical/warning)
+```
+
+`.secrets/` está gitignored — tras crear el archivo, `git status` debe mostrar
+cero cambios. El `chat_id` de destino está fijado en `alertmanager.yml`.
 
 ### Iniciar el Sistema de Monitoreo
 
@@ -226,12 +242,15 @@ docker-compose logs -f grafana
    docker-compose logs alertmanager
    ```
 
-2. Probar webhook de Slack:
+2. Probar el flujo de Telegram (round-trip del bot):
    ```bash
-   curl -X POST -H 'Content-type: application/json' \
-     --data '{"text":"Test message"}' \
-     YOUR_SLACK_WEBHOOK_URL
+   TOKEN=$(grep -v '^#' dashboard/monitoring/alertmanager/.secrets/telegram_token | tail -1)
+   curl -s "https://api.telegram.org/bot${TOKEN}/sendMessage" \
+     -d chat_id=346997361 -d text="alertmanager healthcheck"
+   # respuesta esperada: {"ok":true,...} en el chat de alertas
    ```
+   Si falla: verificar que el bot pueda escribir al chat (iniciar /start con el
+   bot) y que el token del archivo coincida con el del bot.
 
 3. Verificar estado de alertas:
    - Ir a http://localhost:9093/#/status

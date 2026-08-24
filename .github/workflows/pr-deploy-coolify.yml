@@ -8,7 +8,9 @@ on:
 
 env:
   PYTHON_VERSION: "3.11"
-  NODE_VERSION: "18"
+  NODE_VERSION: "26"
+
+# NOTE: preview deploys are NON-BLOCKING while COOLIFY_* secrets are absent (#107).
 
 jobs:
   # Deploy Backend PR Preview
@@ -16,6 +18,7 @@ jobs:
     name: Deploy Backend Preview
     runs-on: ubuntu-latest
     if: github.event.action != 'closed'
+    continue-on-error: true  # non-blocking: COOLIFY_* secrets missing — see #107
     outputs:
       preview_url: ${{ steps.deploy.outputs.preview_url }}
     steps:
@@ -126,6 +129,7 @@ jobs:
     name: Deploy Frontend Preview
     runs-on: ubuntu-latest
     if: github.event.action != 'closed'
+    continue-on-error: true  # non-blocking: COOLIFY_* secrets missing — see #107
     outputs:
       preview_url: ${{ steps.deploy.outputs.preview_url }}
     steps:
@@ -144,7 +148,12 @@ jobs:
       - name: Install Frontend Dependencies
         run: |
           cd dashboard/frontend
-          npm ci
+          npm ci --strict-allow-scripts
+
+      - name: Smoke test post-install (npm v12 install-scripts)
+        run: |
+          cd dashboard/frontend
+          node scripts/smoke-install.mjs
 
       - name: Build Frontend
         run: |
@@ -256,6 +265,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [deploy-backend-preview, deploy-frontend-preview]
     if: github.event.action != 'closed'
+    continue-on-error: true  # non-blocking: COOLIFY_* secrets missing — see #107
     steps:
       - name: Wait for deployments to be ready
         run: sleep 60
@@ -350,6 +360,7 @@ jobs:
     name: Cleanup Preview Deployments
     runs-on: ubuntu-latest
     if: github.event.action == 'closed'
+    continue-on-error: true  # non-blocking: COOLIFY_* secrets missing — see #107
     steps:
       - name: Delete Backend Preview
         run: |
