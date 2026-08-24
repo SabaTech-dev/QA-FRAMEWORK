@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Accuracy testing API wiring (card c9825844)**: the accuracy_testing
+  module (merged from cards 72f97f1b/ca3090d5) is mounted in the dashboard
+  backend behind JWT auth, opt-in via `ACCURACY_TESTING_ENABLED=1` with
+  `ACCURACY_SPLIT_SECRET` required (fail-closed mount). Owner-scoped
+  endpoints (`GET /accuracy/benchmarks[/{id}]`,
+  `POST /accuracy/sessions`, `GET /accuracy/sessions/{id}[/holdout]`) with
+  an aggregate-only holdout contract (AC2 canary tests). Vendored copy
+  under `dashboard/backend/src/` guarded by a vendor-parity test. Docs in
+  `docs/accuracy-testing.md`.
 - **QA Visual dashboard wiring (Fase C)**: the dashboard backend mounts the
   qa-visual router behind JWT auth (`Depends(get_current_user)`) — all five
   endpoints require authentication — **gated behind `QA_VISUAL_ENABLED=1`
@@ -19,8 +28,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ships `dashboard/backend`), guarded by a vendor-parity test that fails on
   drift between the two copies.
 
+### Fixed
+
+- **Threshold threading (card c9825844)**: `compute_overall()` no longer
+  hardcodes 0.6 — `AccuracyBenchmark.passing_threshold` flows into the pass
+  decision via the evaluator (legacy 0.6 kept as backwards-compatible
+  default when no threshold is threaded).
+
 ### Security
 
+- **L-1 (card c9825844)**: `SplitPolicy.salt` is now required and non-empty
+  (breaking); the API derives a per-tenant salt server-side
+  (`HMAC-SHA256(ACCURACY_SPLIT_SECRET, tenant_id)`) — clients cannot send or
+  choose a salt (422), and holdout membership is tenant-scoped.
+- **L-2 (card c9825844)**: `AccuracyBenchmark.to_dict_full()` (exposes
+  `ground_truth` + `tenant_id`) is served to admins only; sessions and
+  benchmarks are owner-scoped (cross-tenant 404, holdout members 404 for
+  non-admins).
+- **AC2 (card c9825844)**: API responses serialize benchmarks via
+  `to_dict()` and holdout results via `HoldoutSummary` only — canary tests
+  fail on any `holdout_benchmarks` serialization or holdout-content leak.
 - **S-1 (HIGH)**: router factory now accepts injectable `dependencies`;
   mounted in the dashboard with auth. Backward compatible (no dependencies
   by default).
