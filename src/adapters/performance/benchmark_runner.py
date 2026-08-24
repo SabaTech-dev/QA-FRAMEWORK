@@ -1,8 +1,9 @@
 """Benchmark runner for performance testing"""
 
 import time
-from typing import Any, Callable, Dict, List, Optional
 from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List, Optional
+
 from src.adapters.performance.metrics_collector import MetricsCollector
 
 
@@ -211,13 +212,13 @@ class BenchmarkRunner:
             iteration_start = time.time()
             try:
                 if method.lower() == "get":
-                    response = await client.get(url)
+                    _response = await client.get(url)
                 elif method.lower() == "post":
-                    response = await client.post(url, data=payload)
+                    _response = await client.post(url, data=payload)
                 elif method.lower() == "put":
-                    response = await client.put(url, data=payload)
+                    _response = await client.put(url, data=payload)
                 elif method.lower() == "delete":
-                    response = await client.delete(url)
+                    _response = await client.delete(url)
                 else:
                     raise ValueError(f"Unsupported HTTP method: {method}")
 

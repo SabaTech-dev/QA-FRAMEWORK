@@ -1,7 +1,10 @@
 """Password hashing utilities using bcrypt."""
+
 from abc import ABC, abstractmethod
 from typing import Optional
+
 import bcrypt
+
 from src.domain.auth.value_objects import Password
 
 
@@ -73,8 +76,8 @@ class BCryptPasswordHasher(PasswordHasher):
         # Generate salt with configured rounds
         salt = bcrypt.gensalt(rounds=self._rounds)
         # Hash password
-        hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
-        return hashed.decode('utf-8')
+        hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
+        return hashed.decode("utf-8")
 
     def verify(self, plain_password: str, hashed_password: str) -> bool:
         """Verify password against bcrypt hash.
@@ -87,10 +90,7 @@ class BCryptPasswordHasher(PasswordHasher):
             True if passwords match
         """
         try:
-            return bcrypt.checkpw(
-                plain_password.encode('utf-8'),
-                hashed_password.encode('utf-8')
-            )
+            return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
         except Exception:
             return False
 
@@ -108,7 +108,7 @@ class BCryptPasswordHasher(PasswordHasher):
         """
         try:
             # Extract rounds from hash prefix ($2b$rounds$)
-            prefix_parts = hashed_password.split('$')
+            prefix_parts = hashed_password.split("$")
             if len(prefix_parts) >= 3:
                 stored_rounds = int(prefix_parts[2])
                 return stored_rounds < self._rounds

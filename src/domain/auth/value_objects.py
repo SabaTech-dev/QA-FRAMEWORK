@@ -1,11 +1,13 @@
 """Auth domain value objects."""
-from enum import Enum
-from typing import Optional, List, Tuple
+
 import re
+from enum import Enum
+from typing import List, Optional, Tuple
 
 
 class AuthProvider(Enum):
     """Enumeration of supported authentication providers."""
+
     GOOGLE = "google"
     GITHUB = "github"
     EMAIL = "email"
@@ -29,6 +31,7 @@ class AuthProvider(Enum):
 
 class TokenStatus(Enum):
     """Token status enumeration."""
+
     ACTIVE = "active"
     EXPIRED = "expired"
     REVOKED = "revoked"
@@ -68,13 +71,13 @@ class Password:
         if len(password) > Password.MAX_LENGTH:
             errors.append(f"Password must not exceed {Password.MAX_LENGTH} characters")
 
-        if not re.search(r'[A-Z]', password):
+        if not re.search(r"[A-Z]", password):
             errors.append("Password must contain at least one uppercase letter")
 
-        if not re.search(r'[a-z]', password):
+        if not re.search(r"[a-z]", password):
             errors.append("Password must contain at least one lowercase letter")
 
-        if not re.search(r'\d', password):
+        if not re.search(r"\d", password):
             errors.append("Password must contain at least one number")
 
         if not re.search(r'[!@#$%^&*(),.?":{}|<>_\-=+\[\]/\\`~]', password):

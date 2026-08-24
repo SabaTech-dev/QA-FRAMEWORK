@@ -5,20 +5,19 @@ Uses mock data to avoid requiring Docker.
 """
 
 import json
-import pytest
-from datetime import datetime
-from typing import Dict, List, Any
 from pathlib import Path
+from typing import Any, Dict, List
+
+import pytest
 
 from src.adapters.vuln import (
-    VulnSeverity,
+    UnifiedVulnParser,
     VulnCategory,
     VulnerabilityFinding,
-    VulnScanResult,
-    UnifiedVulnParser,
     VulnReportGenerator,
+    VulnScanResult,
+    VulnSeverity,
 )
-
 
 # ─── Fixtures ────────────────────────────────────────────────
 
@@ -78,18 +77,20 @@ def sample_nuclei_output() -> List[Dict[str, Any]]:
 @pytest.fixture
 def sample_nuclei_json_string() -> str:
     """Sample Nuclei JSON output as string."""
-    return json.dumps([
-        {
-            "template-id": "test-template",
-            "info": {
-                "name": "Test Finding",
-                "description": "A test vulnerability",
-                "severity": "low",
-                "tags": ["test"],
-            },
-            "matched-at": "https://test.com/",
-        }
-    ])
+    return json.dumps(
+        [
+            {
+                "template-id": "test-template",
+                "info": {
+                    "name": "Test Finding",
+                    "description": "A test vulnerability",
+                    "severity": "low",
+                    "tags": ["test"],
+                },
+                "matched-at": "https://test.com/",
+            }
+        ]
+    )
 
 
 @pytest.fixture
@@ -164,12 +165,22 @@ class TestVulnCategory:
         assert VulnCategory.from_nuclei_template("test", ["sqli"]) == VulnCategory.INJECTION
         assert VulnCategory.from_nuclei_template("test", ["xss"]) == VulnCategory.INJECTION
         assert VulnCategory.from_nuclei_template("test", ["auth"]) == VulnCategory.AUTH_FAILURES
-        assert VulnCategory.from_nuclei_template("test", ["idor"]) == VulnCategory.BROKEN_ACCESS_CONTROL
-        assert VulnCategory.from_nuclei_template("test", ["cors"]) == VulnCategory.SECURITY_MISCONFIGURATION
+        assert (
+            VulnCategory.from_nuclei_template("test", ["idor"])
+            == VulnCategory.BROKEN_ACCESS_CONTROL
+        )
+        assert (
+            VulnCategory.from_nuclei_template("test", ["cors"])
+            == VulnCategory.SECURITY_MISCONFIGURATION
+        )
         assert VulnCategory.from_nuclei_template("test", ["ssl", "tls"]) == VulnCategory.TLS_ISSUES
         assert VulnCategory.from_nuclei_template("test", ["dns"]) == VulnCategory.DNS_ISSUES
-        assert VulnCategory.from_nuclei_template("test", ["cve"]) == VulnCategory.VULNERABLE_COMPONENTS
-        assert VulnCategory.from_nuclei_template("test", ["exposure"]) == VulnCategory.INFO_DISCLOSURE
+        assert (
+            VulnCategory.from_nuclei_template("test", ["cve"]) == VulnCategory.VULNERABLE_COMPONENTS
+        )
+        assert (
+            VulnCategory.from_nuclei_template("test", ["exposure"]) == VulnCategory.INFO_DISCLOSURE
+        )
         assert VulnCategory.from_nuclei_template("test", ["ssrf"]) == VulnCategory.SSRF
         assert VulnCategory.from_nuclei_template("test", ["unknown_tag"]) == VulnCategory.UNKNOWN
 
@@ -252,12 +263,60 @@ class TestVulnScanResult:
 
     def test_finding_counts(self):
         findings = [
-            VulnerabilityFinding(id="1", title="C1", description="", severity=VulnSeverity.CRITICAL, category=VulnCategory.INJECTION, scanner="test", target="https://example.com"),
-            VulnerabilityFinding(id="2", title="H1", description="", severity=VulnSeverity.HIGH, category=VulnCategory.AUTH_FAILURES, scanner="test", target="https://example.com"),
-            VulnerabilityFinding(id="3", title="M1", description="", severity=VulnSeverity.MEDIUM, category=VulnCategory.SECURITY_MISCONFIGURATION, scanner="test", target="https://example.com"),
-            VulnerabilityFinding(id="4", title="M2", description="", severity=VulnSeverity.MEDIUM, category=VulnCategory.CORS_MISCONFIG, scanner="test", target="https://example.com"),
-            VulnerabilityFinding(id="5", title="L1", description="", severity=VulnSeverity.LOW, category=VulnCategory.INFO_DISCLOSURE, scanner="test", target="https://example.com"),
-            VulnerabilityFinding(id="6", title="I1", description="", severity=VulnSeverity.INFO, category=VulnCategory.DIRECTORY_LISTING, scanner="test", target="https://example.com"),
+            VulnerabilityFinding(
+                id="1",
+                title="C1",
+                description="",
+                severity=VulnSeverity.CRITICAL,
+                category=VulnCategory.INJECTION,
+                scanner="test",
+                target="https://example.com",
+            ),
+            VulnerabilityFinding(
+                id="2",
+                title="H1",
+                description="",
+                severity=VulnSeverity.HIGH,
+                category=VulnCategory.AUTH_FAILURES,
+                scanner="test",
+                target="https://example.com",
+            ),
+            VulnerabilityFinding(
+                id="3",
+                title="M1",
+                description="",
+                severity=VulnSeverity.MEDIUM,
+                category=VulnCategory.SECURITY_MISCONFIGURATION,
+                scanner="test",
+                target="https://example.com",
+            ),
+            VulnerabilityFinding(
+                id="4",
+                title="M2",
+                description="",
+                severity=VulnSeverity.MEDIUM,
+                category=VulnCategory.CORS_MISCONFIG,
+                scanner="test",
+                target="https://example.com",
+            ),
+            VulnerabilityFinding(
+                id="5",
+                title="L1",
+                description="",
+                severity=VulnSeverity.LOW,
+                category=VulnCategory.INFO_DISCLOSURE,
+                scanner="test",
+                target="https://example.com",
+            ),
+            VulnerabilityFinding(
+                id="6",
+                title="I1",
+                description="",
+                severity=VulnSeverity.INFO,
+                category=VulnCategory.DIRECTORY_LISTING,
+                scanner="test",
+                target="https://example.com",
+            ),
         ]
         result = VulnScanResult(
             scan_id="test-002",
@@ -288,7 +347,15 @@ class TestVulnScanResult:
         )
         assert result.total_findings == 0
 
-        f = VulnerabilityFinding(id="new", title="New", description="", severity=VulnSeverity.CRITICAL, category=VulnCategory.INJECTION, scanner="test", target="https://example.com")
+        f = VulnerabilityFinding(
+            id="new",
+            title="New",
+            description="",
+            severity=VulnSeverity.CRITICAL,
+            category=VulnCategory.INJECTION,
+            scanner="test",
+            target="https://example.com",
+        )
         result.add_finding(f)
         assert result.total_findings == 1
         assert result.critical_count == 1
@@ -310,13 +377,43 @@ class TestVulnScanResult:
 
     def test_get_findings_by_severity(self):
         findings = [
-            VulnerabilityFinding(id="c1", title="C1", description="", severity=VulnSeverity.CRITICAL, category=VulnCategory.INJECTION, scanner="test", target="t"),
-            VulnerabilityFinding(id="h1", title="H1", description="", severity=VulnSeverity.HIGH, category=VulnCategory.AUTH_FAILURES, scanner="test", target="t"),
-            VulnerabilityFinding(id="c2", title="C2", description="", severity=VulnSeverity.CRITICAL, category=VulnCategory.INJECTION, scanner="test", target="t"),
+            VulnerabilityFinding(
+                id="c1",
+                title="C1",
+                description="",
+                severity=VulnSeverity.CRITICAL,
+                category=VulnCategory.INJECTION,
+                scanner="test",
+                target="t",
+            ),
+            VulnerabilityFinding(
+                id="h1",
+                title="H1",
+                description="",
+                severity=VulnSeverity.HIGH,
+                category=VulnCategory.AUTH_FAILURES,
+                scanner="test",
+                target="t",
+            ),
+            VulnerabilityFinding(
+                id="c2",
+                title="C2",
+                description="",
+                severity=VulnSeverity.CRITICAL,
+                category=VulnCategory.INJECTION,
+                scanner="test",
+                target="t",
+            ),
         ]
         result = VulnScanResult(
-            scan_id="test-005", scanner="nuclei", scan_type="web", target="t",
-            start_time="S", end_time="E", duration_seconds=0, findings=findings,
+            scan_id="test-005",
+            scanner="nuclei",
+            scan_type="web",
+            target="t",
+            start_time="S",
+            end_time="E",
+            duration_seconds=0,
+            findings=findings,
         )
         crit = result.get_findings_by_severity(VulnSeverity.CRITICAL)
         assert len(crit) == 2
@@ -325,12 +422,34 @@ class TestVulnScanResult:
 
     def test_get_findings_by_category(self):
         findings = [
-            VulnerabilityFinding(id="i1", title="I1", description="", severity=VulnSeverity.HIGH, category=VulnCategory.INJECTION, scanner="test", target="t"),
-            VulnerabilityFinding(id="a1", title="A1", description="", severity=VulnSeverity.HIGH, category=VulnCategory.AUTH_FAILURES, scanner="test", target="t"),
+            VulnerabilityFinding(
+                id="i1",
+                title="I1",
+                description="",
+                severity=VulnSeverity.HIGH,
+                category=VulnCategory.INJECTION,
+                scanner="test",
+                target="t",
+            ),
+            VulnerabilityFinding(
+                id="a1",
+                title="A1",
+                description="",
+                severity=VulnSeverity.HIGH,
+                category=VulnCategory.AUTH_FAILURES,
+                scanner="test",
+                target="t",
+            ),
         ]
         result = VulnScanResult(
-            scan_id="test-006", scanner="nuclei", scan_type="web", target="t",
-            start_time="S", end_time="E", duration_seconds=0, findings=findings,
+            scan_id="test-006",
+            scanner="nuclei",
+            scan_type="web",
+            target="t",
+            start_time="S",
+            end_time="E",
+            duration_seconds=0,
+            findings=findings,
         )
         inject = result.get_findings_by_category(VulnCategory.INJECTION)
         assert len(inject) == 1
@@ -508,8 +627,13 @@ class TestVulnReportGenerator:
 
     def test_empty_result_report(self, tmp_path):
         result = VulnScanResult(
-            scan_id="empty", scanner="nuclei", scan_type="web", target="https://example.com",
-            start_time="S", end_time="E", duration_seconds=0,
+            scan_id="empty",
+            scanner="nuclei",
+            scan_type="web",
+            target="https://example.com",
+            start_time="S",
+            end_time="E",
+            duration_seconds=0,
         )
         reporter = VulnReportGenerator(output_dir=str(tmp_path))
         path = reporter.generate_html(result, filename="empty.html")

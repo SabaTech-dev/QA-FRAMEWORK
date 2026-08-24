@@ -13,7 +13,7 @@ import pytest
 pytest.importorskip('fastapi')
 pytest.importorskip('redis')
 pytest.importorskip('asyncpg')
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, AsyncMock, MagicMock, patch
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 import time
@@ -273,6 +273,73 @@ class TestIntegration:
                 assert is_allowed is True
             else:
                 assert is_allowed is False
+
+
+class TestSkipPathTrailingSlash:
+    """card f90a8079: FastAPI redirect_slashes 307-redirects /metrics -> /metrics/,
+    so the middleware sees the TRAILING-SLASH variant. The skip check must
+    tolerate trailing slashes on both sides (comparison-only; the request path
+    is never mutated)."""
+
+    @staticmethod
+    def _make_middleware(rate_limiter=None):
+        # rate_limiter injection avoids any Redis dependency in these tests
+        return RateLimitMiddleware(app=Mock(), rate_limiter=rate_limiter or Mock())
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("path", [
+        "/metrics", "/metrics/",
+        "/health", "/health/",
+        "/docs", "/docs/",
+        "/openapi.json", "/openapi.json/",
+    ])
+    async def test_dispatch_skips_without_ratelimit_call(self, path):
+        """Skipped paths (with/without trailing slash) bypass the limiter entirely"""
+        mw = self._make_middleware()
+        request = Mock()
+        request.url.path = path
+        sentinel = MagicMock()
+        call_next = AsyncMock(return_value=sentinel)
+
+        response = await mw.dispatch(request, call_next)
+
+        assert response is sentinel
+        call_next.assert_awaited_once_with(request)
+        mw.rate_limiter.is_allowed.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_dispatch_non_skip_path_calls_limiter(self):
+        """Control: non-skipped paths still go through the limiter"""
+        limiter = Mock()
+        limiter.is_allowed = AsyncMock(return_value=(
+            True, {"limit": 100, "remaining": 99, "reset": 0}
+        ))
+        mw = self._make_middleware(rate_limiter=limiter)
+        request = MagicMock()
+        request.url.path = "/api/v1/test"
+        request.headers.get.return_value = None
+        request.client.host = "127.0.0.1"
+        call_next = AsyncMock(return_value=MagicMock())
+
+        await mw.dispatch(request, call_next)
+
+        limiter.is_allowed.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_dispatch_lookalike_paths_not_skipped(self):
+        """Lookalike paths must NOT be skipped (normalization must not over-match)"""
+        limiter = Mock()
+        limiter.is_allowed = AsyncMock(return_value=(
+            True, {"limit": 100, "remaining": 99, "reset": 0}
+        ))
+        mw = self._make_middleware(rate_limiter=limiter)
+        for path in ("/api/v1/metrics", "/metricsx", "/v1/health"):
+            request = MagicMock()
+            request.url.path = path
+            request.headers.get.return_value = None
+            request.client.host = "127.0.0.1"
+            await mw.dispatch(request, AsyncMock(return_value=MagicMock()))
+        assert limiter.is_allowed.await_count == 3
 
 
 # Run tests

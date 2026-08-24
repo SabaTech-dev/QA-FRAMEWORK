@@ -1,0 +1,103 @@
+{
+  "@version": "2.14.0",
+  "@generated": "2026-08-02T10:00:00.000Z",
+  "site": [
+    {
+      "@name": "https://qa.sabatech.dev",
+      "@host": "qa.sabatech.dev",
+      "@port": "443",
+      "@ssl": "true",
+      "alerts": [
+        {
+          "pluginid": "10038",
+          "alertRef": "10038",
+          "alert": "Content Security Policy (CSP) Header Not Set",
+          "name": "Content Security Policy (CSP) Header Not Set",
+          "riskcode": "3",
+          "confidence": "2",
+          "riskdesc": "High (Medium)",
+          "desc": "Content Security Policy (CSP) is a defence-in-depth mechanism.",
+          "instances": [
+            {
+              "uri": "https://qa.sabatech.dev/",
+              "method": "GET",
+              "param": ""
+            },
+            {
+              "uri": "https://qa.sabatech.dev/dashboard",
+              "method": "GET",
+              "param": ""
+            }
+          ],
+          "count": "2",
+          "solution": "Ensure that CSP is set on every response.",
+          "wascid": "15",
+          "reference": "https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Prevention_Cheat_Sheet.html"
+        },
+        {
+          "pluginid": "10010",
+          "alertRef": "10010",
+          "alert": "Cookie No HttpOnly Flag",
+          "name": "Cookie No HttpOnly Flag",
+          "riskcode": "2",
+          "confidence": "2",
+          "riskdesc": "Medium (Medium)",
+          "desc": "A cookie has been set without the HttpOnly flag.",
+          "instances": [
+            {
+              "uri": "https://qa.sabatech.dev/",
+              "method": "GET",
+              "param": "session"
+            }
+          ],
+          "count": "1",
+          "solution": "Ensure that the HttpOnly flag is set.",
+          "wascid": "13",
+          "reference": "https://owasp.org/www-community/HttpOnly"
+        },
+        {
+          "pluginid": "10011",
+          "alertRef": "10011",
+          "alert": "Cookie Without Secure Flag",
+          "name": "Cookie Without Secure Flag",
+          "riskcode": "1",
+          "confidence": "2",
+          "riskdesc": "Low (Medium)",
+          "desc": "A cookie has been set without the Secure flag.",
+          "instances": [
+            {
+              "uri": "https://qa.sabatech.dev/",
+              "method": "GET",
+              "param": "prefs"
+            }
+          ],
+          "count": "1",
+          "solution": "Whenever a cookie contains sensitive information the Secure flag should be set.",
+          "wascid": "13",
+          "reference": "https://owasp.org/www-community/controls/SecureCookie"
+        },
+        {
+          "pluginid": "10036",
+          "alertRef": "10036",
+          "alert": "Server Leaks Version Information via Server Header",
+          "name": "Server Leaks Version Information",
+          "riskcode": "0",
+          "confidence": "2",
+          "riskdesc": "Informational (Medium)",
+          "desc": "The server header discloses version information.",
+          "instances": [
+            {
+              "uri": "https://qa.sabatech.dev/",
+              "method": "GET",
+              "param": ""
+            }
+          ],
+          "count": "1",
+          "solution": "Suppress the Server header or obscure its value.",
+          "wascid": "13",
+          "reference": "https://owasp.org/www-community/attacks/Information_Leakage"
+        }
+      ]
+    }
+  ]
+}

@@ -155,6 +155,6 @@ class TestAPIWithContractValidation:
         )
 
         # Assert contract compliance
-        assert len(violations) == 0, (
-            f"API response violates contract: {[v.message for v in violations]}"
-        )
+        assert (
+            len(violations) == 0
+        ), f"API response violates contract: {[v.message for v in violations]}"

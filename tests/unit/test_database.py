@@ -9,28 +9,29 @@ This module tests the database testing adapters including:
 - SQLiteClient
 """
 
-import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, patch, mock_open
-from pathlib import Path
 
 # Add src to path
 import sys
+from pathlib import Path
+from unittest.mock import AsyncMock, mock_open, patch
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from src.adapters.database import (
     DatabaseClient,
-    SQLiteClient,
-    SQLValidator,
     DataIntegrityTester,
-    MigrationTester,
     IntegrityConstraint,
     MigrationResult,
     MigrationStatus,
+    MigrationTester,
+    SQLiteClient,
+    SQLValidator,
 )
-from src.adapters.database.sql_validator import SQLIssue, SQLValidationResult, ValidationSeverity
 from src.adapters.database.data_integrity_tester import ConstraintType
+from src.adapters.database.sql_validator import SQLValidationResult
 
 
 class TestSQLValidator:
@@ -40,7 +41,7 @@ class TestSQLValidator:
         """Test validator initialization."""
         validator = SQLValidator()
         assert validator is not None
-        assert hasattr(validator, 'DANGEROUS_KEYWORDS')
+        assert hasattr(validator, "DANGEROUS_KEYWORDS")
 
     def test_validate_valid_query(self):
         """Test validation of valid SQL query."""
@@ -190,9 +191,7 @@ class TestDataIntegrityTester:
     async def test_test_unique_constraint_violation(self, mock_db_client):
         """Test UNIQUE constraint violation detection."""
         # Mock query results - duplicate values found
-        mock_db_client.execute_query.return_value = [
-            ("john@example.com", 2)  # email appears twice
-        ]
+        mock_db_client.execute_query.return_value = [("john@example.com", 2)]  # email appears twice
 
         tester = DataIntegrityTester(mock_db_client)
 
@@ -213,9 +212,7 @@ class TestDataIntegrityTester:
     async def test_test_foreign_key_constraint(self, mock_db_client):
         """Test FOREIGN KEY constraint validation."""
         # Mock query results - orphan records found
-        mock_db_client.execute_query.return_value = [
-            (999,)  # user_id 999 doesn't exist
-        ]
+        mock_db_client.execute_query.return_value = [(999,)]  # user_id 999 doesn't exist
 
         tester = DataIntegrityTester(mock_db_client)
 

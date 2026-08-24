@@ -5,16 +5,13 @@ Provides fixtures for the dashboard FastAPI backend including API clients,
 database models, and service mocks.
 """
 
-import asyncio
-from datetime import datetime, timezone, timedelta
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from datetime import datetime, timezone
+from typing import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import httpx
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
-
 
 # =============================================================================
 # Dashboard Model Fixtures

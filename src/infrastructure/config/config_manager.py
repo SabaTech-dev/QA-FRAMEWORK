@@ -1,16 +1,17 @@
 """Configuration management with support for YAML, JSON, ENV"""
 
-import os
 from pathlib import Path
 from typing import Any, Dict, Optional
+
 import yaml
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic_settings import BaseSettings
 
 
 class TestConfig(BaseModel):
     """Test execution configuration"""
-    model_config = ConfigDict(extra='allow')
+
+    model_config = ConfigDict(extra="allow")
 
     environment: str = "development"
     parallel_workers: int = 4
@@ -20,7 +21,8 @@ class TestConfig(BaseModel):
 
 class APIConfig(BaseModel):
     """API configuration"""
-    model_config = ConfigDict(extra='allow')
+
+    model_config = ConfigDict(extra="allow")
 
     base_url: str = "http://localhost:8000"
     auth_type: str = "none"
@@ -31,7 +33,8 @@ class APIConfig(BaseModel):
 
 class UIConfig(BaseModel):
     """UI testing configuration"""
-    model_config = ConfigDict(extra='allow')
+
+    model_config = ConfigDict(extra="allow")
 
     browser: str = "chromium"
     headless: bool = True
@@ -43,7 +46,8 @@ class UIConfig(BaseModel):
 
 class AllureConfig(BaseModel):
     """Allure reporting configuration"""
-    model_config = ConfigDict(extra='allow')
+
+    model_config = ConfigDict(extra="allow")
 
     enabled: bool = True
     results_dir: str = "allure-results"
@@ -54,7 +58,8 @@ class AllureConfig(BaseModel):
 
 class HTMLReportConfig(BaseModel):
     """HTML reporting configuration"""
-    model_config = ConfigDict(extra='allow')
+
+    model_config = ConfigDict(extra="allow")
 
     enabled: bool = True
     report_dir: str = "reports/html-report"
@@ -62,7 +67,8 @@ class HTMLReportConfig(BaseModel):
 
 class JSONReportConfig(BaseModel):
     """JSON reporting configuration"""
-    model_config = ConfigDict(extra='allow')
+
+    model_config = ConfigDict(extra="allow")
 
     enabled: bool = False
     report_dir: str = "reports/json-report"
@@ -70,7 +76,8 @@ class JSONReportConfig(BaseModel):
 
 class ReportingConfig(BaseModel):
     """Reporting configuration"""
-    model_config = ConfigDict(extra='allow')
+
+    model_config = ConfigDict(extra="allow")
 
     allure: AllureConfig = Field(default_factory=AllureConfig)
     html: HTMLReportConfig = Field(default_factory=HTMLReportConfig)
@@ -80,11 +87,9 @@ class ReportingConfig(BaseModel):
 
 class QAConfig(BaseSettings):
     """Main QA Framework configuration"""
+
     model_config = ConfigDict(
-        extra='allow',
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=False
+        extra="allow", env_file=".env", env_file_encoding="utf-8", case_sensitive=False
     )
 
     test: TestConfig = Field(default_factory=TestConfig)

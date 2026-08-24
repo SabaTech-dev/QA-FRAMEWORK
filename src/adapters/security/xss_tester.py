@@ -1,10 +1,9 @@
 """Cross-Site Scripting (XSS) testing module"""
 
 import re
-from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 from enum import Enum
-from urllib.parse import urljoin, parse_qs, urlparse
+from typing import Any, Dict, List, Optional
 
 
 class XSSType(Enum):
@@ -352,7 +351,7 @@ class XSSTester:
 
         # Check for javascript: protocol
         js_protocol_pattern = re.compile(r"javascript:", re.IGNORECASE)
-        matches = js_protocol_pattern.findall(response_text)
+        _matches = js_protocol_pattern.findall(response_text)
 
         return False
 
