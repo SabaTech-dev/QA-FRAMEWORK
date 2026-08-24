@@ -11,6 +11,7 @@ from uuid import uuid4
 
 from .splitting import HoldoutSummary
 from .value_objects import (
+    DEFAULT_PASSING_THRESHOLD,
     AccuracyLevel,
     CriterionScore,
     EvaluationCriterion,
@@ -149,14 +150,25 @@ class AccuracyEvaluation:
     def has_hallucinations(self) -> bool:
         return len(self.hallucinations) > 0
 
-    def compute_overall(self) -> "AccuracyEvaluation":
-        """F-ACC-005: Compute overall score, returning a new object (no mutation)."""
+    def compute_overall(self, passing_threshold: Optional[float] = None) -> "AccuracyEvaluation":
+        """F-ACC-005: Compute overall score, returning a new object (no mutation).
+
+        Args:
+            passing_threshold: minimum overall score to pass. Callers holding
+                a benchmark must thread ``benchmark.passing_threshold`` here;
+                ``None`` keeps the legacy 0.6 default for backwards
+                compatibility (card c9825844 — the hardcoded 0.6 used to make
+                the per-benchmark config dead).
+        """
         if not self.criterion_scores:
             return self
 
+        threshold = DEFAULT_PASSING_THRESHOLD if passing_threshold is None else passing_threshold
+        validate_threshold(threshold)
+
         new_overall = sum(s.score for s in self.criterion_scores) / len(self.criterion_scores)
         new_level = AccuracyLevel.from_score(new_overall)
-        new_passed = new_overall >= 0.6
+        new_passed = new_overall >= threshold
 
         # Determine verdict
         if new_overall >= 0.8:

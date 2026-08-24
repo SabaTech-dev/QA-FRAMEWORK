@@ -162,8 +162,10 @@ class RuleBasedAccuracyEvaluator:
         evaluation.missing_points = missing_points
         evaluation.hallucinations = hallucinations
 
-        # F-ACC-005: compute_overall returns new object (no mutation)
-        evaluation = evaluation.compute_overall()
+        # F-ACC-005: compute_overall returns new object (no mutation).
+        # Card c9825844: thread the benchmark's passing_threshold instead of
+        # letting compute_overall fall back to the legacy hardcoded 0.6.
+        evaluation = evaluation.compute_overall(passing_threshold=benchmark.passing_threshold)
 
         return evaluation
 

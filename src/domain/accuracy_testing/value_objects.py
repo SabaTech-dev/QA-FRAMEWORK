@@ -101,6 +101,11 @@ def validate_threshold(value: float) -> float:
     return value
 
 
+# Legacy default used when no benchmark threshold is threaded into
+# AccuracyEvaluation.compute_overall() (card c9825844).
+DEFAULT_PASSING_THRESHOLD = 0.6
+
+
 @dataclass(frozen=True)
 class CriterionScore:
     """Score for a single evaluation criterion."""
