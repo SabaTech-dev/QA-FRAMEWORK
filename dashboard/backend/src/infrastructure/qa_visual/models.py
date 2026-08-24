@@ -4,9 +4,8 @@ The QAAnalysis contract mirrors the exact JSON structure the vision model
 is prompted to return (validated in Fase A: 5/5 literal texts, 0 hallucinations).
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -35,18 +34,18 @@ class QAIssue(BaseModel):
     severity: Severity = Severity.INFO
     category: IssueCategory = IssueCategory.OTHER
     description: str = ""
-    element: Optional[str] = None
+    element: str | None = None
 
 
 class LayoutInfo(BaseModel):
     description: str = ""
-    colors: Optional[Dict[str, str]] = None
+    colors: dict[str, str] | None = None
 
 
 class Accessibility(BaseModel):
-    contrast_issues: List[str] = Field(default_factory=list)
+    contrast_issues: list[str] = Field(default_factory=list)
     missing_alt: bool = False
-    missing_labels: List[str] = Field(default_factory=list)
+    missing_labels: list[str] = Field(default_factory=list)
 
 
 class VisualRegression(BaseModel):
@@ -71,10 +70,10 @@ class VisualRegression(BaseModel):
 class QAAnalysis(BaseModel):
     """Structured result the vision model must return for one screenshot."""
 
-    page_title: Optional[str] = None
-    visible_texts: List[str] = Field(default_factory=list)
-    layout: Optional[LayoutInfo] = None
-    qa_issues: List[QAIssue] = Field(default_factory=list)
+    page_title: str | None = None
+    visible_texts: list[str] = Field(default_factory=list)
+    layout: LayoutInfo | None = None
+    qa_issues: list[QAIssue] = Field(default_factory=list)
     accessibility: Accessibility = Field(default_factory=Accessibility)
     visual_regression: VisualRegression = Field(default_factory=VisualRegression)
     overall_score: int = Field(ge=0, le=100)
@@ -94,11 +93,11 @@ class AnalyzeResponse(BaseModel):
     latency_s: float
     model: str
     regression_detected: bool = False
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     # S-1R: identity of the user who triggered the analysis. Reports
     # persisted before owner-scoping have owner=None and are readable by
     # admins only.
-    owner: Optional[str] = None
+    owner: str | None = None
 
 
 class QAVisualPrincipal(BaseModel):
@@ -119,10 +118,10 @@ class TrendPoint(BaseModel):
 
     report_id: str
     target: str
-    timestamp: Optional[datetime] = None
+    timestamp: datetime | None = None
     score: int
     cost_usd: float = 0.0
-    passed: Optional[bool] = None
+    passed: bool | None = None
 
 
 class TrendAlert(BaseModel):
@@ -131,8 +130,8 @@ class TrendAlert(BaseModel):
     type: str
     target: str
     message: str
-    current_score: Optional[int] = None
-    previous_score: Optional[int] = None
+    current_score: int | None = None
+    previous_score: int | None = None
 
     @model_validator(mode="after")
     def _validate_degradation_scores(self) -> "TrendAlert":

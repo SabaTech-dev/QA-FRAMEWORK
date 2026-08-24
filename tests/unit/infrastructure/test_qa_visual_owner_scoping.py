@@ -18,7 +18,7 @@ Without ``get_current_principal`` the router keeps its legacy
 unscoped behaviour for standalone mounts (backward compatibility).
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import AsyncMock
 
@@ -52,7 +52,7 @@ def make_response(**overrides) -> AnalyzeResponse:
         latency_s=4.37,
         model="deepseek-v4-flash-vision-exp",
         regression_detected=False,
-        timestamp=datetime(2026, 8, 24, 12, 0, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2026, 8, 24, 12, 0, 0, tzinfo=UTC),
     )
     fields.update(overrides)
     return AnalyzeResponse(**fields)
@@ -77,7 +77,7 @@ def store(tmp_path: Path) -> QAVisualReportStore:
             report_id="rep-legacy",
             target="amc",
             owner=None,
-            timestamp=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
         )
     )
     return store
@@ -101,7 +101,7 @@ class TestStorageOwnerScoping:
                 report_id="rep-alice-early",
                 target="amc",
                 owner="alice",
-                timestamp=datetime(2026, 1, 2, tzinfo=timezone.utc),
+                timestamp=datetime(2026, 1, 2, tzinfo=UTC),
             )
         )
         baseline = store.get_baseline("amc", owner="alice")
@@ -113,7 +113,7 @@ class TestStorageOwnerScoping:
 
 
 def gateway_result(score: int) -> VisionResult:
-    content = '{"overall_score": %d, "summary": "generated"}' % score
+    content = f'{{"overall_score": {score}, "summary": "generated"}}'
     return VisionResult(
         content=content,
         latency_s=4.0,

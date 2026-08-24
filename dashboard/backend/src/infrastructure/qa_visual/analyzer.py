@@ -8,7 +8,6 @@ The analyzer owns two policy decisions from the GO-NOGO Fase B scope:
 """
 
 import logging
-from typing import List, Optional, Tuple
 
 from src.infrastructure.qa_visual.config import QAVisualConfig
 from src.infrastructure.qa_visual.gateway_client import VisionGatewayClient, VisionGatewayError
@@ -22,7 +21,7 @@ logger = logging.getLogger(__name__)
 class QAVisualAnalysisError(Exception):
     """Raised when the analysis pipeline fails end to end."""
 
-    def __init__(self, message: str, raw_content: Optional[str] = None):
+    def __init__(self, message: str, raw_content: str | None = None):
         super().__init__(message)
         self.raw_content = raw_content
 
@@ -32,9 +31,9 @@ class QAVisualAnalyzer:
 
     def __init__(
         self,
-        config: Optional[QAVisualConfig] = None,
-        gateway_client: Optional[VisionGatewayClient] = None,
-        store: Optional[QAVisualReportStore] = None,
+        config: QAVisualConfig | None = None,
+        gateway_client: VisionGatewayClient | None = None,
+        store: QAVisualReportStore | None = None,
     ):
         self._config = config or QAVisualConfig.from_env()
         self._gateway = gateway_client or VisionGatewayClient(self._config)
@@ -49,7 +48,7 @@ class QAVisualAnalyzer:
         return self._config
 
     async def analyze(
-        self, image_bytes: bytes, target: str, owner: Optional[str] = None
+        self, image_bytes: bytes, target: str, owner: str | None = None
     ) -> AnalyzeResponse:
         """Analyze one screenshot and persist the report."""
         try:
@@ -94,7 +93,7 @@ class QAVisualAnalyzer:
         )
         return response
 
-    def _detect_regression(self, analysis, baseline_report: Optional[dict]) -> bool:
+    def _detect_regression(self, analysis, baseline_report: dict | None) -> bool:
         """Regression = big score drop vs baseline OR regression flags."""
         if analysis.visual_regression.has_any():
             return True
@@ -112,11 +111,11 @@ class QAVisualAnalyzer:
 
 def build_trend_report(
     store: QAVisualReportStore,
-    target: Optional[str] = None,
+    target: str | None = None,
     limit: int = 50,
     degradation_points: int = 10,
-    owner: Optional[str] = None,
-) -> Tuple[List[TrendPoint], List[TrendAlert]]:
+    owner: str | None = None,
+) -> tuple[list[TrendPoint], list[TrendAlert]]:
     """Build score history and degradation alerts from stored reports.
 
     Points are returned newest first (mirroring store ordering); alerts are
@@ -136,7 +135,7 @@ def build_trend_report(
         for r in reports
     ]
 
-    alerts: List[TrendAlert] = []
+    alerts: list[TrendAlert] = []
     # reports are newest-first; walk chronologically to compare consecutive runs
     chronological = list(reversed(reports))
     for previous, current in zip(chronological, chronological[1:]):

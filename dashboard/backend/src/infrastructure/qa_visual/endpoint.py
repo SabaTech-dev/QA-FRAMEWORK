@@ -22,7 +22,7 @@ Example:
 
 import logging
 from collections.abc import Callable, Sequence
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 
@@ -45,17 +45,17 @@ CHUNK_SIZE = 64 * 1024
 
 def _no_principal() -> None:
     """Default principal dependency: no owner scoping (standalone mounts)."""
-    return None
+    return
 
 
-def _owner_scope(principal: Optional[QAVisualPrincipal]) -> Optional[str]:
+def _owner_scope(principal: QAVisualPrincipal | None) -> str | None:
     """Owner a non-admin principal is scoped to; None sees everything."""
     if principal is None or principal.is_admin:
         return None
     return principal.owner
 
 
-def _require_report_access(report: dict, principal: Optional[QAVisualPrincipal]) -> None:
+def _require_report_access(report: dict, principal: QAVisualPrincipal | None) -> None:
     """Raise 403 unless the principal owns the report or is an admin.
 
     S-1R: reports persisted before owner-scoping (owner absent) belong to
@@ -92,10 +92,10 @@ async def _read_capped(upload: UploadFile) -> bytes:
 
 
 def create_qa_visual_router(
-    analyzer: Optional[QAVisualAnalyzer] = None,
+    analyzer: QAVisualAnalyzer | None = None,
     prefix: str = "/api/v1/qa-visual",
-    dependencies: Optional[Sequence[Any]] = None,
-    get_current_principal: Optional[Callable[..., Any]] = None,
+    dependencies: Sequence[Any] | None = None,
+    get_current_principal: Callable[..., Any] | None = None,
 ) -> APIRouter:
     """Create the QA Visual API router.
 
@@ -138,7 +138,7 @@ def create_qa_visual_router(
         target: str = Form(
             ..., max_length=200, description="Target name (page/feature identifier)"
         ),
-        principal: Optional[QAVisualPrincipal] = Depends(principal_dependency),
+        principal: QAVisualPrincipal | None = Depends(principal_dependency),
     ) -> AnalyzeResponse:
         """Analyze one screenshot with the vision model and store the report."""
         # S-2a: reject oversized uploads before reading the body.
@@ -191,9 +191,9 @@ def create_qa_visual_router(
 
     @router.get("/reports")
     def list_reports(
-        target: Optional[str] = None,
+        target: str | None = None,
         limit: int = 50,
-        principal: Optional[QAVisualPrincipal] = Depends(principal_dependency),
+        principal: QAVisualPrincipal | None = Depends(principal_dependency),
     ) -> list:
         """List stored QA Visual reports (newest first).
 
@@ -208,7 +208,7 @@ def create_qa_visual_router(
     @router.get("/reports/{report_id}")
     def get_report(
         report_id: str,
-        principal: Optional[QAVisualPrincipal] = Depends(principal_dependency),
+        principal: QAVisualPrincipal | None = Depends(principal_dependency),
     ) -> dict:
         """Return one stored report by id (owner or admin only)."""
         report = get_analyzer().store.get_report(report_id)
@@ -222,9 +222,9 @@ def create_qa_visual_router(
 
     @router.get("/trends")
     def get_trends(
-        target: Optional[str] = None,
+        target: str | None = None,
         limit: int = 50,
-        principal: Optional[QAVisualPrincipal] = Depends(principal_dependency),
+        principal: QAVisualPrincipal | None = Depends(principal_dependency),
     ) -> dict:
         """Score history and degradation alerts (dashboard data source).
 
@@ -247,7 +247,7 @@ def create_qa_visual_router(
     @router.get("/baselines/{target}")
     def get_baseline(
         target: str,
-        principal: Optional[QAVisualPrincipal] = Depends(principal_dependency),
+        principal: QAVisualPrincipal | None = Depends(principal_dependency),
     ) -> dict:
         """Return the baseline (earliest) report for a target.
 
