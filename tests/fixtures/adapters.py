@@ -237,12 +237,10 @@ async def browser_context(
     )
 
     # Add worker identification
-    await context.add_init_script(
-        f"""
+    await context.add_init_script(f"""
         window.__TEST_WORKER_ID__ = "{worker_id}";
         window.__TEST_PARALLEL__ = true;
-    """
-    )
+    """)
 
     try:
         yield context
