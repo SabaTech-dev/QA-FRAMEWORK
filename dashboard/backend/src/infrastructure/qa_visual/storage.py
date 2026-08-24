@@ -54,15 +54,25 @@ class QAVisualReportStore:
         return path
 
     def list_reports(
-        self, target: Optional[str] = None, limit: Optional[int] = None
+        self,
+        target: Optional[str] = None,
+        limit: Optional[int] = None,
+        owner: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """List reports (newest first), optionally filtered by target."""
+        """List reports (newest first), optionally filtered by target.
+
+        When ``owner`` is given only that owner's reports are returned;
+        reports persisted before owner-scoping (owner absent/None) are
+        excluded because no regular user owns them.
+        """
         reports = []
         for path in self._dir.glob("*.json") if self._dir.exists() else []:
             report = self._read_report(path)
             if report is None:
                 continue
             if target and report.get("target") != target:
+                continue
+            if owner is not None and report.get("owner") != owner:
                 continue
             reports.append(report)
         reports.sort(key=lambda r: r.get("timestamp") or "", reverse=True)
@@ -76,9 +86,13 @@ class QAVisualReportStore:
                 return report
         return None
 
-    def get_baseline(self, target: str) -> Optional[Dict[str, Any]]:
-        """Return the earliest report for a target (its visual baseline)."""
-        reports = self.list_reports(target=target)
+    def get_baseline(self, target: str, owner: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """Return the earliest report for a target (its visual baseline).
+
+        With ``owner`` the baseline is scoped to that owner so scores are
+        never compared across owners (S-1R).
+        """
+        reports = self.list_reports(target=target, owner=owner)
         if not reports:
             return None
         return min(reports, key=lambda r: r.get("timestamp") or "")

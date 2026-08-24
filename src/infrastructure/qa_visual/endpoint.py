@@ -3,9 +3,14 @@
 Endpoints:
 - POST /analyze          — upload a screenshot, get the full QA report
 - GET  /reports          — list stored reports (filter by target, limit)
-- GET  /reports/{id}     — one stored report
+- GET  /reports/{id}     — one stored report (owner or admin only)
 - GET  /trends           — score history + degradation alerts
 - GET  /baselines/{t}    — baseline report for a target
+
+Owner scoping (S-1R): pass a ``get_current_principal`` dependency
+returning a QAVisualPrincipal (owner + is_admin) and every endpoint
+scopes reports to that owner; admins see everything. Without it the
+router keeps its legacy unscoped behaviour for standalone mounts.
 
 Example:
     from fastapi import FastAPI
@@ -16,17 +21,26 @@ Example:
 """
 
 import logging
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import Any, Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
 
 from src.infrastructure.qa_visual.analyzer import (
     QAVisualAnalysisError,
     QAVisualAnalyzer,
     build_trend_report,
 )
-from src.infrastructure.qa_visual.models import AnalyzeResponse
+from src.infrastructure.qa_visual.models import AnalyzeResponse, QAVisualPrincipal
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +50,33 @@ MAX_SCREENSHOT_BYTES = 10 * 1024 * 1024  # 10 MB safety cap
 MULTIPART_OVERHEAD_ALLOWANCE = 64 * 1024
 PNG_MAGIC_BYTES = b"\x89PNG\r\n\x1a\n"
 CHUNK_SIZE = 64 * 1024
+
+
+def _no_principal() -> None:
+    """Default principal dependency: no owner scoping (standalone mounts)."""
+    return None
+
+
+def _owner_scope(principal: Optional[QAVisualPrincipal]) -> Optional[str]:
+    """Owner a non-admin principal is scoped to; None sees everything."""
+    if principal is None or principal.is_admin:
+        return None
+    return principal.owner
+
+
+def _require_report_access(report: dict, principal: Optional[QAVisualPrincipal]) -> None:
+    """Raise 403 unless the principal owns the report or is an admin.
+
+    S-1R: reports persisted before owner-scoping (owner absent) belong to
+    no regular user, so only admins may read them.
+    """
+    if principal is None or principal.is_admin:
+        return
+    if report.get("owner") != principal.owner:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not allowed to access this report",
+        )
 
 
 async def _read_capped(upload: UploadFile) -> bytes:
@@ -63,6 +104,7 @@ def create_qa_visual_router(
     analyzer: Optional[QAVisualAnalyzer] = None,
     prefix: str = "/api/v1/qa-visual",
     dependencies: Optional[Sequence[Any]] = None,
+    get_current_principal: Optional[Callable[..., Any]] = None,
 ) -> APIRouter:
     """Create the QA Visual API router.
 
@@ -72,6 +114,10 @@ def create_qa_visual_router(
         dependencies: router-level FastAPI dependencies (e.g. auth).
             Applied to every endpoint; empty by default so the module
             stays decoupled from any concrete auth service.
+        get_current_principal: dependency returning a QAVisualPrincipal
+            (owner + is_admin) used for owner scoping (S-1R). When None
+            the router keeps its legacy unscoped behaviour for
+            standalone mounts.
 
     Returns:
         FastAPI router with the QA Visual endpoints.
@@ -82,6 +128,7 @@ def create_qa_visual_router(
         dependencies=list(dependencies) if dependencies else [],
     )
     _analyzer = analyzer
+    principal_dependency = get_current_principal or _no_principal
 
     def get_analyzer() -> QAVisualAnalyzer:
         nonlocal _analyzer
@@ -100,6 +147,7 @@ def create_qa_visual_router(
         target: str = Form(
             ..., max_length=200, description="Target name (page/feature identifier)"
         ),
+        principal: Optional[QAVisualPrincipal] = Depends(principal_dependency),
     ) -> AnalyzeResponse:
         """Analyze one screenshot with the vision model and store the report."""
         # S-2a: reject oversized uploads before reading the body.
@@ -129,7 +177,11 @@ def create_qa_visual_router(
                 detail="Screenshot is not a valid PNG",
             )
         try:
-            response = await get_analyzer().analyze(image_bytes, target=target)
+            response = await get_analyzer().analyze(
+                image_bytes,
+                target=target,
+                owner=principal.owner if principal else None,
+            )
         except QAVisualAnalysisError as exc:
             # S-3 (CWE-209): full detail goes to server logs only; the HTTP
             # client gets a generic message.
@@ -147,30 +199,54 @@ def create_qa_visual_router(
         return response
 
     @router.get("/reports")
-    def list_reports(target: Optional[str] = None, limit: int = 50) -> list:
-        """List stored QA Visual reports (newest first)."""
-        return get_analyzer().store.list_reports(target=target, limit=limit)
+    def list_reports(
+        target: Optional[str] = None,
+        limit: int = 50,
+        principal: Optional[QAVisualPrincipal] = Depends(principal_dependency),
+    ) -> list:
+        """List stored QA Visual reports (newest first).
+
+        Scoped to the caller's reports unless the principal is an admin.
+        """
+        return get_analyzer().store.list_reports(
+            target=target,
+            limit=limit,
+            owner=_owner_scope(principal),
+        )
 
     @router.get("/reports/{report_id}")
-    def get_report(report_id: str) -> dict:
-        """Return one stored report by id."""
+    def get_report(
+        report_id: str,
+        principal: Optional[QAVisualPrincipal] = Depends(principal_dependency),
+    ) -> dict:
+        """Return one stored report by id (owner or admin only)."""
         report = get_analyzer().store.get_report(report_id)
         if report is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Report '{report_id}' not found",
             )
+        _require_report_access(report, principal)
         return report
 
     @router.get("/trends")
-    def get_trends(target: Optional[str] = None, limit: int = 50) -> dict:
-        """Score history and degradation alerts (dashboard data source)."""
+    def get_trends(
+        target: Optional[str] = None,
+        limit: int = 50,
+        principal: Optional[QAVisualPrincipal] = Depends(principal_dependency),
+    ) -> dict:
+        """Score history and degradation alerts (dashboard data source).
+
+        Points and alerts are scoped to the caller's reports unless the
+        principal is an admin.
+        """
         analyzer = get_analyzer()
         points, alerts = build_trend_report(
             analyzer.store,
             target=target,
             limit=limit,
             degradation_points=analyzer.config.degradation_alert_points,
+            owner=_owner_scope(principal),
         )
         return {
             "points": [p.model_dump() for p in points],
@@ -178,9 +254,16 @@ def create_qa_visual_router(
         }
 
     @router.get("/baselines/{target}")
-    def get_baseline(target: str) -> dict:
-        """Return the baseline (earliest) report for a target."""
-        baseline = get_analyzer().store.get_baseline(target)
+    def get_baseline(
+        target: str,
+        principal: Optional[QAVisualPrincipal] = Depends(principal_dependency),
+    ) -> dict:
+        """Return the baseline (earliest) report for a target.
+
+        The baseline is scoped to the caller's reports for that target
+        unless the principal is an admin.
+        """
+        baseline = get_analyzer().store.get_baseline(target, owner=_owner_scope(principal))
         if baseline is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
