@@ -8,7 +8,6 @@ If FastAPI is not installed, import will fail but other modules will work.
 try:
     from collections.abc import Callable
     from contextlib import asynccontextmanager
-    from typing import Optional
 
     from fastapi import FastAPI, Request, Response
     from starlette.middleware.base import BaseHTTPMiddleware

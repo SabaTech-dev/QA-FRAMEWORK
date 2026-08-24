@@ -1,7 +1,7 @@
 """Interfaces - Contracts for core components (SOLID DIP)"""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from src.core.entities.test_result import TestResult
 

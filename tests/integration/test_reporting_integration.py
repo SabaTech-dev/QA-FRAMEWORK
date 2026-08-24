@@ -14,19 +14,10 @@ pytest.importorskip(
 )
 
 from src.adapters.http.httpx_client import HTTPXClient  # import tras setup de entorno
-from src.adapters.reporting.allure_reporter import (  # import tras setup de entorno
-    AllureReporter,
-)
-from src.adapters.reporting.html_reporter import (  # import tras setup de entorno
-    HTMLReporter,
-)
-from src.adapters.reporting.json_reporter import (  # import tras setup de entorno
-    JSONReporter,
-)
-from src.core.entities.test_result import (  # import tras setup de entorno
-    TestResult,
-    TestStatus,
-)
+from src.adapters.reporting.allure_reporter import AllureReporter  # import tras setup de entorno
+from src.adapters.reporting.html_reporter import HTMLReporter  # import tras setup de entorno
+from src.adapters.reporting.json_reporter import JSONReporter  # import tras setup de entorno
+from src.core.entities.test_result import TestResult, TestStatus  # import tras setup de entorno
 
 
 class TestReportingAPICalls:

@@ -66,6 +66,28 @@ target-version = ['py311']
 line-length = 100
 target-version = "py311"
 
+[tool.ruff.lint]
+# ruff 0.16.4 expanded-defaults migration (PR ruff-B, Batch C):
+# 2,017 mechanical fixes applied; 279 remaining violations are judgment-rule
+# findings deferred EXPLICITLY (per-rule, counts at migration time). Removing a
+# rule from this ignore list = accepting its fixes; do it rule-by-rule.
+# F-class: 0 real errors (4 trivial F401 fixed in this PR).
+ignore = [
+    "BLE001",  # 77: blind-except — deliberate around third-party calls (logging+fallback paths)
+    "DTZ001", "DTZ003", "DTZ004", "DTZ005",  # 61: tz-naive datetimes — needs API-wide tz decision, not mechanical
+    "RUF012",  # 25: mutable class defaults — needs ClassVar annotations w/ semantic review
+    "PYI036", "PYI034",  # 27: exit/annotation stub conventions
+    "SIM102", "SIM103", "SIM117",  # 19: collapsible-if style churn
+    "S110",   # 8: try-except-pass — audit-worthy, separate card
+    "RUF059", "RUF013", "RUF022", "RUF034", "RUF007",  # 26: ruff opinion rules
+    "B008", "B004", "B017",  # 8: bugbear opinions (B008 FastAPI Depends pattern)
+    "PLW1510", "PLW0602",  # 7: global/subprocess check opinions
+    "PIE810", "C408", "C414",  # 8: call style
+    "ASYNC221", "ASYNC230",  # 7: async timeout/blocking calls — needs real refactor
+    "UP035",  # 2: typing.List legacy re-exports (external compat)
+    "TRY002", # 1: raise-vanilla-class
+]
+
 [tool.mypy]
 python_version = "3.11"
 strict = true
