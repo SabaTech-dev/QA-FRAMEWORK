@@ -95,6 +95,23 @@ class AnalyzeResponse(BaseModel):
     model: str
     regression_detected: bool = False
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    # S-1R: identity of the user who triggered the analysis. Reports
+    # persisted before owner-scoping have owner=None and are readable by
+    # admins only.
+    owner: Optional[str] = None
+
+
+class QAVisualPrincipal(BaseModel):
+    """Caller identity for owner-scoped access (S-1R).
+
+    The module stays decoupled from any concrete auth service: the
+    mounter provides a dependency returning this principal. ``owner`` is
+    the identity that reports are scoped to (e.g. username); ``is_admin``
+    grants access to every owner's reports.
+    """
+
+    owner: str
+    is_admin: bool = False
 
 
 class TrendPoint(BaseModel):

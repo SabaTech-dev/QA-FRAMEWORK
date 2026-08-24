@@ -1,12 +1,12 @@
 # QA-FRAMEWORK - Dependencies
 
 # Core Testing Framework
-pytest==7.4.4
-pytest-asyncio==0.23.3
-pytest-xdist==3.5.0
-pytest-cov==4.1.0
+pytest==9.0.3
+pytest-asyncio==1.4.0
+pytest-xdist==3.8.0
+pytest-cov==7.1.0
 allure-pytest==2.13.5  # Fixed: correct package name
-pytest-html==4.1.1
+pytest-html==4.2.0
 
 # HTTP Clients
 httpx==0.26.0
@@ -32,7 +32,7 @@ allure-python-commons==2.13.5
 
 # Performance Testing
 locust==2.22.0
-pytest-benchmark==4.0.0
+pytest-benchmark==5.2.3
 
 # Security Testing
 bandit==1.7.6
