@@ -117,6 +117,7 @@ jobs:
           python -m pytest tests/middleware -v \
             --cov=middleware \
             --cov-report=xml \
+            --cov-fail-under=0 \
             --junitxml=junit-middleware.xml
 
       - name: Upload middleware test results

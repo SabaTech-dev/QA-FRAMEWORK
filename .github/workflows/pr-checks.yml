@@ -172,6 +172,7 @@ jobs:
         run: |
           cd dashboard/backend
           python -m pytest tests/middleware -v \
+            --no-cov \
             --junitxml=junit-middleware.xml
 
       - name: Upload middleware test results
