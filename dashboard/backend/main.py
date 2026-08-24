@@ -85,8 +85,14 @@ if os.getenv("QA_VISUAL_ENABLED") == "1":
 # contracts: L-1 per-tenant salt derived server-side (ACCURACY_SPLIT_SECRET,
 # required — the router factory fails closed on an empty secret) and L-2
 # owner-scoped resources with to_dict_full() served to superusers only.
+# Response provider (card 2f9afe89): built from env; None when no API key
+# is configured, which keeps POST /accuracy/sessions at its explicit 503
+# "no provider configured" signal (fail-closed by omission).
 if os.getenv("ACCURACY_TESTING_ENABLED") == "1":
     from src.infrastructure.accuracy_testing.endpoint import create_accuracy_router
+    from src.infrastructure.accuracy_testing.llm_gateway_provider import (
+        create_response_provider_from_env,
+    )
     from src.infrastructure.accuracy_testing.security import AccuracyPrincipal
 
     def _accuracy_principal(user: User = Depends(get_current_user)) -> AccuracyPrincipal:
@@ -98,6 +104,7 @@ if os.getenv("ACCURACY_TESTING_ENABLED") == "1":
     app.include_router(
         create_accuracy_router(
             principal_dependency=_accuracy_principal,
+            response_provider=create_response_provider_from_env(),
             split_secret=os.getenv("ACCURACY_SPLIT_SECRET", ""),
         )
     )

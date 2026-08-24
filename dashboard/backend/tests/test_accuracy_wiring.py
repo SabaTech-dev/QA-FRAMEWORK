@@ -93,6 +93,46 @@ def test_accuracy_mount_fails_closed_without_secret():
     mp.undo()
 
 
+@pytest.fixture()
+def main_app_mounted_with_provider():
+    mp = pytest.MonkeyPatch()
+    mp.setenv("ACCURACY_TESTING_ENABLED", "1")
+    mp.setenv("ACCURACY_SPLIT_SECRET", "wiring-test-secret")
+    mp.setenv("ACCURACY_PROVIDER_API_KEY", "wiring-test-key")
+    import main as dashboard_main
+
+    app = importlib.reload(dashboard_main).app
+    yield app
+    mp.undo()
+
+
+def test_accuracy_mount_with_provider_env_assembles(main_app_mounted_with_provider):
+    """Card 2f9afe89: with a provider API key in the env the dashboard
+    mounts cleanly with the response provider wired (no import/mount error;
+    auth still gates the endpoints)."""
+    client = TestClient(main_app_mounted_with_provider)
+    # Mounted (not 404) and still auth-gated.
+    assert client.get("/accuracy/benchmarks").status_code == 401
+    resp = client.post("/accuracy/sessions", json={"ai_model": "m"})
+    assert resp.status_code == 401
+    # Not the provider-less 503: the request never reached the handler
+    # because auth rejects it first, proving the router (and provider
+    # import) assembled without error.
+    assert resp.status_code != 503
+
+
+def test_vendored_factory_returns_none_without_key(monkeypatch):
+    """The vendored copy exposes the env factory and honours fail-closed
+    by omission: no key -> None (endpoint keeps its explicit 503)."""
+    from src.infrastructure.accuracy_testing.llm_gateway_provider import (
+        create_response_provider_from_env,
+    )
+
+    monkeypatch.delenv("ACCURACY_PROVIDER_API_KEY", raising=False)
+    monkeypatch.delenv("OPENCODE_GO_API_KEY", raising=False)
+    assert create_response_provider_from_env() is None
+
+
 def test_vendored_router_happy_path_owner_scoped():
     app = FastAPI()
     app.include_router(
