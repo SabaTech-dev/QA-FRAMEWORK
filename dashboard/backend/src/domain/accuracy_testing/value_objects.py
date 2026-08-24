@@ -8,7 +8,6 @@ against legal/regulatory benchmarks.
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import List
 
 # F-ACC-003: Maximum input length for regex operations
 MAX_EVAL_INPUT_LENGTH = 10_000
@@ -114,7 +113,7 @@ class CriterionScore:
     score: float  # 0.0 - 1.0
     max_score: float = 1.0
     explanation: str = ""
-    evidence: List[str] = None
+    evidence: list[str] = None
 
     def __post_init__(self):
         if self.evidence is None:

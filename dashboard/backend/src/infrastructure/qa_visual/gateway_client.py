@@ -12,7 +12,7 @@ import json
 import logging
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any
 
 import httpx
 
@@ -65,16 +65,16 @@ class VisionResult:
 
     content: str
     latency_s: float
-    usage: Dict[str, Any]
+    usage: dict[str, Any]
     cost_usd: float
     model_reported: str
-    finish_reason: Optional[str]
+    finish_reason: str | None
 
 
 class VisionGatewayClient:
     """Talks to the vision gateway with spike conditions baked in."""
 
-    def __init__(self, config: QAVisualConfig, http_client: Optional[httpx.AsyncClient] = None):
+    def __init__(self, config: QAVisualConfig, http_client: httpx.AsyncClient | None = None):
         self._config = config
         self._owns_client = http_client is None
         self._client = http_client or httpx.AsyncClient(timeout=config.request_timeout_s)
@@ -133,9 +133,9 @@ class VisionGatewayClient:
             finish_reason=choice.get("finish_reason"),
         )
 
-    def _build_payload(self, image_bytes: bytes) -> Dict[str, Any]:
+    def _build_payload(self, image_bytes: bytes) -> dict[str, Any]:
         data_url = "data:image/png;base64," + base64.b64encode(image_bytes).decode()
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "model": self._config.model,
             "messages": [
                 {
