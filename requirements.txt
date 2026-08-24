@@ -32,7 +32,7 @@ allure-python-commons==2.13.5
 
 # Performance Testing
 locust==2.22.0
-pytest-benchmark==4.0.0
+pytest-benchmark==5.2.3
 
 # Security Testing
 bandit==1.7.6
