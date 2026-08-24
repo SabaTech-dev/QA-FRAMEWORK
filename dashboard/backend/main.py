@@ -14,7 +14,7 @@ from services.auth_service import get_current_user, get_qa_visual_principal
 from api.v1 import router as api_router
 from api.v1.health import router as health_router
 from api.v1.health import set_startup_complete
-from api.v1.integrations import include_integrations_router
+from api.v1.integrations import include_router as include_integrations_router
 from config import settings
 from core.logging_config import configure_logging, get_logger
 from src.infrastructure.qa_visual import create_qa_visual_router
