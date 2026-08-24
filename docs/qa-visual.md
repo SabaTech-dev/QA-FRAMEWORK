@@ -68,15 +68,50 @@ app.include_router(
 )
 ```
 
+It also accepts `get_current_principal` for owner scoping (S-1R): the
+dependency must return a `QAVisualPrincipal` (`owner`, `is_admin`). Every
+endpoint then scopes reports to that owner; `is_admin=True` bypasses the
+scoping. Without it the router keeps its legacy unscoped behaviour for
+standalone mounts:
+
+```python
+from src.infrastructure.qa_visual import QAVisualPrincipal
+
+def get_principal():  # e.g. resolve from your auth service
+    return QAVisualPrincipal(owner="alice", is_admin=False)
+
+app.include_router(
+    create_qa_visual_router(
+        dependencies=[Depends(get_current_user)],
+        get_current_principal=get_principal,
+    )
+)
+```
+
+Owner-scoping rules (S-1R):
+
+- `POST /analyze` stamps the principal as the report `owner` and the
+  baseline/regression comparison never crosses owners.
+- `GET /reports` and `GET /trends` only return the caller's reports
+  (admins see everything).
+- `GET /reports/{id}` answers 403 for authenticated non-owners, 404 for
+  unknown ids.
+- `GET /baselines/{target}` is scoped to the caller's reports for that
+  target.
+- Reports persisted before owner-scoping (`owner` absent) are admin-only.
+
 ### Dashboard wiring (Fase C)
 
 The dashboard backend (`dashboard/backend/main.py`) mounts the router with
-`dependencies=[Depends(get_current_user)]`: **all five endpoints require a
-valid JWT**. The mount is **gated behind `QA_VISUAL_ENABLED=1` (default
-off)** — without the flag the router is not mounted and every qa-visual
-endpoint returns 404. The dashboard is multi-tenant without roles and the
-report store is global, so the flag must stay off until reports are
-owner-scoped (security finding S-1R). Because the Docker build context only
+`dependencies=[Depends(get_current_user)]` and
+`get_current_principal=get_qa_visual_principal` (maps `owner` to the
+authenticated username and `is_admin` to the existing `is_superuser`
+role): **all five endpoints require a valid JWT and reports are
+owner-scoped (S-1R resolved)**. The mount is still **gated behind
+`QA_VISUAL_ENABLED=1` (default off)** — without the flag the router is
+not mounted and every qa-visual endpoint returns 404; with the S-1R fix
+in place the flag is safe to enable in staging. Because the Docker build
+context only
 ships `dashboard/backend`,
 the module is vendored at `dashboard/backend/src/infrastructure/qa_visual/`
 (same pattern as the cache module). A parity test
@@ -125,6 +160,7 @@ Content-Type: multipart/form-data
 {
   "report_id": "a1b2c3d4e5f6",
   "target": "amc",
+  "owner": "alice",
   "passed": true,
   "score": 95,
   "threshold": 80,
@@ -155,12 +191,17 @@ logs only).
 
 ### Reports and trends
 
+All read endpoints are owner-scoped when the router is mounted with a
+principal (S-1R); admins bypass the scoping.
+
 - `GET /api/v1/qa-visual/reports?target=amc&limit=50` — stored reports, newest first.
-- `GET /api/v1/qa-visual/reports/{report_id}` — one report (404 if unknown).
+- `GET /api/v1/qa-visual/reports/{report_id}` — one report (404 if unknown,
+  403 if owned by another user).
 - `GET /api/v1/qa-visual/trends?target=amc` — dashboard data source:
   `points` (score history) + `alerts` (degradation: score drop >= 10 points
   between consecutive runs, or `regression_detected` flags).
-- `GET /api/v1/qa-visual/baselines/{target}` — baseline report of a target (404 if none).
+- `GET /api/v1/qa-visual/baselines/{target}` — baseline report of a target
+  (404 if none for the caller).
 
 ## Playwright E2E integration
 
@@ -204,6 +245,8 @@ from src.infrastructure.qa_visual import QAVisualAnalyzer
 analyzer = QAVisualAnalyzer()  # reads env config
 response = await analyzer.analyze(image_bytes, target="landing")
 print(response.score, response.passed, response.cost_usd)
+# owner-scoped runs (S-1R): stamp the caller and scope baselines to them
+response = await analyzer.analyze(image_bytes, target="landing", owner="alice")
 ```
 
 ## Model lifecycle note (C4)

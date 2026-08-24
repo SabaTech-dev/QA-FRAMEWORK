@@ -18,15 +18,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   an aggregate-only holdout contract (AC2 canary tests). Vendored copy
   under `dashboard/backend/src/` guarded by a vendor-parity test. Docs in
   `docs/accuracy-testing.md`.
+- **QA Visual owner scoping + roles (S-1R)**: the router factory accepts a
+  `get_current_principal` dependency returning a `QAVisualPrincipal`
+  (`owner`, `is_admin`). The dashboard mounts the qa-visual router with
+  `get_qa_visual_principal`, mapping `owner` to the authenticated username
+  and `is_admin` to the existing `is_superuser` role. Reports are stamped
+  with their owner at analyze time; `GET /reports`, `GET /reports/{id}`,
+  `GET /trends` and `GET /baselines/{target}` are scoped to the caller,
+  superusers see everything, and an authenticated non-owner reading
+  someone else's report gets 403. Baseline/regression comparison never
+  crosses owners. Reports persisted before owner-scoping (`owner` absent)
+  are admin-only. Backward compatible: without `get_current_principal`
+  the router keeps its legacy unscoped behaviour for standalone mounts.
 - **QA Visual dashboard wiring (Fase C)**: the dashboard backend mounts the
   qa-visual router behind JWT auth (`Depends(get_current_user)`) — all five
-  endpoints require authentication — **gated behind `QA_VISUAL_ENABLED=1`
-  (default off: the router is not mounted and endpoints return 404 until the
-  flag is set; report storage is not yet owner-scoped in the multi-tenant
-  dashboard)**. The module is vendored at
+  endpoints require authentication — gated behind `QA_VISUAL_ENABLED=1`
+  (default off). With S-1R resolved the flag is now safe to enable in
+  staging. The module is vendored at
   `dashboard/backend/src/infrastructure/qa_visual/` (Docker build context only
   ships `dashboard/backend`), guarded by a vendor-parity test that fails on
   drift between the two copies.
+- **Dashboard test-suite collection fix**: empty `__init__.py` markers in
+  `dashboard/backend/tests/`, `tests/services/` and `tests/unit/` fix the
+  `import file mismatch` abort caused by nine duplicate test basenames;
+  the full local suite (`python -m pytest tests/`) collects again.
 
 ### Fixed
 
@@ -48,6 +63,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **AC2 (card c9825844)**: API responses serialize benchmarks via
   `to_dict()` and holdout results via `HoldoutSummary` only — canary tests
   fail on any `holdout_benchmarks` serialization or holdout-content leak.
+- **S-1R (HIGH, CVSS 5.4)**: cross-tenant BOLA closed — the QA Visual
+  report store was global, so any authenticated user could read, list,
+  trend-analyse and baseline-compare other users' reports. Reports are now
+  owner-scoped (see Added above); authorization is proven with real-JWT
+  tests (403 non-owner / 200 owner / 200 admin) against the real mounted
+  app.
 - **S-1 (HIGH)**: router factory now accepts injectable `dependencies`;
   mounted in the dashboard with auth. Backward compatible (no dependencies
   by default).
