@@ -159,7 +159,7 @@ class TestHoldoutFullFlow:
     def test_split_payload_is_ui_safe(self):
         """BenchmarkSplit serialization: counts only, no content."""
         benchmarks = create_german_ai_liability_benchmarks()
-        split = split_benchmarks(benchmarks, SplitPolicy(holdout_ratio=0.3))
+        split = split_benchmarks(benchmarks, SplitPolicy(salt="unit-test", holdout_ratio=0.3))
 
         dumped = json.dumps(split.to_dict())
         assert "eval_count" in dumped

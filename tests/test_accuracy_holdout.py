@@ -107,9 +107,9 @@ class RecordingProvider:
 
 class TestSplitPolicy:
     def test_defaults(self):
-        p = SplitPolicy()
+        p = SplitPolicy(salt="unit-test")
         assert p.holdout_ratio == 0.2
-        assert p.salt == ""
+        assert p.salt == "unit-test"
         assert p.min_eval_size == 1
         assert p.min_holdout_size == 1
 
@@ -121,17 +121,17 @@ class TestSplitPolicy:
     @pytest.mark.parametrize("bad_ratio", [0.0, -0.1, 1.0, 1.5])
     def test_ratio_must_be_open_interval(self, bad_ratio):
         with pytest.raises(ValueError):
-            SplitPolicy(holdout_ratio=bad_ratio)
+            SplitPolicy(salt="unit-test", holdout_ratio=bad_ratio)
 
     @pytest.mark.parametrize("bad_min", [0, -1])
     def test_min_sizes_must_be_positive(self, bad_min):
         with pytest.raises(ValueError):
-            SplitPolicy(min_eval_size=bad_min)
+            SplitPolicy(salt="unit-test", min_eval_size=bad_min)
         with pytest.raises(ValueError):
-            SplitPolicy(min_holdout_size=bad_min)
+            SplitPolicy(salt="unit-test", min_holdout_size=bad_min)
 
     def test_frozen(self):
-        p = SplitPolicy()
+        p = SplitPolicy(salt="unit-test")
         with pytest.raises(AttributeError):
             p.holdout_ratio = 0.5
 
@@ -144,7 +144,7 @@ class TestSplitPolicy:
 class TestSplitBenchmarks:
     def test_split_covers_all_benchmarks_exactly_once(self):
         benches = make_benchmarks(10)
-        policy = SplitPolicy(holdout_ratio=0.2)
+        policy = SplitPolicy(salt="unit-test", holdout_ratio=0.2)
         split = split_benchmarks(benches, policy)
 
         all_ids = [b.id for b in split.eval_benchmarks] + [b.id for b in split.holdout_benchmarks]
@@ -153,7 +153,7 @@ class TestSplitBenchmarks:
 
     def test_exact_ratio_on_large_set(self):
         benches = make_benchmarks(20)
-        split = split_benchmarks(benches, SplitPolicy(holdout_ratio=0.2))
+        split = split_benchmarks(benches, SplitPolicy(salt="unit-test", holdout_ratio=0.2))
         assert len(split.holdout_benchmarks) == 4
         assert len(split.eval_benchmarks) == 16
 
@@ -174,7 +174,7 @@ class TestSplitBenchmarks:
             )
             for b in benches
         ]
-        policy = SplitPolicy(holdout_ratio=0.25)
+        policy = SplitPolicy(salt="unit-test", holdout_ratio=0.25)
         s1 = split_benchmarks(benches, policy)
         s2 = split_benchmarks(same_ids, policy)
         assert {b.id for b in s1.holdout_benchmarks} == {b.id for b in s2.holdout_benchmarks}
@@ -206,12 +206,12 @@ class TestSplitBenchmarks:
 
     def test_fewer_than_two_benchmarks_all_eval(self):
         benches = make_benchmarks(1)
-        split = split_benchmarks(benches, SplitPolicy())
+        split = split_benchmarks(benches, SplitPolicy(salt="unit-test"))
         assert len(split.eval_benchmarks) == 1
         assert len(split.holdout_benchmarks) == 0
 
     def test_empty_input(self):
-        split = split_benchmarks([], SplitPolicy())
+        split = split_benchmarks([], SplitPolicy(salt="unit-test"))
         assert split.eval_benchmarks == []
         assert split.holdout_benchmarks == []
 
@@ -219,7 +219,7 @@ class TestSplitBenchmarks:
         benches = make_benchmarks(4)
         split = split_benchmarks(
             benches,
-            SplitPolicy(holdout_ratio=0.5, min_eval_size=3, min_holdout_size=1),
+            SplitPolicy(salt="unit-test", holdout_ratio=0.5, min_eval_size=3, min_holdout_size=1),
         )
         assert len(split.eval_benchmarks) >= 3
         assert len(split.holdout_benchmarks) >= 1
@@ -229,13 +229,15 @@ class TestSplitBenchmarks:
         with pytest.raises(ValueError):
             split_benchmarks(
                 benches,
-                SplitPolicy(holdout_ratio=0.5, min_eval_size=2, min_holdout_size=2),
+                SplitPolicy(
+                    salt="unit-test", holdout_ratio=0.5, min_eval_size=2, min_holdout_size=2
+                ),
             )
 
     def test_duplicate_benchmark_ids_rejected(self):
         b = make_benchmarks(1)[0]
         with pytest.raises(ValueError):
-            split_benchmarks([b, b], SplitPolicy())
+            split_benchmarks([b, b], SplitPolicy(salt="unit-test"))
 
 
 # ========================================================================
@@ -246,7 +248,7 @@ class TestSplitBenchmarks:
 class TestBenchmarkSplitRedaction:
     def test_to_dict_contains_only_counts(self):
         benches = make_benchmarks(10)
-        split = split_benchmarks(benches, SplitPolicy(holdout_ratio=0.2))
+        split = split_benchmarks(benches, SplitPolicy(salt="unit-test", holdout_ratio=0.2))
         d = split.to_dict()
         assert d == {
             "eval_count": 8,
@@ -256,7 +258,7 @@ class TestBenchmarkSplitRedaction:
 
     def test_to_dict_leaks_no_holdout_content(self):
         benches = make_benchmarks(10)
-        split = split_benchmarks(benches, SplitPolicy(holdout_ratio=0.3))
+        split = split_benchmarks(benches, SplitPolicy(salt="unit-test", holdout_ratio=0.3))
         dumped = json.dumps(split.to_dict())
         for b in benches:
             assert b.question not in dumped
@@ -265,7 +267,7 @@ class TestBenchmarkSplitRedaction:
 
     def test_repr_is_redacted(self):
         benches = make_benchmarks(6)
-        split = split_benchmarks(benches, SplitPolicy(holdout_ratio=0.2))
+        split = split_benchmarks(benches, SplitPolicy(salt="unit-test", holdout_ratio=0.2))
         r = repr(split)
         assert "eval_count=" in r
         assert "holdout_count=" in r
@@ -276,9 +278,14 @@ class TestBenchmarkSplitRedaction:
 
     def test_counts_properties(self):
         benches = make_benchmarks(5)
-        split = split_benchmarks(benches, SplitPolicy(holdout_ratio=0.2))
+        split = split_benchmarks(benches, SplitPolicy(salt="unit-test", holdout_ratio=0.2))
         assert split.eval_count == len(split.eval_benchmarks)
         assert split.holdout_count == len(split.holdout_benchmarks)
+
+
+def unit_policy() -> SplitPolicy:
+    """Explicit per-tenant salt for split tests (L-1: no default salt)."""
+    return SplitPolicy(salt="unit-test")
 
 
 class TestBenchmarkSplitConstructionInvariants:
@@ -287,29 +294,29 @@ class TestBenchmarkSplitConstructionInvariants:
     def test_duplicate_eval_ids_rejected(self):
         b = make_benchmarks(1)[0]
         with pytest.raises(ValueError, match="Duplicate benchmark ids in eval"):
-            BenchmarkSplit(eval_benchmarks=[b, b])
+            BenchmarkSplit(eval_benchmarks=[b, b], policy=unit_policy())
 
     def test_duplicate_holdout_ids_rejected(self):
         b = make_benchmarks(1)[0]
         with pytest.raises(ValueError, match="Duplicate benchmark ids in holdout"):
-            BenchmarkSplit(holdout_benchmarks=[b, b])
+            BenchmarkSplit(holdout_benchmarks=[b, b], policy=unit_policy())
 
     def test_overlapping_sets_rejected(self):
         b = make_benchmarks(1)[0]
         other = make_benchmarks(1)[0]
         with pytest.raises(ValueError, match="disjoint"):
-            BenchmarkSplit(eval_benchmarks=[b], holdout_benchmarks=[b, other])
+            BenchmarkSplit(eval_benchmarks=[b], holdout_benchmarks=[b, other], policy=unit_policy())
 
     def test_holdout_below_policy_minimum_rejected(self):
         b = make_benchmarks(1)[0]
         other = make_benchmarks(1)[0]
-        policy = SplitPolicy(min_holdout_size=2)
+        policy = SplitPolicy(salt="unit-test", min_holdout_size=2)
         with pytest.raises(ValueError, match="below policy minimum"):
             BenchmarkSplit(eval_benchmarks=[b], holdout_benchmarks=[other], policy=policy)
 
     def test_eval_below_policy_minimum_rejected(self):
         benches = make_benchmarks(2)
-        policy = SplitPolicy(min_eval_size=2)
+        policy = SplitPolicy(salt="unit-test", min_eval_size=2)
         with pytest.raises(ValueError, match="below policy minimum"):
             BenchmarkSplit(
                 eval_benchmarks=[benches[0]], holdout_benchmarks=[benches[1]], policy=policy
@@ -317,7 +324,9 @@ class TestBenchmarkSplitConstructionInvariants:
 
     def test_empty_holdout_allowed_regardless_of_minimum(self):
         b = make_benchmarks(1)[0]
-        split = BenchmarkSplit(eval_benchmarks=[b], policy=SplitPolicy(min_holdout_size=2))
+        split = BenchmarkSplit(
+            eval_benchmarks=[b], policy=SplitPolicy(salt="unit-test", min_holdout_size=2)
+        )
         assert split.holdout_count == 0
 
 
@@ -389,7 +398,7 @@ class TestHoldoutSummary:
 class TestHoldoutEvaluationService:
     def _make_split(self, n=10):
         benches = make_benchmarks(n, prefix="hold")
-        return benches, split_benchmarks(benches, SplitPolicy(holdout_ratio=0.2))
+        return benches, split_benchmarks(benches, SplitPolicy(salt="unit-test", holdout_ratio=0.2))
 
     def test_returns_aggregate_summary(self):
         _, split = self._make_split()
@@ -445,7 +454,7 @@ class TestHoldoutEvaluationService:
 
     def test_empty_holdout_returns_zero_summary(self):
         benches = make_benchmarks(1)
-        split = split_benchmarks(benches, SplitPolicy())
+        split = split_benchmarks(benches, SplitPolicy(salt="unit-test"))
         service = HoldoutEvaluationService(evaluator=StubEvaluator())
         summary = service.run_holdout(split, RecordingProvider([]))
         assert summary.holdout_count == 0
@@ -453,7 +462,7 @@ class TestHoldoutEvaluationService:
 
     def test_hallucination_count_aggregated(self):
         benches = make_benchmarks(10)
-        split = split_benchmarks(benches, SplitPolicy(holdout_ratio=0.4))
+        split = split_benchmarks(benches, SplitPolicy(salt="unit-test", holdout_ratio=0.4))
         # Every answer wrong -> every holdout evaluation hallucinates
         provider = RecordingProvider(responses=["wrong"] * len(split.holdout_benchmarks))
         service = HoldoutEvaluationService(evaluator=HallucinatingStubEvaluator())
@@ -521,7 +530,7 @@ class TestSessionHoldoutIntegration:
 
     def test_session_to_dict_holdout_aggregates_only(self):
         benches = make_benchmarks(10)
-        split = split_benchmarks(benches, SplitPolicy(holdout_ratio=0.2))
+        split = split_benchmarks(benches, SplitPolicy(salt="unit-test", holdout_ratio=0.2))
         provider = RecordingProvider(responses=["ans"] * len(split.holdout_benchmarks))
         service = HoldoutEvaluationService(evaluator=StubEvaluator())
         summary = service.run_holdout(split, provider)
@@ -541,7 +550,7 @@ class TestSessionHoldoutIntegration:
 
     def test_session_to_dict_leaks_no_holdout_content(self):
         benches = make_benchmarks(10)
-        split = split_benchmarks(benches, SplitPolicy(holdout_ratio=0.3))
+        split = split_benchmarks(benches, SplitPolicy(salt="unit-test", holdout_ratio=0.3))
         provider = RecordingProvider(
             responses=["SECRET-HOLDOUT-ANSWER"] * len(split.holdout_benchmarks)
         )
