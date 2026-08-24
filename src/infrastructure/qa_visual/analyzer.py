@@ -48,7 +48,9 @@ class QAVisualAnalyzer:
     def config(self) -> QAVisualConfig:
         return self._config
 
-    async def analyze(self, image_bytes: bytes, target: str) -> AnalyzeResponse:
+    async def analyze(
+        self, image_bytes: bytes, target: str, owner: Optional[str] = None
+    ) -> AnalyzeResponse:
         """Analyze one screenshot and persist the report."""
         try:
             result = await self._gateway.analyze_image(image_bytes)
@@ -63,7 +65,7 @@ class QAVisualAnalyzer:
             )
 
         analysis = parsed.analysis
-        baseline = self._store.get_baseline(target)
+        baseline = self._store.get_baseline(target, owner=owner)
         regression_detected = self._detect_regression(analysis, baseline)
 
         response = AnalyzeResponse(
@@ -77,6 +79,9 @@ class QAVisualAnalyzer:
             latency_s=result.latency_s,
             model=result.model_reported,
             regression_detected=regression_detected,
+            # S-1R: persist who triggered the analysis so reports can be
+            # scoped by owner at query time.
+            owner=owner,
         )
         self._store.save(response)
         logger.info(
@@ -110,13 +115,15 @@ def build_trend_report(
     target: Optional[str] = None,
     limit: int = 50,
     degradation_points: int = 10,
+    owner: Optional[str] = None,
 ) -> Tuple[List[TrendPoint], List[TrendAlert]]:
     """Build score history and degradation alerts from stored reports.
 
     Points are returned newest first (mirroring store ordering); alerts are
     raised whenever consecutive scores drop by ``degradation_points`` or more.
+    With ``owner`` only that owner's reports contribute (S-1R).
     """
-    reports = store.list_reports(target=target, limit=limit)
+    reports = store.list_reports(target=target, limit=limit, owner=owner)
     points = [
         TrendPoint(
             report_id=r.get("report_id", ""),
