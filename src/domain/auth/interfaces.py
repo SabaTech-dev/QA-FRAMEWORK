@@ -1,7 +1,6 @@
 """OAuth Domain Interface."""
 
 from abc import ABC, abstractmethod
-from typing import Optional
 
 from .entities import OAuthUser, Token
 
@@ -17,16 +16,14 @@ class OAuthProvider(ABC):
     @abstractmethod
     def name(self) -> str:
         """Provider identifier (e.g., 'google', 'github')."""
-        pass
 
     @property
     @abstractmethod
     def display_name(self) -> str:
         """Human-readable provider name."""
-        pass
 
     @abstractmethod
-    async def get_authorization_url(self, state: str, redirect_uri: Optional[str] = None) -> str:
+    async def get_authorization_url(self, state: str, redirect_uri: str | None = None) -> str:
         """Generate OAuth authorization URL.
 
         Args:
@@ -39,10 +36,9 @@ class OAuthProvider(ABC):
         Raises:
             OAuthConfigurationError: If provider is not properly configured
         """
-        pass
 
     @abstractmethod
-    async def exchange_code(self, code: str, redirect_uri: Optional[str] = None) -> Token:
+    async def exchange_code(self, code: str, redirect_uri: str | None = None) -> Token:
         """Exchange authorization code for access token.
 
         Args:
@@ -55,7 +51,6 @@ class OAuthProvider(ABC):
         Raises:
             OAuthExchangeError: If code exchange fails
         """
-        pass
 
     @abstractmethod
     async def get_user_info(self, token: Token) -> OAuthUser:
@@ -70,7 +65,6 @@ class OAuthProvider(ABC):
         Raises:
             OAuthUserInfoError: If user info fetch fails
         """
-        pass
 
     @abstractmethod
     async def refresh_token(self, refresh_token: str) -> Token:
@@ -85,7 +79,6 @@ class OAuthProvider(ABC):
         Raises:
             OAuthRefreshError: If token refresh fails
         """
-        pass
 
     @abstractmethod
     def is_configured(self) -> bool:
@@ -94,4 +87,3 @@ class OAuthProvider(ABC):
         Returns:
             True if provider has valid credentials, False otherwise
         """
-        pass

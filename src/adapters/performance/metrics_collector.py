@@ -4,7 +4,7 @@ import statistics
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from src.core.interfaces import IMetricsCollector
 
@@ -27,10 +27,10 @@ class PerformanceMetrics:
     total_requests: int = 0
     successful_requests: int = 0
     failed_requests: int = 0
-    response_times: List[float] = field(default_factory=list)
-    error_types: Dict[str, int] = field(default_factory=lambda: defaultdict(int))
-    start_time: Optional[float] = None
-    end_time: Optional[float] = None
+    response_times: list[float] = field(default_factory=list)
+    error_types: dict[str, int] = field(default_factory=lambda: defaultdict(int))
+    start_time: float | None = None
+    end_time: float | None = None
 
     @property
     def error_rate(self) -> float:
@@ -99,7 +99,7 @@ class PerformanceMetrics:
             else max(self.response_times)
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert metrics to dictionary."""
         return {
             "total_requests": self.total_requests,
@@ -190,9 +190,9 @@ class MetricsCollector(IMetricsCollector):
             requests_count: Number of requests in the time window
             time_window_ms: Time window in milliseconds
         """
-        pass  # Throughput is calculated from total requests and duration
+        # Throughput is calculated from total requests and duration
 
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """
         Get collected metrics.
 

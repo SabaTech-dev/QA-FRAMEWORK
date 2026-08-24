@@ -5,7 +5,7 @@ import os
 import subprocess
 import tempfile
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any
 
 from src.adapters.performance.metrics_collector import MetricsCollector
 
@@ -21,7 +21,7 @@ class LoadTestRunner(ABC):
     @abstractmethod
     async def run_load_test(
         self, target_url: str, users: int, duration: int, ramp_up: int = 0
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Run load test.
 
@@ -34,12 +34,10 @@ class LoadTestRunner(ABC):
         Returns:
             Dictionary with test results
         """
-        pass
 
     @abstractmethod
     async def is_available(self) -> bool:
         """Check if the load testing tool is available."""
-        pass
 
 
 class LocustAdapter(LoadTestRunner):
@@ -49,7 +47,7 @@ class LocustAdapter(LoadTestRunner):
     Locust is a scalable load testing tool written in Python.
     """
 
-    def __init__(self, locustfile: Optional[str] = None):
+    def __init__(self, locustfile: str | None = None):
         """
         Initialize Locust adapter.
 
@@ -71,7 +69,7 @@ class LocustAdapter(LoadTestRunner):
 
     async def run_load_test(
         self, target_url: str, users: int, duration: int, ramp_up: int = 0
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Run load test using Locust.
 
@@ -156,7 +154,7 @@ class QuickstartUser(HttpUser):
             f.write(content)
         return path
 
-    def _parse_results(self, output: str, duration: float) -> Dict[str, Any]:
+    def _parse_results(self, output: str, duration: float) -> dict[str, Any]:
         """Parse locust output to extract metrics."""
         # This is a simplified parser - in production, you'd parse CSV files
         return {
@@ -172,7 +170,7 @@ class K6Adapter(LoadTestRunner):
     k6 is a modern load testing tool built with Go and JavaScript.
     """
 
-    def __init__(self, script: Optional[str] = None):
+    def __init__(self, script: str | None = None):
         """
         Initialize k6 adapter.
 
@@ -192,7 +190,7 @@ class K6Adapter(LoadTestRunner):
 
     async def run_load_test(
         self, target_url: str, users: int, duration: int, ramp_up: int = 0
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Run load test using k6.
 
@@ -276,7 +274,7 @@ export default function() {{
             f.write(content)
         return path
 
-    def _load_k6_summary(self) -> Dict[str, Any]:
+    def _load_k6_summary(self) -> dict[str, Any]:
         """Load k6 summary JSON if available."""
         try:
             import json
@@ -284,7 +282,7 @@ export default function() {{
 
             with open("/tmp/k6_summary.json", "r") as f:
                 data = json.load(f)
-                return cast(Dict[str, Any], data)
+                return cast(dict[str, Any], data)
         except (FileNotFoundError, json.JSONDecodeError):
             return {}
 
@@ -310,7 +308,7 @@ class ApacheBenchAdapter(LoadTestRunner):
 
     async def run_load_test(
         self, target_url: str, users: int, duration: int, ramp_up: int = 0
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Run load test using Apache Bench.
 
@@ -370,7 +368,7 @@ class ApacheBenchAdapter(LoadTestRunner):
             "errors": stderr.decode() if stderr else None,
         }
 
-    def _parse_ab_output(self, output: str) -> Dict[str, Any]:
+    def _parse_ab_output(self, output: str) -> dict[str, Any]:
         """Parse Apache Bench output to extract metrics."""
         results = {}
 

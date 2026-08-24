@@ -1,9 +1,9 @@
 """Tenant entity - Domain model for multi-tenancy support"""
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any
 from uuid import UUID, uuid4
 
 
@@ -47,16 +47,16 @@ class Tenant:
     slug: str = ""
     plan: TenantPlan = TenantPlan.FREE
     status: TenantStatus = TenantStatus.TRIAL
-    settings: Dict[str, Any] = field(default_factory=dict)
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    settings: dict[str, Any] = field(default_factory=dict)
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
     def __post_init__(self) -> None:
         """Initialize default values"""
         if self.created_at is None:
-            self.created_at = datetime.now(timezone.utc)
+            self.created_at = datetime.now(UTC)
         if self.updated_at is None:
-            self.updated_at = datetime.now(timezone.utc)
+            self.updated_at = datetime.now(UTC)
         if self.settings is None:
             self.settings = {}
 
@@ -89,7 +89,7 @@ class Tenant:
             value: Setting value
         """
         self.settings[key] = value
-        self.updated_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(UTC)
 
     def get_setting(self, key: str, default: Any = None) -> Any:
         """
@@ -107,12 +107,12 @@ class Tenant:
     def activate(self) -> None:
         """Activate tenant account"""
         self.status = TenantStatus.ACTIVE
-        self.updated_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(UTC)
 
     def suspend(self) -> None:
         """Suspend tenant account"""
         self.status = TenantStatus.SUSPENDED
-        self.updated_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(UTC)
 
     def upgrade_plan(self, new_plan: TenantPlan) -> None:
         """
@@ -122,9 +122,9 @@ class Tenant:
             new_plan: New subscription plan
         """
         self.plan = new_plan
-        self.updated_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(UTC)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert tenant entity to dictionary"""
         return {
             "id": str(self.id),
@@ -138,7 +138,7 @@ class Tenant:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Tenant":
+    def from_dict(cls, data: dict[str, Any]) -> "Tenant":
         """
         Create a Tenant instance from a dictionary.
 

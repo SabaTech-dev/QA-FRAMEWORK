@@ -4,7 +4,6 @@ Edge Case Generator
 Generates edge case scenarios from requirements.
 """
 
-from typing import List
 from uuid import uuid4
 
 from src.domain.test_generation.entities import EdgeCase
@@ -155,7 +154,7 @@ class EdgeCaseGeneratorImpl:
         ],
     }
 
-    def generate_from_requirement(self, requirement: dict) -> List[EdgeCase]:
+    def generate_from_requirement(self, requirement: dict) -> list[EdgeCase]:
         """Generate edge cases from a requirement."""
         edge_cases = []
 
@@ -184,7 +183,7 @@ class EdgeCaseGeneratorImpl:
         """Categorize an edge case."""
         return edge_case.category
 
-    def _determine_categories(self, requirement: dict) -> List[str]:
+    def _determine_categories(self, requirement: dict) -> list[str]:
         """Determine which edge case categories apply."""
         categories = ["boundary", "negative"]  # Always include these
 

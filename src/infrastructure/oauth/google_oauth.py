@@ -1,7 +1,5 @@
 """Google OAuth Provider Implementation."""
 
-from typing import Dict
-
 import httpx
 
 from domain.auth.entities import OAuthUser, Token
@@ -32,7 +30,7 @@ class GoogleOAuthProvider(BaseOAuthProvider):
     def _token_url(self) -> str:
         return self.GOOGLE_TOKEN_URL
 
-    def _get_authorization_params(self, state: str, redirect_uri: str) -> Dict[str, str]:
+    def _get_authorization_params(self, state: str, redirect_uri: str) -> dict[str, str]:
         """Build Google OAuth authorization parameters."""
         return {
             "client_id": self.client_id,

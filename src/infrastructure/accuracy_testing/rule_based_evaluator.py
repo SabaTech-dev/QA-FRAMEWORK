@@ -10,8 +10,7 @@ For production use, consider integrating an LLM-based evaluator.
 
 import re
 import time
-from datetime import datetime, timezone
-from typing import List
+from datetime import UTC, datetime
 
 from src.domain.accuracy_testing.entities import AccuracyBenchmark, AccuracyEvaluation
 from src.domain.accuracy_testing.value_objects import (
@@ -105,11 +104,11 @@ class RuleBasedAccuracyEvaluator:
         truth_lower = truth_truncated.lower()
 
         # Compute per-criterion scores
-        scores: List[CriterionScore] = []
-        strengths: List[str] = []
-        weaknesses: List[str] = []
-        missing_points: List[str] = []
-        hallucinations: List[str] = []
+        scores: list[CriterionScore] = []
+        strengths: list[str] = []
+        weaknesses: list[str] = []
+        missing_points: list[str] = []
+        hallucinations: list[str] = []
 
         for criterion in benchmark.criteria:
             if criterion == EvaluationCriterion.FACTUAL_ACCURACY:
@@ -147,7 +146,7 @@ class RuleBasedAccuracyEvaluator:
             criterion_scores=scores,
             ai_model=ai_model,
             evaluation_time_ms=elapsed_ms,
-            evaluated_at=datetime.now(timezone.utc),
+            evaluated_at=datetime.now(UTC),
         )
 
         # Identify strengths and weaknesses

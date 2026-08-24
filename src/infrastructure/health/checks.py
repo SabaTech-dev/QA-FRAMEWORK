@@ -2,7 +2,7 @@
 
 import asyncio
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 from src.infrastructure.health.models import (
     DatabaseHealthCheckConfig,
@@ -30,9 +30,9 @@ async def check_database_health(
         HealthCheckResult with database status
     """
     start_time = time.time()
-    error_details: Optional[str] = None
-    error_type: Optional[str] = None
-    metadata: Dict[str, Any] = {}
+    error_details: str | None = None
+    error_type: str | None = None
+    metadata: dict[str, Any] = {}
 
     try:
         if config.database_type == ServiceType.DATABASE_POSTGRESQL:
@@ -46,12 +46,12 @@ async def check_database_health(
 
         return result
 
-    except asyncio.TimeoutError:
+    except TimeoutError:
         error_details = f"Database health check timed out after {timeout_seconds}s"
         error_type = "timeout"
         status = HealthStatus.UNHEALTHY
     except ConnectionRefusedError as e:
-        error_details = f"Connection refused: {str(e)}"
+        error_details = f"Connection refused: {e!s}"
         error_type = "connection_refused"
         status = HealthStatus.UNHEALTHY
     except Exception as e:
@@ -78,7 +78,7 @@ async def _check_postgresql_health(
 ) -> HealthCheckResult:
     """Check PostgreSQL database health."""
     start_time = time.time()
-    metadata: Dict[str, Any] = {}
+    metadata: dict[str, Any] = {}
 
     try:
         # Try to import asyncpg
@@ -164,7 +164,7 @@ async def _check_mysql_health(
 ) -> HealthCheckResult:
     """Check MySQL database health."""
     start_time = time.time()
-    metadata: Dict[str, Any] = {}
+    metadata: dict[str, Any] = {}
 
     try:
         import aiomysql
@@ -208,7 +208,7 @@ async def _check_sqlite_health(
 ) -> HealthCheckResult:
     """Check SQLite database health."""
     start_time = time.time()
-    metadata: Dict[str, Any] = {}
+    metadata: dict[str, Any] = {}
 
     try:
         import aiosqlite
@@ -240,7 +240,7 @@ async def _check_sqlite_health(
         raise ImportError("aiosqlite is not installed. Install with: pip install aiosqlite")
 
 
-def _parse_mysql_connection_string(conn_str: str) -> Dict[str, Any]:
+def _parse_mysql_connection_string(conn_str: str) -> dict[str, Any]:
     """Parse MySQL connection string into connection parameters."""
     from urllib.parse import urlparse
 
@@ -272,9 +272,9 @@ async def check_redis_health(
         HealthCheckResult with Redis status
     """
     start_time = time.time()
-    error_details: Optional[str] = None
-    error_type: Optional[str] = None
-    metadata: Dict[str, Any] = {}
+    error_details: str | None = None
+    error_type: str | None = None
+    metadata: dict[str, Any] = {}
 
     try:
         import redis.asyncio as redis
@@ -337,7 +337,7 @@ async def check_redis_health(
         finally:
             await client.close()
 
-    except asyncio.TimeoutError:
+    except TimeoutError:
         error_details = f"Redis health check timed out after {timeout_seconds}s"
         error_type = "timeout"
         status = HealthStatus.UNHEALTHY
@@ -380,9 +380,9 @@ async def check_external_api_health(
         HealthCheckResult with API status
     """
     start_time = time.time()
-    error_details: Optional[str] = None
-    error_type: Optional[str] = None
-    metadata: Dict[str, Any] = {}
+    error_details: str | None = None
+    error_type: str | None = None
+    metadata: dict[str, Any] = {}
 
     try:
         import httpx
@@ -424,7 +424,7 @@ async def check_external_api_health(
         error_type = "timeout"
         status = HealthStatus.UNHEALTHY if config.required else HealthStatus.DEGRADED
     except httpx.ConnectError as e:
-        error_details = f"Connection failed: {str(e)}"
+        error_details = f"Connection failed: {e!s}"
         error_type = "connection_error"
         status = HealthStatus.UNHEALTHY if config.required else HealthStatus.DEGRADED
     except ImportError:
@@ -462,9 +462,9 @@ async def check_internal_service_health(
         HealthCheckResult with service status
     """
     start_time = time.time()
-    error_details: Optional[str] = None
-    error_type: Optional[str] = None
-    metadata: Dict[str, Any] = {}
+    error_details: str | None = None
+    error_type: str | None = None
+    metadata: dict[str, Any] = {}
 
     try:
         import httpx
@@ -518,7 +518,7 @@ async def check_internal_service_health(
         error_type = "timeout"
         status = HealthStatus.UNHEALTHY if config.required else HealthStatus.DEGRADED
     except httpx.ConnectError as e:
-        error_details = f"Connection failed: {str(e)}"
+        error_details = f"Connection failed: {e!s}"
         error_type = "connection_error"
         status = HealthStatus.UNHEALTHY if config.required else HealthStatus.DEGRADED
     except ImportError:

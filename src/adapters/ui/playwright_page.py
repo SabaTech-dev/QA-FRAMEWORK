@@ -1,7 +1,7 @@
 """UI Page Interface and Implementation with Playwright"""
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any
 
 from playwright.async_api import Browser, BrowserContext, Page, async_playwright
 
@@ -22,7 +22,6 @@ class IUIPage(ABC):
         Args:
             url: URL to navigate to
         """
-        pass
 
     @abstractmethod
     async def click(self, selector: str) -> None:
@@ -32,7 +31,6 @@ class IUIPage(ABC):
         Args:
             selector: CSS selector for the element
         """
-        pass
 
     @abstractmethod
     async def fill(self, selector: str, value: str) -> None:
@@ -43,7 +41,6 @@ class IUIPage(ABC):
             selector: CSS selector for the input
             value: Value to fill
         """
-        pass
 
     @abstractmethod
     async def wait_for_selector(self, selector: str, timeout: int = 30000) -> None:
@@ -54,7 +51,6 @@ class IUIPage(ABC):
             selector: CSS selector for the element
             timeout: Timeout in milliseconds (default: 30000)
         """
-        pass
 
     @abstractmethod
     async def get_text(self, selector: str) -> str:
@@ -67,7 +63,6 @@ class IUIPage(ABC):
         Returns:
             Text content of the element
         """
-        pass
 
     @abstractmethod
     async def is_visible(self, selector: str) -> bool:
@@ -80,7 +75,6 @@ class IUIPage(ABC):
         Returns:
             True if visible, False otherwise
         """
-        pass
 
     @abstractmethod
     async def screenshot(self, path: str) -> None:
@@ -90,12 +84,10 @@ class IUIPage(ABC):
         Args:
             path: Path to save the screenshot
         """
-        pass
 
     @abstractmethod
     async def close(self) -> None:
         """Close the browser/page."""
-        pass
 
 
 class PlaywrightPage(IUIPage):
@@ -115,7 +107,7 @@ class PlaywrightPage(IUIPage):
         self,
         browser_type: str = "chromium",
         headless: bool = True,
-        viewport: Optional[tuple] = None,
+        viewport: tuple | None = None,
     ):
         """
         Initialize Playwright page.
@@ -130,9 +122,9 @@ class PlaywrightPage(IUIPage):
         self.viewport = viewport or (1920, 1080)
 
         self._playwright = None
-        self._browser: Optional[Browser] = None
-        self._context: Optional[BrowserContext] = None
-        self._page: Optional[Page] = None
+        self._browser: Browser | None = None
+        self._context: BrowserContext | None = None
+        self._page: Page | None = None
 
     async def _init_browser(self) -> None:
         """Initialize browser if not already initialized."""

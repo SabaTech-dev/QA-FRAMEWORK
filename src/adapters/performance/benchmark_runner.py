@@ -1,8 +1,9 @@
 """Benchmark runner for performance testing"""
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 from src.adapters.performance.metrics_collector import MetricsCollector
 
@@ -28,7 +29,7 @@ class BenchmarkResult:
     avg_time: float
     min_time: float
     max_time: float
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     @property
     def throughput(self) -> float:
@@ -37,7 +38,7 @@ class BenchmarkResult:
             return 0.0
         return self.iterations / self.total_time
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert benchmark result to dictionary."""
         return {
             "name": self.name,
@@ -77,7 +78,7 @@ class BenchmarkRunner:
         func: Callable,
         iterations: int = 100,
         warmup_iterations: int = 10,
-        name: Optional[str] = None,
+        name: str | None = None,
     ) -> BenchmarkResult:
         """
         Benchmark an async function.
@@ -92,7 +93,7 @@ class BenchmarkRunner:
             BenchmarkResult with timing statistics
         """
         benchmark_name = name or func.__name__
-        times: List[float] = []
+        times: list[float] = []
 
         # Warmup
         for _ in range(warmup_iterations):
@@ -132,7 +133,7 @@ class BenchmarkRunner:
         func: Callable,
         iterations: int = 100,
         warmup_iterations: int = 10,
-        name: Optional[str] = None,
+        name: str | None = None,
     ) -> BenchmarkResult:
         """
         Benchmark a synchronous function.
@@ -147,7 +148,7 @@ class BenchmarkRunner:
             BenchmarkResult with timing statistics
         """
         benchmark_name = name or func.__name__
-        times: List[float] = []
+        times: list[float] = []
 
         # Warmup
         for _ in range(warmup_iterations):
@@ -188,7 +189,7 @@ class BenchmarkRunner:
         method: str,
         url: str,
         iterations: int = 100,
-        payload: Optional[Dict] = None,
+        payload: dict | None = None,
     ) -> BenchmarkResult:
         """
         Benchmark an HTTP endpoint.
@@ -203,7 +204,7 @@ class BenchmarkRunner:
         Returns:
             BenchmarkResult with timing statistics
         """
-        times: List[float] = []
+        times: list[float] = []
         errors = 0
 
         start_time = time.time()
@@ -248,7 +249,7 @@ class BenchmarkRunner:
             },
         )
 
-    def compare_benchmarks(self, results: List[BenchmarkResult]) -> Dict[str, Any]:
+    def compare_benchmarks(self, results: list[BenchmarkResult]) -> dict[str, Any]:
         """
         Compare multiple benchmark results.
 

@@ -8,7 +8,7 @@ This middleware:
 """
 
 import logging
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from fastapi import HTTPException, Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -27,7 +27,7 @@ class TenantContext:
     This is attached to request.state.tenant_context
     """
 
-    def __init__(self, tenant: Optional[Tenant], resolved_from: str):
+    def __init__(self, tenant: Tenant | None, resolved_from: str):
         """
         Initialize tenant context.
 
@@ -44,12 +44,12 @@ class TenantContext:
         return self.tenant is not None
 
     @property
-    def tenant_id(self) -> Optional[str]:
+    def tenant_id(self) -> str | None:
         """Get tenant ID if authenticated"""
         return str(self.tenant.id) if self.tenant else None
 
     @property
-    def tenant_slug(self) -> Optional[str]:
+    def tenant_slug(self) -> str | None:
         """Get tenant slug if authenticated"""
         return self.tenant.slug if self.tenant else None
 
@@ -70,7 +70,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
         app,
         tenant_repository: TenantRepositoryInterface,
         require_tenant: bool = False,
-        public_paths: Optional[list] = None,
+        public_paths: list | None = None,
     ):
         """
         Initialize middleware.
@@ -159,7 +159,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
         # Continue processing request
         return await call_next(request)
 
-    def _extract_subdomain(self, host: str) -> Optional[str]:
+    def _extract_subdomain(self, host: str) -> str | None:
         """
         Extract subdomain from host header.
 

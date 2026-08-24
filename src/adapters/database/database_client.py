@@ -1,6 +1,6 @@
 """Main database testing client"""
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from src.adapters.database.data_integrity_tester import DataIntegrityTester, IntegrityConstraint
 from src.adapters.database.migration_tester import MigrationTester
@@ -40,7 +40,7 @@ class DatabaseClient(IDatabaseClient):
         await client.disconnect()
     """
 
-    def __init__(self, connection_string: Optional[str] = None):
+    def __init__(self, connection_string: str | None = None):
         """
         Initialize database client.
 
@@ -48,10 +48,10 @@ class DatabaseClient(IDatabaseClient):
             connection_string: Database connection string (optional)
         """
         self.connection_string = connection_string
-        self._connection: Optional[Any] = None
+        self._connection: Any | None = None
         self._validator = SQLValidator()
-        self._integrity_tester: Optional[DataIntegrityTester] = None
-        self._migration_tester: Optional[MigrationTester] = None
+        self._integrity_tester: DataIntegrityTester | None = None
+        self._migration_tester: MigrationTester | None = None
         self._connected = False
 
     async def connect(self) -> None:
@@ -71,7 +71,7 @@ class DatabaseClient(IDatabaseClient):
         self._connected = False
         self._connection = None
 
-    async def execute_query(self, query: str, params: Optional[Dict] = None) -> Any:
+    async def execute_query(self, query: str, params: dict | None = None) -> Any:
         """
         Execute a SQL query.
 
@@ -88,7 +88,7 @@ class DatabaseClient(IDatabaseClient):
         # This should be implemented by subclasses
         raise NotImplementedError("execute_query must be implemented by subclass")
 
-    async def validate_query(self, query: str) -> Dict[str, Any]:
+    async def validate_query(self, query: str) -> dict[str, Any]:
         """
         Validate a SQL query for syntax and performance issues.
 
@@ -139,8 +139,8 @@ class DatabaseClient(IDatabaseClient):
         }
 
     async def test_data_integrity(
-        self, table: str, constraints: List[IntegrityConstraint]
-    ) -> Dict[str, Any]:
+        self, table: str, constraints: list[IntegrityConstraint]
+    ) -> dict[str, Any]:
         """
         Test data integrity constraints.
 
@@ -160,8 +160,8 @@ class DatabaseClient(IDatabaseClient):
         return await self._integrity_tester.test_data_integrity(table, constraints)
 
     async def test_migration(
-        self, migration_script: str, rollback_script: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, migration_script: str, rollback_script: str | None = None
+    ) -> dict[str, Any]:
         """
         Test database migration script.
 
@@ -192,7 +192,7 @@ class DatabaseClient(IDatabaseClient):
             "rollback_successful": result.rollback_successful,
         }
 
-    async def get_schema_info(self) -> Dict[str, Any]:
+    async def get_schema_info(self) -> dict[str, Any]:
         """
         Get database schema information.
 
@@ -207,7 +207,7 @@ class DatabaseClient(IDatabaseClient):
 
     async def check_orphan_records(
         self, table: str, column: str, reference_table: str, reference_column: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Check for orphan records in foreign key relationships.
 
@@ -233,7 +233,7 @@ class DatabaseClient(IDatabaseClient):
             reference_column=reference_column,
         )
 
-    async def run_full_database_scan(self) -> Dict[str, Any]:
+    async def run_full_database_scan(self) -> dict[str, Any]:
         """
         Run a comprehensive database scan.
 
@@ -316,7 +316,7 @@ class SQLiteClient(DatabaseClient):
             self._sqlite_conn = None
         self._connected = False
 
-    async def execute_query(self, query: str, params: Optional[Dict] = None) -> Any:
+    async def execute_query(self, query: str, params: dict | None = None) -> Any:
         """
         Execute SQL query on SQLite database.
 
@@ -342,7 +342,7 @@ class SQLiteClient(DatabaseClient):
             await cursor.close()
             return []
 
-    async def get_schema_info(self) -> Dict[str, Any]:
+    async def get_schema_info(self) -> dict[str, Any]:
         """
         Get SQLite database schema information.
 
@@ -358,7 +358,7 @@ class SQLiteClient(DatabaseClient):
         )
         tables = [row[0] for row in tables_result]
 
-        schema: Dict[str, Any] = {"tables": tables, "columns": {}, "indexes": {}}
+        schema: dict[str, Any] = {"tables": tables, "columns": {}, "indexes": {}}
 
         # Get columns for each table
         for table in tables:

@@ -8,8 +8,8 @@ This module provides:
 """
 
 import logging
+from collections.abc import Callable
 from functools import wraps
-from typing import Callable, List, Optional
 from uuid import UUID
 
 from fastapi import HTTPException, Request, status
@@ -33,7 +33,7 @@ class RBACContext:
     For now, we'll implement permission checking based on roles
     """
 
-    def __init__(self, roles: List[Role]):
+    def __init__(self, roles: list[Role]):
         """
         Initialize RBAC context.
 
@@ -54,7 +54,7 @@ class RBACContext:
         """
         return any(role.has_permission(permission) for role in self.roles)
 
-    def has_any_permission(self, permissions: List[str]) -> bool:
+    def has_any_permission(self, permissions: list[str]) -> bool:
         """
         Check if any role has any of the specified permissions.
 
@@ -66,7 +66,7 @@ class RBACContext:
         """
         return any(self.has_permission(perm) for perm in permissions)
 
-    def has_all_permissions(self, permissions: List[str]) -> bool:
+    def has_all_permissions(self, permissions: list[str]) -> bool:
         """
         Check if any role has all specified permissions.
 
@@ -79,7 +79,7 @@ class RBACContext:
         return all(self.has_permission(perm) for perm in permissions)
 
     @property
-    def role_names(self) -> List[str]:
+    def role_names(self) -> list[str]:
         """Get list of role names"""
         return [role.name for role in self.roles]
 
@@ -90,7 +90,7 @@ class RBACContext:
 
 
 def require_permission(
-    permission: str, role_repository: RoleRepositoryInterface, tenant_id: Optional[UUID] = None
+    permission: str, role_repository: RoleRepositoryInterface, tenant_id: UUID | None = None
 ):
     """
     FastAPI dependency to require a specific permission for access.
@@ -156,7 +156,6 @@ def require_permission(
             )
 
         logger.debug(f"Permission granted: {permission} for roles: {rbac_context.role_names}")
-        return None
 
     return check_permission
 
@@ -232,7 +231,7 @@ def permission_required(permission: str):
     return decorator
 
 
-def require_any_permission(permissions: List[str]):
+def require_any_permission(permissions: list[str]):
     """
     FastAPI dependency to require any of the specified permissions.
 
@@ -259,12 +258,10 @@ def require_any_permission(permissions: List[str]):
                 detail=f"Permission denied: one of {permissions} required",
             )
 
-        return None
-
     return check_permissions
 
 
-def require_all_permissions(permissions: List[str]):
+def require_all_permissions(permissions: list[str]):
     """
     FastAPI dependency to require all of the specified permissions.
 
@@ -291,8 +288,6 @@ def require_all_permissions(permissions: List[str]):
                 detail=f"Permission denied: all of {permissions} required",
             )
 
-        return None
-
     return check_permissions
 
 
@@ -318,7 +313,5 @@ def is_admin_only():
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required"
             )
-
-        return None
 
     return check_admin

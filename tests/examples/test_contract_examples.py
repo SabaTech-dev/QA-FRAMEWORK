@@ -128,7 +128,6 @@ class TestWithDecorator:
     def test_decorated_contract(self) -> None:
         """Test marked with contract decorator."""
         # The decorator marks this test as covering GET /users
-        pass
 
 
 # Real-world example: Integration with HTTP client testing

@@ -13,7 +13,6 @@ discards per-item results and keeps aggregates only (F-ACC-006 / AC2).
 from __future__ import annotations
 
 import threading
-from typing import Dict, List, Optional, Tuple
 
 from src.domain.accuracy_testing.entities import AccuracyBenchmark, AccuracyTestSession
 from src.domain.accuracy_testing.holdout_service import HoldoutEvaluationService
@@ -24,12 +23,12 @@ from src.infrastructure.accuracy_testing.security import AccuracyPrincipal
 
 
 def run_accuracy_session(
-    benchmarks: List[AccuracyBenchmark],
+    benchmarks: list[AccuracyBenchmark],
     split: BenchmarkSplit,
     evaluator: IAccuracyEvaluator,
     response_provider: IResponseProvider,
     ai_model: str,
-    tenant_id: Optional[str],
+    tenant_id: str | None,
 ) -> AccuracyTestSession:
     """Evaluate the eval subset in detail and the holdout in aggregates.
 
@@ -65,7 +64,7 @@ class AccuracySessionStore:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._records: Dict[str, Tuple[str, AccuracyTestSession, BenchmarkSplit]] = {}
+        self._records: dict[str, tuple[str, AccuracyTestSession, BenchmarkSplit]] = {}
 
     def save(self, owner: str, session: AccuracyTestSession, split: BenchmarkSplit) -> None:
         with self._lock:
@@ -73,7 +72,7 @@ class AccuracySessionStore:
 
     def get(
         self, session_id: str, principal: AccuracyPrincipal
-    ) -> Optional[Tuple[AccuracyTestSession, BenchmarkSplit]]:
+    ) -> tuple[AccuracyTestSession, BenchmarkSplit] | None:
         """Owner-scoped retrieval: owners see their own, admins see all."""
         with self._lock:
             record = self._records.get(session_id)
@@ -86,7 +85,7 @@ class AccuracySessionStore:
 
 
 def split_for_tenant(
-    benchmarks: List[AccuracyBenchmark],
+    benchmarks: list[AccuracyBenchmark],
     split_secret: str,
     tenant_id: str,
     holdout_ratio: float = 0.2,

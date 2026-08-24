@@ -6,7 +6,7 @@ Uses mock data to avoid requiring Docker.
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 
@@ -23,7 +23,7 @@ from src.adapters.vuln import (
 
 
 @pytest.fixture
-def sample_nuclei_output() -> List[Dict[str, Any]]:
+def sample_nuclei_output() -> list[dict[str, Any]]:
     """Sample Nuclei JSONL output."""
     return [
         {
@@ -94,7 +94,7 @@ def sample_nuclei_json_string() -> str:
 
 
 @pytest.fixture
-def sample_wstg_output() -> Dict[str, Any]:
+def sample_wstg_output() -> dict[str, Any]:
     """Sample WSTG scanner output."""
     return {
         "tests": {

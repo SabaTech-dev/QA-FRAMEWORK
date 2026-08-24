@@ -6,7 +6,7 @@ Analyzes root causes of test flakiness and provides recommendations.
 
 import re
 from collections import Counter
-from typing import Any, Dict, List
+from typing import Any
 
 from src.domain.flaky_detection.entities import TestRun
 from src.domain.flaky_detection.value_objects import QuarantineReason, TestIdentifier
@@ -68,8 +68,8 @@ class RootCauseAnalyzer:
     def analyze(
         self,
         test_identifier: TestIdentifier,
-        runs: List[TestRun],
-    ) -> Dict[str, Any]:
+        runs: list[TestRun],
+    ) -> dict[str, Any]:
         """
         Analyze root causes of flakiness.
 
@@ -135,7 +135,7 @@ class RootCauseAnalyzer:
             "patterns_found": patterns,
         }
 
-    def _analyze_errors(self, runs: List[TestRun]) -> Dict[str, Any]:
+    def _analyze_errors(self, runs: list[TestRun]) -> dict[str, Any]:
         """Analyze error messages for patterns."""
         errors = []
         for run in runs:
@@ -171,7 +171,7 @@ class RootCauseAnalyzer:
             "external_indicators": list(set(external_matches))[:5],
         }
 
-    def _analyze_timing(self, runs: List[TestRun]) -> Dict[str, Any]:
+    def _analyze_timing(self, runs: list[TestRun]) -> dict[str, Any]:
         """Analyze timing patterns."""
         durations = [r.duration_ms for r in runs if r.duration_ms > 0]
 
@@ -198,7 +198,7 @@ class RootCauseAnalyzer:
             "slow_run_percentage": slow_runs / len(durations) if durations else 0,
         }
 
-    def _analyze_positions(self, runs: List[TestRun]) -> Dict[str, Any]:
+    def _analyze_positions(self, runs: list[TestRun]) -> dict[str, Any]:
         """Analyze if failures correlate with test position."""
         failure_positions = []
 
@@ -226,9 +226,9 @@ class RootCauseAnalyzer:
 
     def _generate_recommendations(
         self,
-        causes: List[QuarantineReason],
-        patterns: Dict[str, Any],
-    ) -> List[str]:
+        causes: list[QuarantineReason],
+        patterns: dict[str, Any],
+    ) -> list[str]:
         """Generate fix recommendations based on causes."""
         recommendations = []
 

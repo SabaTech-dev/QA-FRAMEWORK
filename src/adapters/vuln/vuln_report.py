@@ -8,7 +8,6 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from .vuln_parser import UnifiedVulnParser, VulnerabilityFinding, VulnScanResult, VulnSeverity
 
@@ -27,7 +26,7 @@ class VulnReportGenerator:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-    def generate_json(self, result: VulnScanResult, filename: Optional[str] = None) -> str:
+    def generate_json(self, result: VulnScanResult, filename: str | None = None) -> str:
         """Generate JSON vulnerability report.
 
         Args:
@@ -80,7 +79,7 @@ class VulnReportGenerator:
         logger.info(f"JSON report generated: {report_path}")
         return str(report_path)
 
-    def generate_html(self, result: VulnScanResult, filename: Optional[str] = None) -> str:
+    def generate_html(self, result: VulnScanResult, filename: str | None = None) -> str:
         """Generate HTML vulnerability report with interactive features.
 
         Args:
@@ -280,7 +279,7 @@ class VulnReportGenerator:
         logger.info(f"HTML report generated: {report_path}")
         return str(report_path)
 
-    def generate_markdown(self, result: VulnScanResult, filename: Optional[str] = None) -> str:
+    def generate_markdown(self, result: VulnScanResult, filename: str | None = None) -> str:
         """Generate Markdown vulnerability report.
 
         Args:
@@ -373,9 +372,7 @@ class VulnReportGenerator:
         logger.info(f"Markdown report generated: {report_path}")
         return str(report_path)
 
-    def generate_all(
-        self, result: VulnScanResult, base_name: Optional[str] = None
-    ) -> Dict[str, str]:
+    def generate_all(self, result: VulnScanResult, base_name: str | None = None) -> dict[str, str]:
         """Generate all report formats.
 
         Args:
@@ -425,7 +422,7 @@ class VulnReportGenerator:
             </div>"""
         return bars
 
-    def _render_findings_table(self, findings: List[VulnerabilityFinding]) -> str:
+    def _render_findings_table(self, findings: list[VulnerabilityFinding]) -> str:
         """Render findings table rows as HTML."""
         rows = ""
         for f in findings:

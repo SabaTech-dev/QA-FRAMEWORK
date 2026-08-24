@@ -27,10 +27,11 @@ import sys
 import threading
 import time
 import uuid
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 from queue import Queue
-from typing import Any, Dict, Generator, Optional
+from typing import Any
 
 import pytest
 
@@ -51,14 +52,14 @@ pytest_plugins = [
 # =============================================================================
 
 # Thread-safe data structures for parallel execution
-_worker_locks: Dict[str, threading.Lock] = {}
-_resource_pools: Dict[str, Queue] = {}
-_test_data: Dict[str, Any] = {}
+_worker_locks: dict[str, threading.Lock] = {}
+_resource_pools: dict[str, Queue] = {}
+_test_data: dict[str, Any] = {}
 _data_lock = threading.Lock()
 
 # Worker identification
-_worker_id: Optional[str] = None
-_session_id: Optional[str] = None
+_worker_id: str | None = None
+_session_id: str | None = None
 
 
 def get_worker_id() -> str:
@@ -326,7 +327,7 @@ def worker_temp_dir(tmp_path_factory: pytest.TempPathFactory, worker_id: str) ->
 
 
 @pytest.fixture(scope="function")
-def isolated_test_data(worker_id: str) -> Dict[str, Any]:
+def isolated_test_data(worker_id: str) -> dict[str, Any]:
     """
     Provide isolated test data dictionary per test.
 
@@ -351,8 +352,7 @@ def isolated_test_data(worker_id: str) -> Dict[str, Any]:
         yield _test_data[data_key]
     finally:
         with _data_lock:
-            if data_key in _test_data:
-                del _test_data[data_key]
+            _test_data.pop(data_key, None)
 
 
 @pytest.fixture(scope="session")
@@ -386,7 +386,7 @@ def faker_factory(worker_id: str) -> Generator[Any, None, None]:
 
 
 @pytest.fixture(scope="function")
-def timer() -> Generator[Dict[str, float], None, None]:
+def timer() -> Generator[dict[str, float], None, None]:
     """
     Provide a timer fixture for performance measurements.
 
@@ -401,7 +401,7 @@ def timer() -> Generator[Dict[str, float], None, None]:
             elapsed = timer["end"] - timer["start"]
             assert elapsed < 1.0
     """
-    timing_data: Dict[str, float] = {}
+    timing_data: dict[str, float] = {}
     timing_data["start"] = time.time()
 
     yield timing_data
@@ -411,7 +411,7 @@ def timer() -> Generator[Dict[str, float], None, None]:
 
 
 @pytest.fixture(scope="function")
-def execution_context(worker_id: str, session_id: str) -> Dict[str, Any]:
+def execution_context(worker_id: str, session_id: str) -> dict[str, Any]:
     """
     Provide execution context information for tests.
 

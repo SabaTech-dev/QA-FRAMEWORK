@@ -1,7 +1,6 @@
 """User migrator for multi-tenant migration."""
 
 import logging
-from typing import List
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,7 +33,7 @@ class UserMigrator(DataMigrator):
         self.skipped_users = []
         self.errors = []
 
-    async def migrate_users(self, default_tenant: Tenant) -> List[str]:
+    async def migrate_users(self, default_tenant: Tenant) -> list[str]:
         """
         Migrate all existing users to the default tenant.
 
@@ -87,7 +86,7 @@ class UserMigrator(DataMigrator):
                     self.migrated_users.append(user)
 
                 except Exception as e:
-                    error_msg = f"Failed to migrate user {user.username}: {str(e)}"
+                    error_msg = f"Failed to migrate user {user.username}: {e!s}"
                     logger.error(error_msg)
                     self.add_error(error_msg)
                     self.errors.append(error_msg)
@@ -100,14 +99,14 @@ class UserMigrator(DataMigrator):
             return migrated_ids
 
         except Exception as e:
-            error_msg = f"User migration failed: {str(e)}"
+            error_msg = f"User migration failed: {e!s}"
             logger.error(error_msg)
             self.add_error(error_msg)
             if not self.dry_run:
                 await self.db_session.rollback()
             raise
 
-    def get_migrated_users(self) -> List:
+    def get_migrated_users(self) -> list:
         """
         Get list of migrated users.
 
@@ -116,7 +115,7 @@ class UserMigrator(DataMigrator):
         """
         return self.migrated_users
 
-    def get_skipped_users(self) -> List:
+    def get_skipped_users(self) -> list:
         """
         Get list of users that were skipped.
 
@@ -125,7 +124,7 @@ class UserMigrator(DataMigrator):
         """
         return self.skipped_users
 
-    def get_errors(self) -> List[str]:
+    def get_errors(self) -> list[str]:
         """
         Get list of migration errors.
 

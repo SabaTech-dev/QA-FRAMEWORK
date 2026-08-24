@@ -165,13 +165,11 @@ class TestCrossPlatform:
         Use platform checks for platform-specific behavior.
         """
         # This would use a parameterized driver fixture
-        pass
 
     @pytest.mark.parametrize("platform", ["android", "ios"])
     def test_platform_specific(self, platform: str) -> None:
         """Parametrized test for multiple platforms."""
         # Platform-specific test logic
-        pass
 
 
 # Markers usage examples
@@ -184,7 +182,6 @@ class TestWithAdvancedFeatures:
     def test_with_custom_app(self, android_driver: AppiumDriver) -> None:
         """Test using custom app specified via marker."""
         # The android_driver fixture will use the app path from marker
-        pass
 
 
 # Practical usage example

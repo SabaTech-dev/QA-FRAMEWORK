@@ -10,11 +10,11 @@ from .user_migrator import UserMigrator
 
 __all__ = [
     "DataMigrator",
-    "UserMigrator",
-    "TestMigrator",
-    "MigrationReportGenerator",
     "DataMigratorType",
+    "MigrationReportGenerator",
     "MigrationStatus",
+    "TestMigrator",
+    "UserMigrator",
 ]
 
 MigrationStatus = _DataMigrator.MigrationStatus

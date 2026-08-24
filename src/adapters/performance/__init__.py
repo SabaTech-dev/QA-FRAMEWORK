@@ -6,12 +6,12 @@ from .metrics_collector import MetricsCollector, PerformanceMetrics
 from .performance_client import PerformanceClient
 
 __all__ = [
-    "MetricsCollector",
-    "PerformanceMetrics",
-    "LoadTestRunner",
-    "LocustAdapter",
-    "K6Adapter",
     "ApacheBenchAdapter",
     "BenchmarkRunner",
+    "K6Adapter",
+    "LoadTestRunner",
+    "LocustAdapter",
+    "MetricsCollector",
     "PerformanceClient",
+    "PerformanceMetrics",
 ]

@@ -5,9 +5,8 @@ Defines the core value objects used in the test generation system.
 """
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import List, Optional
 
 
 class GenerationType(str, Enum):
@@ -93,19 +92,19 @@ class TestCaseMetadata:
 
     generated_at: datetime
     generator_version: str
-    llm_model: Optional[str]
+    llm_model: str | None
     source_type: RequirementSource
-    source_id: Optional[str]
+    source_id: str | None
     tokens_used: int
     generation_time_ms: int
     validated: bool
-    validation_errors: List[str]
+    validation_errors: list[str]
 
     @classmethod
     def create_empty(cls) -> "TestCaseMetadata":
         """Create empty metadata."""
         return cls(
-            generated_at=datetime.now(timezone.utc),
+            generated_at=datetime.now(UTC),
             generator_version="1.0.0",
             llm_model=None,
             source_type=RequirementSource.MARKDOWN,
@@ -116,7 +115,7 @@ class TestCaseMetadata:
             validation_errors=[],
         )
 
-    def with_validation(self, errors: List[str]) -> "TestCaseMetadata":
+    def with_validation(self, errors: list[str]) -> "TestCaseMetadata":
         """Create metadata with validation results."""
         return TestCaseMetadata(
             generated_at=self.generated_at,

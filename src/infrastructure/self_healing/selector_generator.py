@@ -5,7 +5,6 @@ Generates candidate selectors from various sources.
 """
 
 import re
-from typing import List, Optional
 
 from src.domain.self_healing.entities import Selector
 from src.domain.self_healing.value_objects import HealingContext, SelectorMetadata, SelectorType
@@ -34,8 +33,8 @@ class SelectorGenerator:
     def generate_from_attributes(
         self,
         attributes: dict,
-        element_text: Optional[str] = None,
-    ) -> List[Selector]:
+        element_text: str | None = None,
+    ) -> list[Selector]:
         """
         Generate candidate selectors from element attributes.
 
@@ -52,7 +51,7 @@ class SelectorGenerator:
             return candidates
 
         # Priority 1: ID selector
-        if "id" in attributes and attributes["id"]:
+        if attributes.get("id"):
             candidates.append(
                 self._create_selector(
                     f"#{self._escape_css(attributes['id'])}",
@@ -74,7 +73,7 @@ class SelectorGenerator:
                     )
 
         # Priority 3: Name attribute
-        if "name" in attributes and attributes["name"]:
+        if attributes.get("name"):
             candidates.append(
                 self._create_selector(
                     f"[name=\"{self._escape_css(attributes['name'])}\"]",
@@ -88,7 +87,7 @@ class SelectorGenerator:
         candidates.extend(aria_selectors)
 
         # Priority 5: Class-based selectors
-        if "class" in attributes and attributes["class"]:
+        if attributes.get("class"):
             class_selectors = self._generate_class_selectors(attributes["class"])
             candidates.extend(class_selectors)
 
@@ -108,7 +107,7 @@ class SelectorGenerator:
     def generate_from_context(
         self,
         context: HealingContext,
-    ) -> List[Selector]:
+    ) -> list[Selector]:
         """
         Generate candidate selectors from page context.
 
@@ -171,8 +170,8 @@ class SelectorGenerator:
 
     def generate_composite(
         self,
-        selectors: List[Selector],
-    ) -> List[Selector]:
+        selectors: list[Selector],
+    ) -> list[Selector]:
         """
         Generate composite selectors from multiple candidates.
 
@@ -265,7 +264,7 @@ class SelectorGenerator:
         parts = value.split("'")
         return "concat('', '" + "', '".join(parts) + "')"
 
-    def _generate_aria_selectors(self, attributes: dict) -> List[Selector]:
+    def _generate_aria_selectors(self, attributes: dict) -> list[Selector]:
         """Generate selectors based on ARIA attributes."""
         selectors = []
 
@@ -277,7 +276,7 @@ class SelectorGenerator:
         ]
 
         for attr in aria_attrs:
-            if attr in attributes and attributes[attr]:
+            if attributes.get(attr):
                 value = self._escape_css(attributes[attr])
                 selectors.append(
                     self._create_selector(
@@ -289,7 +288,7 @@ class SelectorGenerator:
 
         return selectors
 
-    def _generate_class_selectors(self, class_value: str) -> List[Selector]:
+    def _generate_class_selectors(self, class_value: str) -> list[Selector]:
         """Generate selectors from class attribute."""
         selectors = []
 
@@ -335,7 +334,7 @@ class SelectorGenerator:
         self,
         text: str,
         attributes: dict,
-    ) -> List[Selector]:
+    ) -> list[Selector]:
         """Generate text-based selectors."""
         selectors = []
 
@@ -377,13 +376,13 @@ class SelectorGenerator:
         self,
         tag: str,
         attributes: dict,
-    ) -> List[Selector]:
+    ) -> list[Selector]:
         """Generate tag-based selectors with attributes."""
         selectors = []
 
         # Tag with single attribute
         for attr in ["type", "placeholder", "title", "alt"]:
-            if attr in attributes and attributes[attr]:
+            if attributes.get(attr):
                 value = self._escape_css(attributes[attr])
                 selectors.append(
                     self._create_selector(

@@ -4,7 +4,6 @@ Value Objects for Flaky Test Detection Domain
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 
 class FlakyStatus(str, Enum):
@@ -70,7 +69,7 @@ class TestIdentifier:
 
     test_id: str
     suite_id: str
-    class_name: Optional[str]
+    class_name: str | None
     method_name: str
 
     def __str__(self) -> str:

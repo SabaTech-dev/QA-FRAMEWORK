@@ -2,7 +2,7 @@
 Unit tests for test generation value objects.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -141,7 +141,7 @@ class TestTestCaseMetadata:
     def test_create_metadata(self):
         """Test creating metadata."""
         metadata = TestCaseMetadata(
-            generated_at=datetime.now(timezone.utc),
+            generated_at=datetime.now(UTC),
             generator_version="1.0.0",
             llm_model="gpt-4",
             source_type=RequirementSource.MARKDOWN,

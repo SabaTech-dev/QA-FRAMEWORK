@@ -383,7 +383,7 @@ class TestDeadlockPrevention:
             await asyncio.wait_for(lock.acquire(), timeout=0.1)
             acquired = True
             await asyncio.sleep(0.2)  # Hold longer than timeout
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass
         finally:
             if acquired:
@@ -403,10 +403,8 @@ class TestDeadlockPrevention:
 
         async def use_resources(task_id: int):
             # Always acquire in alphabetical order: a -> b -> c
-            async with resource_a:
-                async with resource_b:
-                    async with resource_c:
-                        await asyncio.sleep(0.01)
+            async with resource_a, resource_b, resource_c:
+                await asyncio.sleep(0.01)
 
         # Run multiple tasks - should complete without deadlock
         await asyncio.gather(*[use_resources(i) for i in range(5)])

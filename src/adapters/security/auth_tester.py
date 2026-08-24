@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List
+from typing import Any
 
 
 class AuthTestType(Enum):
@@ -68,7 +68,7 @@ class AuthTester:
     """
 
     # Common weak/default credentials
-    COMMON_CREDENTIALS: List[Dict[str, str]] = [
+    COMMON_CREDENTIALS: list[dict[str, str]] = [
         {"username": "admin", "password": "admin"},
         {"username": "admin", "password": "password"},
         {"username": "admin", "password": "123456"},
@@ -86,16 +86,16 @@ class AuthTester:
 
     def __init__(self) -> None:
         """Initialize authentication tester."""
-        self._results: List[Dict[str, Any]] = []
+        self._results: list[dict[str, Any]] = []
 
     async def test_authentication(
         self,
         http_client: Any,
         login_url: str,
-        test_cases: List[AuthTestCase],
+        test_cases: list[AuthTestCase],
         username_field: str = "username",
         password_field: str = "password",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Test authentication mechanism with multiple test cases.
 
@@ -137,7 +137,7 @@ class AuthTester:
         login_url: str,
         username_field: str = "username",
         password_field: str = "password",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Test for common/default credentials.
 
@@ -174,7 +174,7 @@ class AuthTester:
         attempts: int = 10,
         username_field: str = "username",
         password_field: str = "password",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Test for brute force protection mechanisms.
 
@@ -249,7 +249,7 @@ class AuthTester:
         registration_url: str,
         username_field: str = "username",
         password_field: str = "password",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Test password policy enforcement.
 
@@ -322,7 +322,7 @@ class AuthTester:
         test_case: AuthTestCase,
         username_field: str,
         password_field: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Run a single authentication test case."""
         response = await self._attempt_login(
             http_client,
@@ -358,7 +358,7 @@ class AuthTester:
         password: str,
         username_field: str,
         password_field: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Attempt to login with given credentials."""
         try:
             data = {username_field: username, password_field: password}
@@ -388,7 +388,7 @@ class AuthTester:
         password: str,
         username_field: str,
         password_field: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Attempt to register with given credentials."""
         try:
             data = {username_field: username, password_field: password}
@@ -410,7 +410,7 @@ class AuthTester:
         except Exception as e:
             return {"status_code": 0, "text": "", "headers": {}, "error": str(e)}
 
-    def _is_login_successful(self, response: Dict[str, Any]) -> bool:
+    def _is_login_successful(self, response: dict[str, Any]) -> bool:
         """
         Determine if login was successful based on response.
 
@@ -458,7 +458,7 @@ class AuthTester:
 
         return False
 
-    def _identify_security_issues(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _identify_security_issues(self, results: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Identify security issues from test results."""
         issues = []
 
@@ -475,7 +475,7 @@ class AuthTester:
 
         return issues
 
-    def _get_recommendations(self, results: List[Dict[str, Any]]) -> List[str]:
+    def _get_recommendations(self, results: list[dict[str, Any]]) -> list[str]:
         """Generate recommendations based on test results."""
         vulnerabilities = [r for r in results if r.get("vulnerable")]
 

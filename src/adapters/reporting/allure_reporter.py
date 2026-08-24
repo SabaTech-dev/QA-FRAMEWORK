@@ -10,7 +10,7 @@ import shutil
 import subprocess
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import allure
 from allure_commons.types import AttachmentType
@@ -91,9 +91,9 @@ class AllureReporter(IReporter):
         """
         self.results_dir = Path(results_dir)
         self.screenshots_on_failure = screenshots_on_failure
-        self.current_test: Optional[str] = None
-        self._steps: List[Dict[str, Any]] = []
-        self._tags: List[str] = []
+        self.current_test: str | None = None
+        self._steps: list[dict[str, Any]] = []
+        self._tags: list[str] = []
 
         # Create results directory
         if clean_results and self.results_dir.exists():
@@ -103,7 +103,7 @@ class AllureReporter(IReporter):
         # Set Allure environment variable
         os.environ["ALLURE_RESULTS_DIR"] = str(self.results_dir.absolute())
 
-    def start_test(self, test_name: str, description: Optional[str] = None) -> None:
+    def start_test(self, test_name: str, description: str | None = None) -> None:
         """
         Start reporting for a test case.
 
@@ -120,7 +120,7 @@ class AllureReporter(IReporter):
         if description:
             allure.dynamic.description(description)
 
-    def end_test(self, status: str, message: Optional[str] = None) -> None:
+    def end_test(self, status: str, message: str | None = None) -> None:
         """
         End reporting for current test case.
 
@@ -144,7 +144,7 @@ class AllureReporter(IReporter):
         self.current_test = None
         self._steps = []
 
-    def add_step(self, step_name: str, status: Optional[str] = None) -> None:
+    def add_step(self, step_name: str, status: str | None = None) -> None:
         """
         Add a step to the current test.
 
@@ -160,7 +160,7 @@ class AllureReporter(IReporter):
             if status and status != "passed":
                 allure.dynamic.label("step_status", status)
 
-    def attach_screenshot(self, screenshot_path: str, name: Optional[str] = None) -> None:
+    def attach_screenshot(self, screenshot_path: str, name: str | None = None) -> None:
         """
         Attach a screenshot to the current test report.
 
@@ -188,7 +188,7 @@ class AllureReporter(IReporter):
         """
         allure.attach(content, name=name, attachment_type=AttachmentType.TEXT)
 
-    def attach_json(self, data: Dict[str, Any], name: str) -> None:
+    def attach_json(self, data: dict[str, Any], name: str) -> None:
         """
         Attach JSON data to the current test report.
 
@@ -250,7 +250,7 @@ class AllureReporter(IReporter):
 
     def capture_failure_screenshot(
         self, screenshot_func: Any, *args: Any, **kwargs: Any
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Capture screenshot on test failure.
 
@@ -297,7 +297,7 @@ class AllureReporter(IReporter):
         """
         allure.dynamic.story(story_name)
 
-    def add_link(self, url: str, name: Optional[str] = None, link_type: str = "link") -> None:
+    def add_link(self, url: str, name: str | None = None, link_type: str = "link") -> None:
         """
         Add a link to the test report.
 

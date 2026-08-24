@@ -5,7 +5,7 @@ Analyzes UI automation code and generates additional test cases.
 """
 
 from dataclasses import dataclass
-from typing import List, Optional, Protocol
+from typing import Protocol
 
 from ..entities import GeneratedTest, TestGenerationSession, TestScenario
 from ..value_objects import (
@@ -25,11 +25,11 @@ class UIAnalyzer(Protocol):
         """Analyze UI automation code."""
         ...
 
-    def extract_selectors(self, code: str) -> List[str]:
+    def extract_selectors(self, code: str) -> list[str]:
         """Extract selectors from UI code."""
         ...
 
-    def extract_flows(self, code: str) -> List[dict]:
+    def extract_flows(self, code: str) -> list[dict]:
         """Extract user flows from UI code."""
         ...
 
@@ -46,7 +46,7 @@ class LLMAdapter(Protocol):
         """Generate a test from a UI flow."""
         ...
 
-    def suggest_improvements(self, test_code: str) -> List[str]:
+    def suggest_improvements(self, test_code: str) -> list[str]:
         """Suggest improvements to test code."""
         ...
 
@@ -61,7 +61,7 @@ class GenerateFromUIInput:
 
     ui_code: str
     framework: TestFramework = TestFramework.PLAYWRIGHT
-    tenant_id: Optional[str] = None
+    tenant_id: str | None = None
     generate_missing_tests: bool = True
     improve_existing: bool = False
     min_confidence: float = 0.5
@@ -72,11 +72,11 @@ class GenerateFromUIOutput:
     """Output from the GenerateFromUI use case."""
 
     session: TestGenerationSession
-    tests: List[GeneratedTest]
+    tests: list[GeneratedTest]
     flows_detected: int
     selectors_found: int
     success: bool
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
 
 class GenerateFromUI:

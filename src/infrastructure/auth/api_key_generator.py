@@ -4,7 +4,6 @@ import hashlib
 import hmac
 import secrets
 from datetime import datetime
-from typing import Optional, Tuple
 from uuid import UUID
 
 from src.domain.auth.entities import APIKey
@@ -37,9 +36,9 @@ class APIKeyGenerator:
         user_id: UUID,
         name: str,
         scopes: list[str],
-        tenant_id: Optional[UUID] = None,
-        expires_at: Optional[datetime] = None,
-    ) -> Tuple[APIKey, str]:
+        tenant_id: UUID | None = None,
+        expires_at: datetime | None = None,
+    ) -> tuple[APIKey, str]:
         """Generate a new API key.
 
         Args:
@@ -102,7 +101,7 @@ class APIKeyGenerator:
         return hmac.compare_digest(computed_hash, stored_hash)
 
     @staticmethod
-    def extract_key_id(plaintext_key: str) -> Optional[str]:
+    def extract_key_id(plaintext_key: str) -> str | None:
         """Extract identifying portion from API key.
 
         Args:

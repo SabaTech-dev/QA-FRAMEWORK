@@ -5,6 +5,6 @@ from src.core.use_cases.test_runner import TestRunner
 
 __all__ = [
     "TestResult",
-    "TestStatus",
     "TestRunner",
+    "TestStatus",
 ]

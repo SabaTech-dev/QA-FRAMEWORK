@@ -1,9 +1,9 @@
 """Base DataMigrator class for multi-tenant migration."""
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Dict
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,7 +39,7 @@ class DataMigrator:
         """
         self.db_session = db_session
         self.dry_run = dry_run
-        self.stats: Dict[str, Any] = {
+        self.stats: dict[str, Any] = {
             "status": self.MigrationStatus.PENDING,
             "started_at": None,
             "completed_at": None,
@@ -58,7 +58,7 @@ class DataMigrator:
             return
 
         self._started = True
-        self.stats["started_at"] = datetime.now(timezone.utc).isoformat()
+        self.stats["started_at"] = datetime.now(UTC).isoformat()
         self.stats["status"] = self.MigrationStatus.IN_PROGRESS
         logger.info("Starting multi-tenant data migration")
 
@@ -69,7 +69,7 @@ class DataMigrator:
         Args:
             success: Whether the migration was successful
         """
-        self.stats["completed_at"] = datetime.now(timezone.utc).isoformat()
+        self.stats["completed_at"] = datetime.now(UTC).isoformat()
         self.stats["status"] = (
             self.MigrationStatus.COMPLETED if success else self.MigrationStatus.FAILED
         )
@@ -109,7 +109,6 @@ class DataMigrator:
                 return None
 
             # Create default tenant
-            from datetime import timezone
 
             default_tenant = TenantModel(
                 id="default-id",
@@ -118,8 +117,8 @@ class DataMigrator:
                 plan="free",
                 status="active",
                 settings={"description": "Default tenant for migrated data"},
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
             )
 
             self.db_session.add(default_tenant)
@@ -130,7 +129,7 @@ class DataMigrator:
             return default_tenant
 
         except Exception as e:
-            error_msg = f"Failed to create default tenant: {str(e)}"
+            error_msg = f"Failed to create default tenant: {e!s}"
             logger.error(error_msg)
             self.stats["errors"].append(error_msg)
             if not self.dry_run:
@@ -150,7 +149,7 @@ class DataMigrator:
             self.stats["total_records"] = total or 0
             return total or 0
         except Exception as e:
-            error_msg = f"Failed to get record count: {str(e)}"
+            error_msg = f"Failed to get record count: {e!s}"
             logger.error(error_msg)
             self.stats["errors"].append(error_msg)
             raise
@@ -174,7 +173,7 @@ class DataMigrator:
         self.stats["errors"].append(error)
         self.stats["failed_records"] += 1
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """
         Get current migration statistics.
 
@@ -192,8 +191,7 @@ class DataMigrator:
         """Context manager exit."""
         if exc_type is not None:
             self.stats["status"] = self.MigrationStatus.FAILED
-            self.stats["errors"].append(f"Migration failed with exception: {str(exc_val)}")
-            logger.error(f"Migration failed: {str(exc_val)}")
+            self.stats["errors"].append(f"Migration failed with exception: {exc_val!s}")
+            logger.error(f"Migration failed: {exc_val!s}")
         else:
             await self.complete(success=True)
-        return None

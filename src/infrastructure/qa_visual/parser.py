@@ -9,7 +9,6 @@ instead of failing the whole analysis.
 import json
 import re
 from dataclasses import dataclass
-from typing import Optional
 
 from pydantic import ValidationError
 
@@ -23,12 +22,12 @@ _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
 class ParseResult:
     """Outcome of parsing the model content."""
 
-    analysis: Optional[QAAnalysis] = None
+    analysis: QAAnalysis | None = None
     parse_error: bool = False
     raw_content: str = ""
 
 
-def _extract_json_text(content: str) -> Optional[str]:
+def _extract_json_text(content: str) -> str | None:
     """Extract candidate JSON text, handling fences and leading prose."""
     text = content.strip()
     if not text:
@@ -72,7 +71,7 @@ def parse_qa_analysis(content: str) -> ParseResult:
     return ParseResult(analysis=analysis, parse_error=False)
 
 
-def _coerce_lenient(data: dict) -> Optional[QAAnalysis]:
+def _coerce_lenient(data: dict) -> QAAnalysis | None:
     """Best-effort coercion: unknown severities/categories fall back to defaults."""
     if "overall_score" not in data:
         return None

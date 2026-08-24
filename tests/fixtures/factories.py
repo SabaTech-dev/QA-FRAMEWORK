@@ -11,7 +11,7 @@ Provides sophisticated data generation patterns including:
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, Generic, List, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 from uuid import uuid4
 
 from faker import Faker
@@ -54,7 +54,7 @@ class UserData:
     is_active: bool = True
     role: str = "user"
     created_at: datetime = field(default_factory=datetime.now)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -69,8 +69,8 @@ class ProductData:
     sku: str = ""
     stock_quantity: int = 0
     is_available: bool = True
-    tags: List[str] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    tags: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -79,12 +79,12 @@ class OrderData:
 
     id: str = field(default_factory=lambda: str(uuid4()))
     user_id: str = ""
-    items: List[Dict[str, Any]] = field(default_factory=list)
+    items: list[dict[str, Any]] = field(default_factory=list)
     total_amount: float = 0.0
     status: str = "pending"
-    shipping_address: Dict[str, str] = field(default_factory=dict)
+    shipping_address: dict[str, str] = field(default_factory=dict)
     created_at: datetime = field(default_factory=datetime.now)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -93,9 +93,9 @@ class APIRequestData:
 
     method: str = "GET"
     url: str = ""
-    headers: Dict[str, str] = field(default_factory=dict)
-    query_params: Dict[str, str] = field(default_factory=dict)
-    body: Optional[Dict[str, Any]] = None
+    headers: dict[str, str] = field(default_factory=dict)
+    query_params: dict[str, str] = field(default_factory=dict)
+    body: dict[str, Any] | None = None
     timeout: int = 30
     retries: int = 3
 
@@ -103,9 +103,9 @@ class APIRequestData:
 class BaseFactory(ABC, Generic[T]):
     """Abstract base factory with common functionality."""
 
-    def __init__(self, faker: Optional[Faker] = None, locale: str = "en_US"):
+    def __init__(self, faker: Faker | None = None, locale: str = "en_US"):
         self.faker = faker or Faker(locale)
-        self.sequences: Dict[str, Sequence] = {}
+        self.sequences: dict[str, Sequence] = {}
 
     def sequence(self, name: str, prefix: str = "") -> str:
         """Get or create a named sequence."""
@@ -116,9 +116,8 @@ class BaseFactory(ABC, Generic[T]):
     @abstractmethod
     def create(self, **overrides: Any) -> T:
         """Create a single instance."""
-        pass
 
-    def create_batch(self, size: int, **overrides: Any) -> List[T]:
+    def create_batch(self, size: int, **overrides: Any) -> list[T]:
         """Create multiple instances."""
         return [self.create(**overrides) for _ in range(size)]
 
@@ -232,7 +231,7 @@ class OrderFactory(BaseFactory[OrderData]):
         )
         return order
 
-    def _generate_items(self, count: int = 3) -> List[Dict[str, Any]]:
+    def _generate_items(self, count: int = 3) -> list[dict[str, Any]]:
         """Generate random order items."""
         return [
             {
@@ -243,11 +242,11 @@ class OrderFactory(BaseFactory[OrderData]):
             for _ in range(count)
         ]
 
-    def _calculate_total(self, items: List[Dict[str, Any]]) -> float:
+    def _calculate_total(self, items: list[dict[str, Any]]) -> float:
         """Calculate total from items."""
         return sum(item["quantity"] * item["price"] for item in items)
 
-    def _generate_address(self) -> Dict[str, str]:
+    def _generate_address(self) -> dict[str, str]:
         """Generate shipping address."""
         return {
             "street": self.faker.street_address(),
@@ -288,7 +287,7 @@ class APIRequestFactory(BaseFactory[APIRequestData]):
         )
         return request
 
-    def _generate_headers(self) -> Dict[str, str]:
+    def _generate_headers(self) -> dict[str, str]:
         """Generate common HTTP headers."""
         return {
             "User-Agent": self.faker.user_agent(),
@@ -303,7 +302,7 @@ class APIRequestFactory(BaseFactory[APIRequestData]):
         defaults.update(overrides)
         return self.create(**defaults)
 
-    def post(self, url: str, body: Dict[str, Any], **overrides: Any) -> APIRequestData:
+    def post(self, url: str, body: dict[str, Any], **overrides: Any) -> APIRequestData:
         """Create POST request."""
         defaults = {"method": "POST", "url": url, "body": body}
         defaults.update(overrides)
@@ -324,7 +323,7 @@ class ObjectMother:
     Provides pre-configured objects for common testing scenarios.
     """
 
-    def __init__(self, faker: Optional[Faker] = None, locale: str = "en_US"):
+    def __init__(self, faker: Faker | None = None, locale: str = "en_US"):
         self.faker = faker or Faker(locale)
         self.user_factory = UserFactory(self.faker)
         self.product_factory = ProductFactory(self.faker)
@@ -390,26 +389,26 @@ class DataBuilder:
     Allows step-by-step construction with method chaining.
     """
 
-    def __init__(self, faker: Optional[Faker] = None, locale: str = "en_US"):
+    def __init__(self, faker: Faker | None = None, locale: str = "en_US"):
         self.faker = faker or Faker(locale)
-        self._data: Dict[str, Any] = {}
+        self._data: dict[str, Any] = {}
 
-    def with_id(self, id: Optional[str] = None) -> "DataBuilder":
+    def with_id(self, id: str | None = None) -> "DataBuilder":
         """Add ID field."""
         self._data["id"] = id or str(uuid4())
         return self
 
-    def with_name(self, name: Optional[str] = None) -> "DataBuilder":
+    def with_name(self, name: str | None = None) -> "DataBuilder":
         """Add name field."""
         self._data["name"] = name or self.faker.name()
         return self
 
-    def with_email(self, email: Optional[str] = None) -> "DataBuilder":
+    def with_email(self, email: str | None = None) -> "DataBuilder":
         """Add email field."""
         self._data["email"] = email or self.faker.email()
         return self
 
-    def with_timestamp(self, timestamp: Optional[datetime] = None) -> "DataBuilder":
+    def with_timestamp(self, timestamp: datetime | None = None) -> "DataBuilder":
         """Add timestamp field."""
         self._data["timestamp"] = timestamp or datetime.now()
         return self
@@ -426,7 +425,7 @@ class DataBuilder:
         self._data[key] = value
         return self
 
-    def build(self) -> Dict[str, Any]:
+    def build(self) -> dict[str, Any]:
         """Build and return the data dictionary."""
         return self._data.copy()
 
@@ -441,15 +440,15 @@ class TestScenarioBuilder:
     Builder for complex test scenarios involving multiple related entities.
     """
 
-    def __init__(self, faker: Optional[Faker] = None, locale: str = "en_US"):
+    def __init__(self, faker: Faker | None = None, locale: str = "en_US"):
         self.faker = faker or Faker(locale)
         self.user_factory = UserFactory(self.faker)
         self.product_factory = ProductFactory(self.faker)
         self.order_factory = OrderFactory(self.faker)
 
-        self._user: Optional[UserData] = None
-        self._products: List[ProductData] = []
-        self._orders: List[OrderData] = []
+        self._user: UserData | None = None
+        self._products: list[ProductData] = []
+        self._orders: list[OrderData] = []
 
     def with_user(self, **overrides: Any) -> "TestScenarioBuilder":
         """Add a user to the scenario."""
@@ -472,7 +471,7 @@ class TestScenarioBuilder:
 
         return self
 
-    def build(self) -> Dict[str, Any]:
+    def build(self) -> dict[str, Any]:
         """Build complete test scenario."""
         return {"user": self._user, "products": self._products, "orders": self._orders}
 

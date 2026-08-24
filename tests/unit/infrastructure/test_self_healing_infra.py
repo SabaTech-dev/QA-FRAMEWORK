@@ -4,7 +4,7 @@ Unit Tests for Self-Healing Infrastructure
 Tests for selector healer, confidence scorer, and related implementations.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import Mock
 
 import pytest
@@ -97,11 +97,11 @@ class TestConfidenceScorer:
             value=".button",
             selector_type=SelectorType.CLASS,
             metadata=SelectorMetadata(
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
                 updated_at=None,
                 usage_count=100,
                 success_rate=0.95,
-                last_successful=datetime.now(timezone.utc),
+                last_successful=datetime.now(UTC),
                 source="manual",
             ),
         )
@@ -117,7 +117,7 @@ class TestConfidenceScorer:
             value=".button",
             selector_type=SelectorType.CLASS,
             metadata=SelectorMetadata(
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
                 updated_at=None,
                 usage_count=100,
                 success_rate=0.2,
@@ -399,11 +399,11 @@ class TestInMemorySelectorRepository:
             selector_type=SelectorType.ID,
             tenant_id="tenant-1",
             metadata=SelectorMetadata(
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
                 updated_at=None,
                 usage_count=10,
                 success_rate=0.9,
-                last_successful=datetime.now(timezone.utc),
+                last_successful=datetime.now(UTC),
                 source="manual",
             ),
         )
@@ -413,7 +413,7 @@ class TestInMemorySelectorRepository:
             selector_type=SelectorType.ID,
             tenant_id="tenant-1",
             metadata=SelectorMetadata(
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
                 updated_at=None,
                 usage_count=10,
                 success_rate=0.3,

@@ -5,9 +5,9 @@ Core domain entities for the billing system.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID, uuid4
 
 from .value_objects import Money, UsageLimit
@@ -49,20 +49,20 @@ class Plan:
     description: str = ""
     plan_type: PlanType = PlanType.FREE
     price: Money = field(default_factory=lambda: Money(0))
-    stripe_price_id: Optional[str] = None
-    stripe_product_id: Optional[str] = None
-    features: List[str] = field(default_factory=list)
+    stripe_price_id: str | None = None
+    stripe_product_id: str | None = None
+    features: list[str] = field(default_factory=list)
     limits: UsageLimit = field(default_factory=UsageLimit)
     is_active: bool = True
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
     def __post_init__(self) -> None:
         """Initialize default timestamps"""
         if self.created_at is None:
-            self.created_at = datetime.now(timezone.utc)
+            self.created_at = datetime.now(UTC)
         if self.updated_at is None:
-            self.updated_at = datetime.now(timezone.utc)
+            self.updated_at = datetime.now(UTC)
 
     def is_free(self) -> bool:
         """Check if this is a free plan"""
@@ -80,7 +80,7 @@ class Plan:
         """Check if value is within plan limits"""
         return self.limits.exceeds_limit(metric, value)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary"""
         return {
             "id": str(self.id),
@@ -112,27 +112,27 @@ class Subscription:
     """
 
     id: UUID = field(default_factory=uuid4)
-    tenant_id: Optional[UUID] = None
-    user_id: Optional[UUID] = None
-    plan_id: Optional[UUID] = None
+    tenant_id: UUID | None = None
+    user_id: UUID | None = None
+    plan_id: UUID | None = None
     plan_type: PlanType = PlanType.FREE
-    stripe_customer_id: Optional[str] = None
-    stripe_subscription_id: Optional[str] = None
+    stripe_customer_id: str | None = None
+    stripe_subscription_id: str | None = None
     status: SubscriptionStatus = SubscriptionStatus.INCOMPLETE
-    current_period_start: Optional[datetime] = None
-    current_period_end: Optional[datetime] = None
+    current_period_start: datetime | None = None
+    current_period_end: datetime | None = None
     cancel_at_period_end: bool = False
-    canceled_at: Optional[datetime] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    canceled_at: datetime | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Initialize default timestamps"""
         if self.created_at is None:
-            self.created_at = datetime.now(timezone.utc)
+            self.created_at = datetime.now(UTC)
         if self.updated_at is None:
-            self.updated_at = datetime.now(timezone.utc)
+            self.updated_at = datetime.now(UTC)
 
     def is_active(self) -> bool:
         """Check if subscription is active"""
@@ -149,16 +149,16 @@ class Subscription:
     def cancel(self, at_period_end: bool = True) -> None:
         """Mark subscription for cancellation"""
         self.cancel_at_period_end = at_period_end
-        self.canceled_at = datetime.now(timezone.utc)
-        self.updated_at = datetime.now(timezone.utc)
+        self.canceled_at = datetime.now(UTC)
+        self.updated_at = datetime.now(UTC)
         self.status = SubscriptionStatus.CANCELING
 
     def activate(self) -> None:
         """Activate subscription"""
         self.status = SubscriptionStatus.ACTIVE
-        self.updated_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(UTC)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary"""
         return {
             "id": str(self.id),
@@ -186,40 +186,38 @@ class Usage:
     """
 
     id: UUID = field(default_factory=uuid4)
-    tenant_id: Optional[UUID] = None
-    period_start: Optional[datetime] = None
-    period_end: Optional[datetime] = None
+    tenant_id: UUID | None = None
+    period_start: datetime | None = None
+    period_end: datetime | None = None
     tests_executed: int = 0
     users_active: int = 0
     suites_created: int = 0
     cases_created: int = 0
     ai_feature_calls: int = 0
     storage_used_gb: float = 0.0
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
     def __post_init__(self) -> None:
         """Initialize default timestamps"""
         if self.created_at is None:
-            self.created_at = datetime.now(timezone.utc)
+            self.created_at = datetime.now(UTC)
         if self.updated_at is None:
-            self.updated_at = datetime.now(timezone.utc)
+            self.updated_at = datetime.now(UTC)
         if self.period_start is None:
-            self.period_start = datetime.now(timezone.utc).replace(
-                day=1, hour=0, minute=0, second=0
-            )
+            self.period_start = datetime.now(UTC).replace(day=1, hour=0, minute=0, second=0)
 
     def increment_tests(self, count: int = 1) -> None:
         """Increment test execution count"""
         self.tests_executed += count
-        self.updated_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(UTC)
 
     def increment_ai_calls(self, count: int = 1) -> None:
         """Increment AI feature usage"""
         self.ai_feature_calls += count
-        self.updated_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(UTC)
 
-    def check_against_limits(self, plan: Plan) -> Dict[str, bool]:
+    def check_against_limits(self, plan: Plan) -> dict[str, bool]:
         """
         Check current usage against plan limits.
 

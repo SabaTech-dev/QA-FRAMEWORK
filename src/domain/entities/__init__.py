@@ -5,12 +5,12 @@ from .role import ROLE_PERMISSIONS, Role
 from .tenant import Tenant, TenantPlan, TenantStatus
 
 __all__ = [
+    "PERMISSIONS",
+    "ROLE_PERMISSIONS",
+    "Permission",
+    "Role",
     "Tenant",
     "TenantPlan",
     "TenantStatus",
-    "Permission",
-    "PERMISSIONS",
     "validate_permission",
-    "Role",
-    "ROLE_PERMISSIONS",
 ]

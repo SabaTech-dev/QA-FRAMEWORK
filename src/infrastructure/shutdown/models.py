@@ -5,7 +5,7 @@ Data models for shutdown management
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class ShutdownPhase(Enum):
@@ -48,7 +48,7 @@ class ConnectionInfo:
     connection_id: str
     resource_type: ResourceType
     created_at: datetime
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     request_count: int = 0
     is_active: bool = True
 
@@ -60,9 +60,9 @@ class ResourceInfo:
     name: str
     resource_type: ResourceType
     instance: Any
-    close_handler: Optional[str] = None  # Name of method to call for closing
+    close_handler: str | None = None  # Name of method to call for closing
     priority: int = 100  # Lower = closed first
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -70,17 +70,17 @@ class ShutdownProgress:
     """Tracks shutdown progress"""
 
     phase: ShutdownPhase = ShutdownPhase.NONE
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
     active_connections: int = 0
     drained_connections: int = 0
     closed_resources: int = 0
     total_resources: int = 0
-    errors: List[str] = field(default_factory=list)
-    warnings: List[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
     @property
-    def duration_seconds(self) -> Optional[float]:
+    def duration_seconds(self) -> float | None:
         """Calculate shutdown duration in seconds"""
         if self.started_at and self.completed_at:
             return (self.completed_at - self.started_at).total_seconds()
@@ -113,8 +113,8 @@ class ShutdownConfig:
     raise_on_error: bool = False  # Raise exceptions during shutdown
 
     # Callbacks
-    pre_shutdown_hooks: List[str] = field(default_factory=list)
-    post_shutdown_hooks: List[str] = field(default_factory=list)
+    pre_shutdown_hooks: list[str] = field(default_factory=list)
+    post_shutdown_hooks: list[str] = field(default_factory=list)
 
 
 @dataclass

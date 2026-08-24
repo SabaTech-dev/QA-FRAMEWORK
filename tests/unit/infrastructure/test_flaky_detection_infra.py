@@ -2,7 +2,7 @@
 Unit Tests for Flaky Detection Infrastructure
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -222,7 +222,7 @@ class TestInMemoryQuarantineManager:
             test_identifier=entry.test_identifier,
             reason=entry.reason,
             quarantined_at=entry.quarantined_at,
-            expires_at=datetime.now(timezone.utc) - timedelta(days=1),
+            expires_at=datetime.now(UTC) - timedelta(days=1),
         )
 
         expired = await manager.get_expired()

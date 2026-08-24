@@ -5,8 +5,8 @@ Core entities that represent generated tests, scenarios, edge cases, and session
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 from uuid import uuid4
 
 from .value_objects import (
@@ -32,13 +32,13 @@ class TestScenario:
     id: str = field(default_factory=lambda: str(uuid4()))
     name: str = ""
     description: str = ""
-    preconditions: List[str] = field(default_factory=list)
-    steps: List[str] = field(default_factory=list)
-    expected_results: List[str] = field(default_factory=list)
+    preconditions: list[str] = field(default_factory=list)
+    steps: list[str] = field(default_factory=list)
+    expected_results: list[str] = field(default_factory=list)
     priority: TestPriority = TestPriority.MEDIUM
-    tags: List[str] = field(default_factory=list)
-    source_requirement: Optional[str] = None
-    tenant_id: Optional[str] = None
+    tags: list[str] = field(default_factory=list)
+    source_requirement: str | None = None
+    tenant_id: str | None = None
 
     @property
     def step_count(self) -> int:
@@ -50,7 +50,7 @@ class TestScenario:
         """Check if scenario has preconditions."""
         return len(self.preconditions) > 0
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary."""
         return {
             "id": self.id,
@@ -76,26 +76,26 @@ class GeneratedTest:
 
     id: str = field(default_factory=lambda: str(uuid4()))
     name: str = ""
-    scenario: Optional[TestScenario] = None
+    scenario: TestScenario | None = None
     test_code: str = ""
     framework: TestFramework = TestFramework.PYTEST
     generation_type: GenerationType = GenerationType.FROM_REQUIREMENTS
     confidence_score: float = 0.0
     confidence_level: ConfidenceLevel = ConfidenceLevel.VERY_LOW
     priority: TestPriority = TestPriority.MEDIUM
-    metadata: Optional[TestCaseMetadata] = None
+    metadata: TestCaseMetadata | None = None
 
     # Test structure
-    imports: List[str] = field(default_factory=list)
+    imports: list[str] = field(default_factory=list)
     test_function: str = ""
-    fixtures: List[str] = field(default_factory=list)
-    assertions: List[str] = field(default_factory=list)
+    fixtures: list[str] = field(default_factory=list)
+    assertions: list[str] = field(default_factory=list)
 
     # Categorization
-    tags: List[str] = field(default_factory=list)
-    file_path: Optional[str] = None
+    tags: list[str] = field(default_factory=list)
+    file_path: str | None = None
 
-    tenant_id: Optional[str] = None
+    tenant_id: str | None = None
     created_at: datetime = field(default_factory=datetime.utcnow)
 
     @property
@@ -115,7 +115,7 @@ class GeneratedTest:
             return False
         return self.metadata.validated and len(self.metadata.validation_errors) == 0
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary."""
         return {
             "id": self.id,
@@ -151,13 +151,13 @@ class EdgeCase:
     name: str = ""
     description: str = ""
     category: str = "general"  # boundary, negative, security, performance
-    input_values: Dict[str, Any] = field(default_factory=dict)
+    input_values: dict[str, Any] = field(default_factory=dict)
     expected_behavior: str = ""
     risk_level: str = "medium"  # low, medium, high, critical
-    generated_test: Optional[GeneratedTest] = None
+    generated_test: GeneratedTest | None = None
 
-    source_requirement: Optional[str] = None
-    tenant_id: Optional[str] = None
+    source_requirement: str | None = None
+    tenant_id: str | None = None
     created_at: datetime = field(default_factory=datetime.utcnow)
 
     @property
@@ -170,7 +170,7 @@ class EdgeCase:
         """Check if edge case is high risk."""
         return self.risk_level in ["high", "critical"]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary."""
         return {
             "id": self.id,
@@ -196,17 +196,17 @@ class TestGenerationSession:
     """
 
     id: str = field(default_factory=lambda: str(uuid4()))
-    tenant_id: Optional[str] = None
+    tenant_id: str | None = None
 
     # Input
     source_type: RequirementSource = RequirementSource.MARKDOWN
-    source_content: Optional[str] = None
-    source_url: Optional[str] = None
+    source_content: str | None = None
+    source_url: str | None = None
 
     # Results
-    scenarios: List[TestScenario] = field(default_factory=list)
-    generated_tests: List[GeneratedTest] = field(default_factory=list)
-    edge_cases: List[EdgeCase] = field(default_factory=list)
+    scenarios: list[TestScenario] = field(default_factory=list)
+    generated_tests: list[GeneratedTest] = field(default_factory=list)
+    edge_cases: list[EdgeCase] = field(default_factory=list)
 
     # Statistics
     total_requirements: int = 0
@@ -215,12 +215,12 @@ class TestGenerationSession:
     edge_cases_identified: int = 0
 
     # Timing
-    started_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    completed_at: Optional[datetime] = None
+    started_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    completed_at: datetime | None = None
     generation_time_ms: int = 0
 
     status: GenerationStatus = GenerationStatus.PENDING
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
     @property
     def total_items(self) -> int:
@@ -344,7 +344,7 @@ class TestGenerationSession:
             else GenerationStatus.PARTIAL if self.tests_generated > 0 else GenerationStatus.FAILED
         )
 
-        generation_time = int((datetime.now(timezone.utc) - self.started_at).total_seconds() * 1000)
+        generation_time = int((datetime.now(UTC) - self.started_at).total_seconds() * 1000)
 
         return TestGenerationSession(
             id=self.id,
@@ -360,13 +360,13 @@ class TestGenerationSession:
             tests_generated=self.tests_generated,
             edge_cases_identified=self.edge_cases_identified,
             started_at=self.started_at,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
             generation_time_ms=generation_time,
             status=final_status,
             error_message=error or self.error_message,
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary."""
         return {
             "id": self.id,

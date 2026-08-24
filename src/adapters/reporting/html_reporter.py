@@ -6,7 +6,7 @@ Simple HTML test report generator.
 
 from datetime import datetime
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any
 
 
 class HTMLReporter:
@@ -16,7 +16,7 @@ class HTMLReporter:
     Generates simple HTML reports with test results summary.
     """
 
-    def __init__(self, config: Optional[Any] = None) -> None:
+    def __init__(self, config: Any | None = None) -> None:
         """
         Initialize HTML reporter.
 
@@ -24,7 +24,7 @@ class HTMLReporter:
             config: Optional configuration (not used in basic implementation)
         """
         self.config = config
-        self.results: List[Any] = []
+        self.results: list[Any] = []
 
     def report(self, result: Any, output_dir: str) -> str:
         """

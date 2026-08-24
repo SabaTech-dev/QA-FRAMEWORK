@@ -4,8 +4,6 @@ Selector Repository Implementation
 In-memory implementation of the selector repository for development/testing.
 """
 
-from typing import Dict, List, Optional
-
 from src.domain.self_healing.entities import Selector
 from src.domain.self_healing.interfaces import ISelectorRepository
 from src.domain.self_healing.value_objects import SelectorType
@@ -20,11 +18,11 @@ class InMemorySelectorRepository(ISelectorRepository):
     """
 
     def __init__(self):
-        self._selectors: Dict[str, Selector] = {}
-        self._alternatives: Dict[str, List[Selector]] = {}
-        self._by_value: Dict[tuple, str] = {}  # (value, type) -> id
+        self._selectors: dict[str, Selector] = {}
+        self._alternatives: dict[str, list[Selector]] = {}
+        self._by_value: dict[tuple, str] = {}  # (value, type) -> id
 
-    async def get_by_id(self, selector_id: str) -> Optional[Selector]:
+    async def get_by_id(self, selector_id: str) -> Selector | None:
         """Retrieve a selector by ID."""
         return self._selectors.get(selector_id)
 
@@ -32,7 +30,7 @@ class InMemorySelectorRepository(ISelectorRepository):
         self,
         value: str,
         selector_type: SelectorType,
-    ) -> Optional[Selector]:
+    ) -> Selector | None:
         """Retrieve a selector by its value and type."""
         key = (value, selector_type)
         selector_id = self._by_value.get(key)
@@ -40,7 +38,7 @@ class InMemorySelectorRepository(ISelectorRepository):
             return self._selectors.get(selector_id)
         return None
 
-    async def get_alternatives(self, selector_id: str) -> List[Selector]:
+    async def get_alternatives(self, selector_id: str) -> list[Selector]:
         """Get alternative selectors for a given selector."""
         return self._alternatives.get(selector_id, [])
 
@@ -74,7 +72,7 @@ class InMemorySelectorRepository(ISelectorRepository):
         tenant_id: str,
         threshold: float = 0.5,
         limit: int = 100,
-    ) -> List[Selector]:
+    ) -> list[Selector]:
         """Get selectors with confidence below threshold."""
         low_confidence = []
 
@@ -124,7 +122,7 @@ class DatabaseSelectorRepository(ISelectorRepository):
         self.connection_string = connection_string
         # In a real implementation, initialize database connection here
 
-    async def get_by_id(self, selector_id: str) -> Optional[Selector]:
+    async def get_by_id(self, selector_id: str) -> Selector | None:
         """Retrieve a selector by ID from database."""
         # Placeholder - implement with actual database query
         raise NotImplementedError("Database implementation required")
@@ -133,11 +131,11 @@ class DatabaseSelectorRepository(ISelectorRepository):
         self,
         value: str,
         selector_type: SelectorType,
-    ) -> Optional[Selector]:
+    ) -> Selector | None:
         """Retrieve a selector by value and type from database."""
         raise NotImplementedError("Database implementation required")
 
-    async def get_alternatives(self, selector_id: str) -> List[Selector]:
+    async def get_alternatives(self, selector_id: str) -> list[Selector]:
         """Get alternatives from database."""
         raise NotImplementedError("Database implementation required")
 
@@ -158,7 +156,7 @@ class DatabaseSelectorRepository(ISelectorRepository):
         tenant_id: str,
         threshold: float = 0.5,
         limit: int = 100,
-    ) -> List[Selector]:
+    ) -> list[Selector]:
         """Query low confidence selectors from database."""
         raise NotImplementedError("Database implementation required")
 

@@ -8,7 +8,7 @@ for mobile testing across different platforms.
 import os
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import yaml
 
@@ -31,9 +31,9 @@ class DeviceProfile:
     platform_version: str
     device_type: DeviceType
     device_name: str
-    screen_resolution: Optional[str] = None
-    screen_density: Optional[int] = None
-    appium_capabilities: Dict[str, Any] = field(default_factory=dict)
+    screen_resolution: str | None = None
+    screen_density: int | None = None
+    appium_capabilities: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -47,8 +47,8 @@ class MobileTestConfig:
     screenshot_dir: str = "./screenshots"
     video_recording: bool = False
     video_dir: str = "./videos"
-    device_profiles: Dict[str, DeviceProfile] = field(default_factory=dict)
-    default_profile: Optional[str] = None
+    device_profiles: dict[str, DeviceProfile] = field(default_factory=dict)
+    default_profile: str | None = None
 
 
 class MobileConfigManager:
@@ -58,11 +58,11 @@ class MobileConfigManager:
     Supports loading from YAML files and environment variables.
     """
 
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(self, config_path: str | None = None):
         self.config_path = config_path or self._find_config_file()
-        self._config: Optional[MobileTestConfig] = None
+        self._config: MobileTestConfig | None = None
 
-    def _find_config_file(self) -> Optional[str]:
+    def _find_config_file(self) -> str | None:
         """Find configuration file in standard locations."""
         possible_paths = [
             "config/mobile.yaml",
@@ -96,7 +96,7 @@ class MobileConfigManager:
 
         return self._config
 
-    def _parse_config(self, data: Dict[str, Any]) -> MobileTestConfig:
+    def _parse_config(self, data: dict[str, Any]) -> MobileTestConfig:
         """Parse configuration dictionary."""
         config = MobileTestConfig(
             appium_server_url=data.get("appium_server_url", "http://localhost:4723"),
@@ -138,7 +138,7 @@ class MobileConfigManager:
             if screenshot_on_failure:
                 self._config.screenshot_on_failure = screenshot_on_failure.lower() == "true"
 
-    def get_device_profile(self, name: Optional[str] = None) -> Optional[DeviceProfile]:
+    def get_device_profile(self, name: str | None = None) -> DeviceProfile | None:
         """Get device profile by name or default."""
         config = self.load_config()
         profile_name = name or config.default_profile
@@ -153,7 +153,7 @@ class MobileConfigManager:
         if self._config:
             self._config.device_profiles[profile.name] = profile
 
-    def save_config(self, path: Optional[str] = None) -> None:
+    def save_config(self, path: str | None = None) -> None:
         """Save configuration to file."""
         if not self._config:
             return
@@ -163,7 +163,7 @@ class MobileConfigManager:
         # Ensure directory exists
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
-        data: Dict[str, Any] = {
+        data: dict[str, Any] = {
             "appium_server_url": self._config.appium_server_url,
             "implicit_wait": self._config.implicit_wait,
             "explicit_wait": self._config.explicit_wait,
@@ -262,7 +262,7 @@ def get_default_ios_profile() -> DeviceProfile:
     return IOS_DEVICES["iphone_12"]
 
 
-def list_available_devices() -> Dict[str, List[str]]:
+def list_available_devices() -> dict[str, list[str]]:
     """List all available device profiles."""
     return {
         "android": list(ANDROID_DEVICES.keys()),

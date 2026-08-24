@@ -11,7 +11,7 @@ Usage:
 """
 
 import time
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 
@@ -44,7 +44,7 @@ class TestParallelBasic:
         assert len(session_id) == 8
 
     @pytest.mark.parallel_safe
-    def test_execution_context(self, execution_context: Dict[str, Any]) -> None:
+    def test_execution_context(self, execution_context: dict[str, Any]) -> None:
         """
         Test execution context contains required information.
 
@@ -110,7 +110,7 @@ class TestParallelWithTiming:
         assert True
 
     @pytest.mark.parallel_safe
-    def test_timing_measurement(self, timer: Dict[str, float]) -> None:
+    def test_timing_measurement(self, timer: dict[str, float]) -> None:
         """
         Test that timer fixture works in parallel.
 
@@ -126,7 +126,7 @@ class TestParallelDataIsolation:
     """Tests demonstrating data isolation in parallel execution."""
 
     @pytest.mark.parallel_safe
-    def test_isolated_data_1(self, isolated_test_data: Dict[str, Any]) -> None:
+    def test_isolated_data_1(self, isolated_test_data: dict[str, Any]) -> None:
         """
         Test data isolation with unique keys.
 
@@ -141,7 +141,7 @@ class TestParallelDataIsolation:
         assert isolated_test_data["value"] == 100
 
     @pytest.mark.parallel_safe
-    def test_isolated_data_2(self, isolated_test_data: Dict[str, Any]) -> None:
+    def test_isolated_data_2(self, isolated_test_data: dict[str, Any]) -> None:
         """
         Test data isolation doesn't interfere with other tests.
 
@@ -158,7 +158,7 @@ class TestParallelDataIsolation:
         assert isolated_test_data["value"] == 200
 
     @pytest.mark.parallel_safe
-    def test_isolated_data_3(self, isolated_test_data: Dict[str, Any]) -> None:
+    def test_isolated_data_3(self, isolated_test_data: dict[str, Any]) -> None:
         """
         Test data isolation with complex data structures.
 
@@ -180,7 +180,7 @@ class TestWorkerResourcePool:
     @pytest.mark.parallel_safe
     def test_worker_pool_basic(
         self,
-        worker_resource_pool: Dict[str, Any],
+        worker_resource_pool: dict[str, Any],
         worker_id: str,
     ) -> None:
         """
@@ -196,7 +196,7 @@ class TestWorkerResourcePool:
     @pytest.mark.parallel_safe
     def test_worker_pool_persistence_1(
         self,
-        worker_resource_pool: Dict[str, Any],
+        worker_resource_pool: dict[str, Any],
     ) -> None:
         """
         Test worker pool persists across tests in same worker.
@@ -210,7 +210,7 @@ class TestWorkerResourcePool:
     @pytest.mark.parallel_safe
     def test_worker_pool_persistence_2(
         self,
-        worker_resource_pool: Dict[str, Any],
+        worker_resource_pool: dict[str, Any],
     ) -> None:
         """
         Test worker pool state from previous test.

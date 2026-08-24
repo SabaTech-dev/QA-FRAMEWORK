@@ -5,7 +5,7 @@ Abstract interfaces for external payment gateways.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any
 from uuid import UUID
 
 
@@ -27,7 +27,7 @@ class PaymentGateway(ABC):
         user_id: UUID,
         email: str,
         name: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """Create a customer at the payment provider and return its id."""
         ...

@@ -11,7 +11,8 @@ SOLID Principles:
     - DIP: Depends on ConfigManager abstraction
 """
 
-from typing import Any, AsyncGenerator, Dict, Generator
+from collections.abc import AsyncGenerator, Generator
+from typing import Any
 
 import httpx
 import pytest
@@ -328,7 +329,7 @@ async def ui_page(
 
 
 @pytest.fixture(scope="session")
-def worker_resource_pool(worker_id: str) -> Dict[str, Any]:
+def worker_resource_pool(worker_id: str) -> dict[str, Any]:
     """
     Provide a resource pool for worker-scoped resources.
 
@@ -343,7 +344,7 @@ def worker_resource_pool(worker_id: str) -> Dict[str, Any]:
             worker_resource_pool["api_key"] = "secret"
             assert "api_key" in worker_resource_pool
     """
-    pool: Dict[str, Any] = {}
+    pool: dict[str, Any] = {}
     pool["worker_id"] = worker_id
     pool["created_at"] = __import__("time").time()
 
@@ -356,8 +357,8 @@ def worker_resource_pool(worker_id: str) -> Dict[str, Any]:
 @pytest.fixture(scope="function")
 def test_resource_tracker(
     worker_id: str,
-    execution_context: Dict[str, Any],
-) -> Generator[Dict[str, Any], None, None]:
+    execution_context: dict[str, Any],
+) -> Generator[dict[str, Any], None, None]:
     """
     Provide a resource tracker for monitoring test resources.
 
@@ -374,7 +375,7 @@ def test_resource_tracker(
             # ... make API calls ...
             assert len(test_resource_tracker["api_calls"]) > 0
     """
-    tracker: Dict[str, Any] = {
+    tracker: dict[str, Any] = {
         "worker_id": worker_id,
         "resources": [],
         "timestamps": [],

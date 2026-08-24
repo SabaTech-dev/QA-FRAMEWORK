@@ -2,7 +2,7 @@
 Unit Tests for Flaky Test Detection
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -254,13 +254,13 @@ class TestQuarantineEntry:
         """Test expiry check."""
         # Not expired
         entry = QuarantineEntry(
-            expires_at=datetime.now(timezone.utc) + timedelta(days=10),
+            expires_at=datetime.now(UTC) + timedelta(days=10),
         )
         assert entry.is_expired is False
 
         # Expired
         expired = QuarantineEntry(
-            expires_at=datetime.now(timezone.utc) - timedelta(days=1),
+            expires_at=datetime.now(UTC) - timedelta(days=1),
         )
         assert expired.is_expired is True
 

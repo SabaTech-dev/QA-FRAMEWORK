@@ -1,7 +1,7 @@
 """Configuration management with support for YAML, JSON, ENV"""
 
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
@@ -26,9 +26,9 @@ class APIConfig(BaseModel):
 
     base_url: str = "http://localhost:8000"
     auth_type: str = "none"
-    token: Optional[str] = None
-    username: Optional[str] = None
-    password: Optional[str] = None
+    token: str | None = None
+    username: str | None = None
+    password: str | None = None
 
 
 class UIConfig(BaseModel):
@@ -106,7 +106,7 @@ class ConfigManager:
     handling configuration loading and management.
     """
 
-    def __init__(self, config_path: Optional[Path] = None):
+    def __init__(self, config_path: Path | None = None):
         """
         Initialize configuration manager.
 
@@ -114,7 +114,7 @@ class ConfigManager:
             config_path: Path to configuration file (YAML or JSON)
         """
         self.config_path = config_path or Path("config/qa.yaml")
-        self._config: Optional[QAConfig] = None
+        self._config: QAConfig | None = None
 
     def load_config(self) -> QAConfig:
         """
@@ -130,7 +130,7 @@ class ConfigManager:
             # Use default configuration
             return QAConfig()
 
-    def _load_file(self, file_path: Path) -> Dict[str, Any]:
+    def _load_file(self, file_path: Path) -> dict[str, Any]:
         """
         Load configuration from file.
 
@@ -145,12 +145,12 @@ class ConfigManager:
         with open(file_path, "r") as f:
             if file_path.suffix in [".yaml", ".yml"]:
                 data = yaml.safe_load(f) or {}
-                return cast(Dict[str, Any], data)
+                return cast(dict[str, Any], data)
             elif file_path.suffix == ".json":
                 import json
 
                 data = json.load(f)
-                return cast(Dict[str, Any], data)
+                return cast(dict[str, Any], data)
             else:
                 raise ValueError(f"Unsupported config file format: {file_path.suffix}")
 

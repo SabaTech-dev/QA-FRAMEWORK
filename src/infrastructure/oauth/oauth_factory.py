@@ -1,7 +1,5 @@
 """OAuth Provider Factory."""
 
-from typing import Dict, Type
-
 from domain.auth.interfaces import OAuthProvider
 from domain.auth.value_objects import AuthProvider
 
@@ -12,7 +10,7 @@ from .google_oauth import GoogleOAuthProvider
 class OAuthProviderFactory:
     """Factory for creating OAuth provider instances."""
 
-    _providers: Dict[AuthProvider, Type[OAuthProvider]] = {
+    _providers: dict[AuthProvider, type[OAuthProvider]] = {
         AuthProvider.GOOGLE: GoogleOAuthProvider,
         AuthProvider.GITHUB: GitHubOAuthProvider,
     }
@@ -56,7 +54,7 @@ class OAuthProviderFactory:
         return cls.create(auth_provider)
 
     @classmethod
-    def get_available_providers(cls) -> Dict[AuthProvider, bool]:
+    def get_available_providers(cls) -> dict[AuthProvider, bool]:
         """Get all available providers and their configuration status.
 
         Returns:
@@ -72,7 +70,7 @@ class OAuthProviderFactory:
     def register_provider(
         cls,
         provider: AuthProvider,
-        provider_class: Type[OAuthProvider],
+        provider_class: type[OAuthProvider],
     ) -> None:
         """Register a custom OAuth provider.
 

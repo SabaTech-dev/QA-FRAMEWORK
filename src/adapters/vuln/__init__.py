@@ -20,13 +20,13 @@ from .vuln_report import VulnReportGenerator
 from .wstg_scanner import WSTGScanner
 
 __all__ = [
-    "VulnSeverity",
-    "VulnCategory",
-    "VulnerabilityFinding",
-    "VulnScanResult",
-    "UnifiedVulnParser",
-    "VulnReportGenerator",
     "NucleiScanner",
-    "WSTGScanner",
+    "UnifiedVulnParser",
+    "VulnCategory",
     "VulnClient",
+    "VulnReportGenerator",
+    "VulnScanResult",
+    "VulnSeverity",
+    "VulnerabilityFinding",
+    "WSTGScanner",
 ]

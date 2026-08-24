@@ -1,6 +1,6 @@
 """GitHub OAuth Provider Implementation."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
 
@@ -33,7 +33,7 @@ class GitHubOAuthProvider(BaseOAuthProvider):
     def _token_url(self) -> str:
         return self.GITHUB_TOKEN_URL
 
-    def _get_authorization_params(self, state: str, redirect_uri: str) -> Dict[str, str]:
+    def _get_authorization_params(self, state: str, redirect_uri: str) -> dict[str, str]:
         """Build GitHub OAuth authorization parameters."""
         return {
             "client_id": self.client_id,
@@ -111,7 +111,7 @@ class GitHubOAuthProvider(BaseOAuthProvider):
         except httpx.RequestError as e:
             raise OAuthUserInfoError(f"Failed to fetch GitHub user info: {e}") from e
 
-    async def _get_primary_email(self, access_token: str) -> Optional[str]:
+    async def _get_primary_email(self, access_token: str) -> str | None:
         """Get primary email from GitHub."""
         headers = {"Authorization": f"token {access_token}"}
 
@@ -121,7 +121,7 @@ class GitHubOAuthProvider(BaseOAuthProvider):
             if response.status_code != 200:
                 return None
 
-            emails: List[Dict[str, Any]] = response.json()
+            emails: list[dict[str, Any]] = response.json()
 
             # Find primary email
             primary = next((e for e in emails if e.get("primary")), None)

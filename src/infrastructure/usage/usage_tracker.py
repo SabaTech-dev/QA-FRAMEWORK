@@ -7,8 +7,8 @@ Service for tracking, aggregating, and reporting resource usage.
 
 import logging
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from src.domain.usage.entities import (
     BillingPeriod,
@@ -26,16 +26,16 @@ class UsageTracker:
 
     def __init__(self):
         # In-memory storage (replace with database in production)
-        self._records: Dict[str, List[UsageRecord]] = defaultdict(list)
-        self._summaries: Dict[str, UsageSummary] = {}
+        self._records: dict[str, list[UsageRecord]] = defaultdict(list)
+        self._summaries: dict[str, UsageSummary] = {}
 
     def track_usage(
         self,
         user_id: str,
         resource_type: ResourceType,
         quantity: float = 1.0,
-        organization_id: Optional[str] = None,
-        metadata: Optional[dict] = None,
+        organization_id: str | None = None,
+        metadata: dict | None = None,
     ) -> UsageRecord:
         """
         Track a usage event.
@@ -67,10 +67,10 @@ class UsageTracker:
     def get_usage(
         self,
         user_id: str,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
-        resource_type: Optional[ResourceType] = None,
-    ) -> List[UsageRecord]:
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        resource_type: ResourceType | None = None,
+    ) -> list[UsageRecord]:
         """
         Get usage records for a user.
 
@@ -99,7 +99,7 @@ class UsageTracker:
         self,
         user_id: str,
         period: BillingPeriod = BillingPeriod.MONTHLY,
-        organization_id: Optional[str] = None,
+        organization_id: str | None = None,
     ) -> UsageSummary:
         """
         Get aggregated usage summary for the current billing period.
@@ -178,7 +178,7 @@ class UsageTracker:
         )
 
         summary.calculate_total()
-        summary.updated_at = datetime.now(timezone.utc)
+        summary.updated_at = datetime.now(UTC)
 
         return summary
 
@@ -187,7 +187,7 @@ class UsageTracker:
         user_id: str,
         resource_type: ResourceType,
         plan_name: str = "free",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Check if user is within usage limits for a resource type.
 
@@ -228,7 +228,7 @@ class UsageTracker:
         self,
         user_id: str,
         plan_name: str = "free",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Get a comprehensive usage report for a user.
 
@@ -259,7 +259,7 @@ class UsageTracker:
             "usage": summary_with_costs.to_dict(),
             "limits": limits.to_dict(),
             "limit_status": limit_checks,
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.now(UTC).isoformat(),
         }
 
     def _get_unit(self, resource_type: ResourceType) -> str:
@@ -275,7 +275,7 @@ class UsageTracker:
 
     def _get_period_dates(self, period: BillingPeriod) -> tuple:
         """Get start and end dates for a billing period."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         if period == BillingPeriod.DAILY:
             start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -327,7 +327,7 @@ class UsageTracker:
 
 
 # Singleton instance
-_usage_tracker: Optional[UsageTracker] = None
+_usage_tracker: UsageTracker | None = None
 
 
 def get_usage_tracker() -> UsageTracker:

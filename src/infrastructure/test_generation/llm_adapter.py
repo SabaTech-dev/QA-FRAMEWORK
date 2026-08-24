@@ -4,8 +4,6 @@ LLM Adapter for Test Generation
 Integrates with LLM providers (OpenAI, Gemini) for generating tests.
 """
 
-from typing import List, Optional
-
 from src.domain.test_generation.entities import GeneratedTest
 from src.domain.test_generation.value_objects import TestFramework
 
@@ -20,7 +18,7 @@ class LLMTestGenerator:
     def __init__(
         self,
         provider: str = "openai",
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         model: str = "gpt-4",
     ):
         self.provider = provider
@@ -85,7 +83,7 @@ class LLMTestGenerator:
 
         return min(base_score, 1.0)
 
-    def suggest_improvements(self, test_code: str) -> List[str]:
+    def suggest_improvements(self, test_code: str) -> list[str]:
         """Suggest improvements to test code."""
         suggestions = []
 
@@ -168,7 +166,7 @@ def test_edge_{name}():
 '''
         return f"// Edge case test for {name}"
 
-    def _get_framework_imports(self, framework: TestFramework) -> List[str]:
+    def _get_framework_imports(self, framework: TestFramework) -> list[str]:
         """Get standard imports for framework."""
         imports = {
             TestFramework.PYTEST: ["import pytest", "from unittest.mock import Mock"],

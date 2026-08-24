@@ -34,7 +34,6 @@ Example:
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict
@@ -65,15 +64,15 @@ class SessionCreateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     ai_model: str = ""
-    benchmark_ids: Optional[List[str]] = None
+    benchmark_ids: list[str] | None = None
 
 
 def create_accuracy_router(
     principal_dependency: Callable[[], AccuracyPrincipal],
-    benchmarks: Optional[Sequence[AccuracyBenchmark]] = None,
-    response_provider: Optional[IResponseProvider] = None,
+    benchmarks: Sequence[AccuracyBenchmark] | None = None,
+    response_provider: IResponseProvider | None = None,
     split_secret: str = "",
-    evaluator: Optional[IAccuracyEvaluator] = None,
+    evaluator: IAccuracyEvaluator | None = None,
     holdout_ratio: float = 0.2,
     prefix: str = "/accuracy",
 ) -> APIRouter:
@@ -99,7 +98,7 @@ def create_accuracy_router(
             "collapse every tenant into a shared holdout namespace (L-1)"
         )
 
-    catalog: List[AccuracyBenchmark] = (
+    catalog: list[AccuracyBenchmark] = (
         list(benchmarks) if benchmarks is not None else create_german_ai_liability_benchmarks()
     )
     evaluator = evaluator or RuleBasedAccuracyEvaluator()
@@ -113,7 +112,7 @@ def create_accuracy_router(
 
     def _visible_benchmark(
         benchmark_id: str, principal: AccuracyPrincipal
-    ) -> Optional[AccuracyBenchmark]:
+    ) -> AccuracyBenchmark | None:
         by_id = {b.id: b for b in catalog}
         if principal.is_admin:
             return by_id.get(benchmark_id)
@@ -128,7 +127,7 @@ def create_accuracy_router(
     @router.get("/benchmarks")
     def list_benchmarks(
         principal: AccuracyPrincipal = Depends(principal_dependency),
-    ) -> List[dict]:
+    ) -> list[dict]:
         if principal.is_admin:
             return [b.to_dict() for b in catalog]
         split = _split(principal)
@@ -159,7 +158,7 @@ def create_accuracy_router(
             )
 
         split = _split(principal)
-        selected: List[AccuracyBenchmark] = split.eval_benchmarks + split.holdout_benchmarks
+        selected: list[AccuracyBenchmark] = split.eval_benchmarks + split.holdout_benchmarks
         if request.benchmark_ids is not None:
             visible_ids = {b.id for b in split.eval_benchmarks}
             unknown = [bid for bid in request.benchmark_ids if bid not in visible_ids]

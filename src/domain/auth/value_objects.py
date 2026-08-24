@@ -2,7 +2,7 @@
 
 import re
 from enum import Enum
-from typing import List, Optional, Tuple
+from typing import Optional
 
 
 class AuthProvider(Enum):
@@ -49,7 +49,7 @@ class Password:
         self._plain_text = plain_text
 
     @staticmethod
-    def validate_strength(password: str) -> Tuple[bool, List[str]]:
+    def validate_strength(password: str) -> tuple[bool, list[str]]:
         """
         Validate password strength.
 
@@ -152,7 +152,7 @@ class Scope:
         return self.AVAILABLE_SCOPES.get(self._name, "Unknown scope")
 
     @classmethod
-    def validate_scopes(cls, scopes: List[str]) -> Tuple[bool, List[str]]:
+    def validate_scopes(cls, scopes: list[str]) -> tuple[bool, list[str]]:
         """Validate a list of scopes."""
         invalid = [s for s in scopes if s not in cls.AVAILABLE_SCOPES]
         if invalid:

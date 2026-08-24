@@ -3,8 +3,8 @@ Entities for Flaky Test Detection Domain
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any, Optional
 from uuid import uuid4
 
 from .value_objects import (
@@ -22,19 +22,19 @@ class TestRun:
     """Record of a single test execution."""
 
     id: str = field(default_factory=lambda: str(uuid4()))
-    test_identifier: Optional[TestIdentifier] = None
+    test_identifier: TestIdentifier | None = None
     passed: bool = True
     duration_ms: int = 0
-    error_message: Optional[str] = None
-    error_type: Optional[str] = None
-    stack_trace: Optional[str] = None
+    error_message: str | None = None
+    error_type: str | None = None
+    stack_trace: str | None = None
     run_number: int = 0  # Position in test run
-    environment: Dict[str, str] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    environment: dict[str, str] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     executed_at: datetime = field(default_factory=datetime.utcnow)
-    tenant_id: Optional[str] = None
+    tenant_id: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary."""
         return {
             "id": self.id,
@@ -58,9 +58,9 @@ class FlakyTest:
     """
 
     id: str = field(default_factory=lambda: str(uuid4()))
-    test_identifier: Optional[TestIdentifier] = None
+    test_identifier: TestIdentifier | None = None
     status: FlakyStatus = FlakyStatus.HEALTHY
-    flakiness_score: Optional[FlakinessScore] = None
+    flakiness_score: FlakinessScore | None = None
 
     # Statistics
     total_runs: int = 0
@@ -75,20 +75,20 @@ class FlakyTest:
     max_duration_ms: int = 0
 
     # Failure analysis
-    failure_pattern: Optional[FailurePattern] = None
-    common_errors: List[str] = field(default_factory=list)
+    failure_pattern: FailurePattern | None = None
+    common_errors: list[str] = field(default_factory=list)
 
     # Detection info
-    detection_method: Optional[DetectionMethod] = None
-    first_detected: Optional[datetime] = None
-    last_flaky_at: Optional[datetime] = None
+    detection_method: DetectionMethod | None = None
+    first_detected: datetime | None = None
+    last_flaky_at: datetime | None = None
 
     # Quarantine info
     quarantine_entry: Optional["QuarantineEntry"] = None
 
-    tenant_id: Optional[str] = None
+    tenant_id: str | None = None
     created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: Optional[datetime] = None
+    updated_at: datetime | None = None
 
     @property
     def is_quarantined(self) -> bool:
@@ -107,7 +107,7 @@ class FlakyTest:
             return 0.0
         return self.duration_std_dev / self.avg_duration_ms
 
-    def update_stats(self, runs: List[TestRun]) -> "FlakyTest":
+    def update_stats(self, runs: list[TestRun]) -> "FlakyTest":
         """Update statistics from a list of runs."""
         if not runs:
             return self
@@ -140,14 +140,14 @@ class FlakyTest:
             common_errors=self.common_errors,
             detection_method=self.detection_method,
             first_detected=self.first_detected,
-            last_flaky_at=datetime.now(timezone.utc) if failures > 0 else self.last_flaky_at,
+            last_flaky_at=datetime.now(UTC) if failures > 0 else self.last_flaky_at,
             quarantine_entry=self.quarantine_entry,
             tenant_id=self.tenant_id,
             created_at=self.created_at,
-            updated_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(UTC),
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary."""
         return {
             "id": self.id,
@@ -177,32 +177,32 @@ class QuarantineEntry:
     """
 
     id: str = field(default_factory=lambda: str(uuid4()))
-    test_identifier: Optional[TestIdentifier] = None
+    test_identifier: TestIdentifier | None = None
     reason: QuarantineReason = QuarantineReason.UNKNOWN
-    description: Optional[str] = None
+    description: str | None = None
 
     # Quarantine details
     quarantined_at: datetime = field(default_factory=datetime.utcnow)
-    quarantined_by: Optional[str] = None  # User ID or 'system'
-    expires_at: Optional[datetime] = None  # Auto-expiry
+    quarantined_by: str | None = None  # User ID or 'system'
+    expires_at: datetime | None = None  # Auto-expiry
 
     # Tracking
     attempts_to_fix: int = 0
-    last_evaluation: Optional[datetime] = None
-    evaluation_results: List[Dict[str, Any]] = field(default_factory=list)
+    last_evaluation: datetime | None = None
+    evaluation_results: list[dict[str, Any]] = field(default_factory=list)
 
     # Resolution
-    resolved_at: Optional[datetime] = None
-    resolution_notes: Optional[str] = None
+    resolved_at: datetime | None = None
+    resolution_notes: str | None = None
 
-    tenant_id: Optional[str] = None
+    tenant_id: str | None = None
 
     @property
     def is_expired(self) -> bool:
         """Check if quarantine has expired."""
         if self.expires_at is None:
             return False
-        return datetime.now(timezone.utc) > self.expires_at
+        return datetime.now(UTC) > self.expires_at
 
     @property
     def is_resolved(self) -> bool:
@@ -215,7 +215,7 @@ class QuarantineEntry:
             {
                 "passed": passed,
                 "notes": notes,
-                "evaluated_at": datetime.now(timezone.utc).isoformat(),
+                "evaluated_at": datetime.now(UTC).isoformat(),
             }
         ]
 
@@ -228,7 +228,7 @@ class QuarantineEntry:
             quarantined_by=self.quarantined_by,
             expires_at=self.expires_at,
             attempts_to_fix=self.attempts_to_fix + (1 if not passed else 0),
-            last_evaluation=datetime.now(timezone.utc),
+            last_evaluation=datetime.now(UTC),
             evaluation_results=new_results,
             resolved_at=self.resolved_at,
             resolution_notes=self.resolution_notes,
@@ -248,12 +248,12 @@ class QuarantineEntry:
             attempts_to_fix=self.attempts_to_fix,
             last_evaluation=self.last_evaluation,
             evaluation_results=self.evaluation_results,
-            resolved_at=datetime.now(timezone.utc),
+            resolved_at=datetime.now(UTC),
             resolution_notes=notes,
             tenant_id=self.tenant_id,
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary."""
         return {
             "id": self.id,
@@ -279,11 +279,11 @@ class FlakyDetectionSession:
     """
 
     id: str = field(default_factory=lambda: str(uuid4()))
-    tenant_id: Optional[str] = None
+    tenant_id: str | None = None
 
     # Scope
-    suite_ids: List[str] = field(default_factory=list)
-    test_ids: List[str] = field(default_factory=list)
+    suite_ids: list[str] = field(default_factory=list)
+    test_ids: list[str] = field(default_factory=list)
 
     # Results
     tests_analyzed: int = 0
@@ -293,12 +293,12 @@ class FlakyDetectionSession:
     quarantined_tests: int = 0
 
     # Details
-    detected_flaky: List[str] = field(default_factory=list)
-    auto_quarantined: List[str] = field(default_factory=list)
+    detected_flaky: list[str] = field(default_factory=list)
+    auto_quarantined: list[str] = field(default_factory=list)
 
     # Timing
     started_at: datetime = field(default_factory=datetime.utcnow)
-    completed_at: Optional[datetime] = None
+    completed_at: datetime | None = None
 
     status: str = "pending"
 
@@ -329,11 +329,11 @@ class FlakyDetectionSession:
             detected_flaky=self.detected_flaky,
             auto_quarantined=self.auto_quarantined,
             started_at=self.started_at,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
             status="completed",
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary."""
         return {
             "id": self.id,

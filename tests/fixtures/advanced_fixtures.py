@@ -14,10 +14,11 @@ import shutil
 import tempfile
 import threading
 import uuid
+from collections.abc import AsyncGenerator, Callable, Generator
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from multiprocessing import Queue
-from typing import Any, AsyncGenerator, Callable, Dict, Generator, List
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -58,7 +59,7 @@ def test_run_timestamp() -> datetime:
 
 
 @pytest.fixture(scope="session")
-def test_config() -> Dict[str, Any]:
+def test_config() -> dict[str, Any]:
     """Test configuration loaded from environment or defaults."""
     return {
         "environment": os.getenv("TEST_ENV", "development"),
@@ -177,9 +178,9 @@ def mock_message_broker() -> Generator[MagicMock, None, None]:
 def mock_http_client() -> Generator[MagicMock, None, None]:
     """Mock HTTP client for unit tests."""
     client = MagicMock()
-    client.get = MagicMock(return_value=MagicMock(status_code=200, json=lambda: {}))
-    client.post = MagicMock(return_value=MagicMock(status_code=201, json=lambda: {}))
-    client.put = MagicMock(return_value=MagicMock(status_code=200, json=lambda: {}))
+    client.get = MagicMock(return_value=MagicMock(status_code=200, json=dict))
+    client.post = MagicMock(return_value=MagicMock(status_code=201, json=dict))
+    client.put = MagicMock(return_value=MagicMock(status_code=200, json=dict))
     client.delete = MagicMock(return_value=MagicMock(status_code=204))
     client.close = MagicMock()
     yield client
@@ -315,7 +316,7 @@ def test_data_table() -> Callable[..., Any]:
 
 
 @pytest.fixture(scope="function")
-def timer() -> Generator[Dict[str, Any], None, None]:
+def timer() -> Generator[dict[str, Any], None, None]:
     """Timer fixture for performance measurement."""
     timer_data = {"start": None, "end": None, "duration": None}
     timer_data["start"] = datetime.now()
@@ -325,7 +326,7 @@ def timer() -> Generator[Dict[str, Any], None, None]:
 
 
 @pytest.fixture(scope="function")
-def execution_context() -> Dict[str, Any]:
+def execution_context() -> dict[str, Any]:
     """Execution context with thread and process info."""
     import os
     import threading
@@ -338,7 +339,7 @@ def execution_context() -> Dict[str, Any]:
 
 
 @pytest.fixture(scope="function")
-def test_data_container() -> Dict[str, Any]:
+def test_data_container() -> dict[str, Any]:
     """Container for test data that needs to be shared within a test."""
     return {}
 
@@ -350,7 +351,7 @@ def unique_test_id(request: pytest.FixtureRequest) -> str:
 
 
 @pytest.fixture(scope="function")
-def isolated_test_data(worker_id: str, unique_test_id: str) -> Dict[str, Any]:
+def isolated_test_data(worker_id: str, unique_test_id: str) -> dict[str, Any]:
     """Isolated test data container per test."""
     return {
         "worker_id": worker_id,
@@ -366,7 +367,7 @@ def isolated_test_data(worker_id: str, unique_test_id: str) -> Dict[str, Any]:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def async_timer() -> AsyncGenerator[Dict[str, Any], None]:
+async def async_timer() -> AsyncGenerator[dict[str, Any], None]:
     """Async timer fixture."""
     timer_data = {"start": datetime.now(), "end": None, "duration": None}
     yield timer_data
@@ -375,7 +376,7 @@ async def async_timer() -> AsyncGenerator[Dict[str, Any], None]:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def async_resource_pool() -> AsyncGenerator[Dict[str, Any], None]:
+async def async_resource_pool() -> AsyncGenerator[dict[str, Any], None]:
     """Async resource pool for async tests."""
     pool = {"resources": [], "max_size": 10}
     yield pool
@@ -404,7 +405,7 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "isolated: Tests requiring complete isolation")
 
 
-def pytest_collection_modifyitems(config: pytest.Config, items: List[pytest.Item]) -> None:
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     """Modify test collection - automatically add markers based on path."""
     for item in items:
         # Auto-mark based on directory

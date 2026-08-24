@@ -9,7 +9,7 @@ from .generate_from_requirements import GenerateFromRequirements
 from .generate_from_ui import GenerateFromUI
 
 __all__ = [
+    "GenerateEdgeCases",
     "GenerateFromRequirements",
     "GenerateFromUI",
-    "GenerateEdgeCases",
 ]

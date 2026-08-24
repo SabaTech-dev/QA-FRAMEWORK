@@ -5,8 +5,8 @@ Core entities for accuracy evaluations, benchmarks, and test sessions.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 from uuid import uuid4
 
 from .splitting import HoldoutSummary
@@ -46,11 +46,11 @@ class AccuracyBenchmark:
     # Benchmark content
     question: str = ""
     ground_truth: str = ""
-    key_points: List[str] = field(default_factory=list)
-    legal_references: List[str] = field(default_factory=list)
+    key_points: list[str] = field(default_factory=list)
+    legal_references: list[str] = field(default_factory=list)
 
     # Evaluation config
-    criteria: List[EvaluationCriterion] = field(
+    criteria: list[EvaluationCriterion] = field(
         default_factory=lambda: [
             EvaluationCriterion.FACTUAL_ACCURACY,
             EvaluationCriterion.LEGAL_REASONING,
@@ -64,9 +64,9 @@ class AccuracyBenchmark:
     # Metadata
     source: str = ""  # e.g., "BGH Urteil vom 28.01.2025 - VI ZR 67/24"
     difficulty: str = "medium"  # easy, medium, hard
-    tags: List[str] = field(default_factory=list)
-    tenant_id: Optional[str] = None
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    tags: list[str] = field(default_factory=list)
+    tenant_id: str | None = None
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def __post_init__(self):
         # F-ACC-002: Validate jurisdiction (ISO 3166-1 alpha-2)
@@ -79,7 +79,7 @@ class AccuracyBenchmark:
         """Check if this is a German AI liability benchmark."""
         return self.legal_domain == LegalDomain.AI_LIABILITY and self.jurisdiction == "DE"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary (public view — sensitive fields excluded)."""
         return {
             "id": self.id,
@@ -99,7 +99,7 @@ class AccuracyBenchmark:
             "created_at": self.created_at.isoformat(),
         }
 
-    def to_dict_full(self) -> Dict[str, Any]:
+    def to_dict_full(self) -> dict[str, Any]:
         """Serialize with all fields including sensitive data (for admin/internal use)."""
         d = self.to_dict()
         d["ground_truth"] = self.ground_truth
@@ -117,30 +117,30 @@ class AccuracyEvaluation:
 
     id: str = field(default_factory=lambda: str(uuid4()))
     benchmark_id: str = ""
-    session_id: Optional[str] = None
+    session_id: str | None = None
 
     # Input
     prompt: str = ""
     ai_response: str = ""
 
     # Results
-    criterion_scores: List[CriterionScore] = field(default_factory=list)
+    criterion_scores: list[CriterionScore] = field(default_factory=list)
     overall_score: float = 0.0
     accuracy_level: AccuracyLevel = AccuracyLevel.FAILING
     verdict: ResponseVerdict = ResponseVerdict.INACCURATE
     passed: bool = False
 
     # Analysis
-    strengths: List[str] = field(default_factory=list)
-    weaknesses: List[str] = field(default_factory=list)
-    missing_points: List[str] = field(default_factory=list)
-    hallucinations: List[str] = field(default_factory=list)
+    strengths: list[str] = field(default_factory=list)
+    weaknesses: list[str] = field(default_factory=list)
+    missing_points: list[str] = field(default_factory=list)
+    hallucinations: list[str] = field(default_factory=list)
 
     # Metadata
     ai_model: str = ""
     evaluation_time_ms: int = 0
-    evaluated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    tenant_id: Optional[str] = None
+    evaluated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    tenant_id: str | None = None
 
     @property
     def score_count(self) -> int:
@@ -150,7 +150,7 @@ class AccuracyEvaluation:
     def has_hallucinations(self) -> bool:
         return len(self.hallucinations) > 0
 
-    def compute_overall(self, passing_threshold: Optional[float] = None) -> "AccuracyEvaluation":
+    def compute_overall(self, passing_threshold: float | None = None) -> "AccuracyEvaluation":
         """F-ACC-005: Compute overall score, returning a new object (no mutation).
 
         Args:
@@ -201,7 +201,7 @@ class AccuracyEvaluation:
             tenant_id=self.tenant_id,
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary (public view — tenant_id excluded)."""
         return {
             "id": self.id,
@@ -236,7 +236,7 @@ class AccuracyTestSession:
     """
 
     id: str = field(default_factory=lambda: str(uuid4()))
-    tenant_id: Optional[str] = None
+    tenant_id: str | None = None
 
     # Config
     name: str = ""
@@ -245,12 +245,12 @@ class AccuracyTestSession:
     ai_model: str = ""
 
     # Contents
-    benchmarks: List[AccuracyBenchmark] = field(default_factory=list)
-    evaluations: List[AccuracyEvaluation] = field(default_factory=list)
+    benchmarks: list[AccuracyBenchmark] = field(default_factory=list)
+    evaluations: list[AccuracyEvaluation] = field(default_factory=list)
 
     # F-ACC-006: holdout result as aggregate-only summary. Per-item holdout
     # results must never be attached here — only HoldoutSummary aggregates.
-    holdout_summary: Optional[HoldoutSummary] = None
+    holdout_summary: HoldoutSummary | None = None
 
     # Stats
     total_benchmarks: int = 0
@@ -258,12 +258,12 @@ class AccuracyTestSession:
     evaluations_passed: int = 0
 
     # Timing
-    started_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    completed_at: Optional[datetime] = None
+    started_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    completed_at: datetime | None = None
     total_time_ms: int = 0
 
     status: EvaluationStatus = EvaluationStatus.PENDING
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
     @property
     def pass_rate(self) -> float:
@@ -330,7 +330,7 @@ class AccuracyTestSession:
                 else EvaluationStatus.FAILED
             )
         )
-        total_time = int((datetime.now(timezone.utc) - self.started_at).total_seconds() * 1000)
+        total_time = int((datetime.now(UTC) - self.started_at).total_seconds() * 1000)
         return AccuracyTestSession(
             id=self.id,
             tenant_id=self.tenant_id,
@@ -345,7 +345,7 @@ class AccuracyTestSession:
             evaluations_completed=self.evaluations_completed,
             evaluations_passed=self.evaluations_passed,
             started_at=self.started_at,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
             total_time_ms=total_time,
             status=final_status,
             error_message=error or self.error_message,
@@ -373,7 +373,7 @@ class AccuracyTestSession:
             error_message=self.error_message,
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary (public view — tenant_id excluded)."""
         return {
             "id": self.id,
@@ -399,7 +399,7 @@ class AccuracyTestSession:
             # F-ACC-004: tenant_id excluded from public output
         }
 
-    def to_dict_full(self) -> Dict[str, Any]:
+    def to_dict_full(self) -> dict[str, Any]:
         """Serialize with all fields including tenant_id (for admin/internal use)."""
         d = self.to_dict()
         d["tenant_id"] = self.tenant_id
