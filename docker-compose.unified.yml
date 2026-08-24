@@ -29,7 +29,7 @@ services:
     networks:
       - qa-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -42,7 +42,7 @@ services:
       dockerfile: Dockerfile
     container_name: qa-framework-frontend
     ports:
-      - "3010:3000"
+      - "127.0.0.1:3010:3000"
     environment:
       - VITE_API_URL=http://localhost:8000
     depends_on:
