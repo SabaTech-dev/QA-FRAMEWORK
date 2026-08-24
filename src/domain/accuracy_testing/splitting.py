@@ -43,21 +43,31 @@ class SplitPolicy:
     Configuration for the eval/holdout split.
 
     Attributes:
+        salt: REQUIRED namespace making splits distinct per tenant/deployment.
+            Knowing the salt reveals WHICH items are holdout, never their
+            content or per-item feedback — hence it must never be empty,
+            shared, or client-chosen.
         holdout_ratio: target fraction of benchmarks assigned to the holdout
             set, in the open interval (0.0, 1.0).
-        salt: namespace making splits distinct per tenant/deployment. Knowing
-            the salt reveals WHICH items are holdout, never their content or
-            per-item feedback.
         min_eval_size: minimum number of eval benchmarks (>= 1).
         min_holdout_size: minimum number of holdout benchmarks (>= 1).
     """
 
+    salt: str
     holdout_ratio: float = 0.2
-    salt: str = ""
     min_eval_size: int = 1
     min_holdout_size: int = 1
 
     def __post_init__(self):
+        # L-1 (card c9825844): a shared or empty salt collapses every tenant
+        # into one namespace — knowing it reveals holdout membership. The
+        # salt is therefore REQUIRED and must be non-empty; per-tenant salts
+        # are derived server-side (see infrastructure.accuracy_testing.security).
+        if not isinstance(self.salt, str) or not self.salt.strip():
+            raise ValueError(
+                "salt must be a non-empty per-tenant value: derive it server-side "
+                "(e.g. HMAC(secret, tenant_id)) instead of relying on a shared default"
+            )
         if not 0.0 < self.holdout_ratio < 1.0:
             raise ValueError(f"holdout_ratio must be in (0.0, 1.0), got {self.holdout_ratio}")
         if self.min_eval_size < 1:
@@ -83,7 +93,8 @@ class BenchmarkSplit:
 
     eval_benchmarks: List["AccuracyBenchmark"] = field(default_factory=list)
     holdout_benchmarks: List["AccuracyBenchmark"] = field(default_factory=list)
-    policy: SplitPolicy = field(default_factory=SplitPolicy)
+    # L-1: no secure default policy exists — required, keyword-only.
+    policy: SplitPolicy = field(kw_only=True)
 
     def __post_init__(self):
         eval_ids = [b.id for b in self.eval_benchmarks]
@@ -142,7 +153,7 @@ def _sort_key(benchmark: "AccuracyBenchmark", salt: str):
 
 def split_benchmarks(
     benchmarks: List["AccuracyBenchmark"],
-    policy: Optional[SplitPolicy] = None,
+    policy: SplitPolicy,
 ) -> BenchmarkSplit:
     """
     Split benchmarks into eval and holdout sets deterministically.
@@ -158,12 +169,13 @@ def split_benchmarks(
 
     Args:
         benchmarks: benchmark set to split (ids must be unique).
-        policy: split configuration; defaults to SplitPolicy().
+        policy: split configuration. REQUIRED (L-1): there is no secure
+            default salt, so callers must pass an explicit per-tenant policy.
 
     Returns:
         BenchmarkSplit with holdout = first k benchmarks in hash order.
     """
-    p = policy or SplitPolicy()
+    p = policy
 
     ids = [b.id for b in benchmarks]
     if len(set(ids)) != len(ids):
