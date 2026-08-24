@@ -142,7 +142,7 @@ class TestAnalyzerOwnerStamping:
         response = await analyzer.analyze(PNG_BYTES, target="amc", owner="alice")
 
         assert response.owner == "alice"
-        persisted = store.get_report(response.report_id)
+        persisted = store.get_report(response.report_id, owner="alice")
         assert persisted["owner"] == "alice"
 
     @pytest.mark.asyncio

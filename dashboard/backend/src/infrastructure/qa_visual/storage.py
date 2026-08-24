@@ -31,6 +31,14 @@ def _sanitize_target(target: str) -> str:
     return sanitized or "unknown"
 
 
+class ReportAccessDenied(Exception):
+    """The report exists but is not accessible to the requesting owner (adv-1).
+
+    Raised instead of returning ``None`` so routers can answer 403
+    without a second unscoped lookup leaking report existence.
+    """
+
+
 class QAVisualReportStore:
     """Saves and queries QA Visual reports as JSON files."""
 
@@ -78,12 +86,33 @@ class QAVisualReportStore:
         reports.sort(key=lambda r: r.get("timestamp") or "", reverse=True)
         return reports[:limit] if limit else reports
 
-    def get_report(self, report_id: str) -> dict[str, Any] | None:
-        """Return one report by id, or None."""
+    def get_report(
+        self,
+        report_id: str,
+        owner: str | None = None,
+        is_admin: bool = False,
+    ) -> dict[str, Any] | None:
+        """Return one report by id if the caller may read it (adv-1).
+
+        Fail-closed: callers must state who is asking — an explicit
+        ``owner`` to scope the read, or ``is_admin=True`` to lift the
+        scoping. A call with neither is a programming error, so a new
+        caller can never silently read every tenant's reports.
+
+        Returns ``None`` when no report with that id exists; raises
+        ``ReportAccessDenied`` when it exists but belongs to another
+        owner (legacy unowned reports are admin-only, as everywhere).
+        """
+        if owner is None and not is_admin:
+            raise ValueError(
+                "get_report() requires an explicit owner or is_admin=True (fail-closed)"
+            )
         for path in self._dir.glob("*.json") if self._dir.exists() else []:
             report = self._read_report(path)
             if report and report.get("report_id") == report_id:
-                return report
+                if is_admin or report.get("owner") == owner:
+                    return report
+                raise ReportAccessDenied(report_id)
         return None
 
     def get_baseline(self, target: str, owner: str | None = None) -> dict[str, Any] | None:
