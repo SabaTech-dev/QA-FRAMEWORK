@@ -24,16 +24,7 @@ import logging
 from collections.abc import Callable, Sequence
 from typing import Any, Optional
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    File,
-    Form,
-    HTTPException,
-    Request,
-    UploadFile,
-    status,
-)
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 
 from src.infrastructure.qa_visual.analyzer import (
     QAVisualAnalysisError,

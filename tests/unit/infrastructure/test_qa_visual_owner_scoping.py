@@ -30,11 +30,7 @@ from src.infrastructure.qa_visual.analyzer import QAVisualAnalyzer
 from src.infrastructure.qa_visual.config import QAVisualConfig
 from src.infrastructure.qa_visual.endpoint import create_qa_visual_router
 from src.infrastructure.qa_visual.gateway_client import VisionResult
-from src.infrastructure.qa_visual.models import (
-    AnalyzeResponse,
-    QAAnalysis,
-    QAVisualPrincipal,
-)
+from src.infrastructure.qa_visual.models import AnalyzeResponse, QAAnalysis, QAVisualPrincipal
 from src.infrastructure.qa_visual.storage import QAVisualReportStore
 
 PNG_BYTES = b"\x89PNG\r\n\x1a\nfakepngdata"
