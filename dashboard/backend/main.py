@@ -1,23 +1,23 @@
-from fastapi import FastAPI, Depends, HTTPException, status
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer
-import asyncio
-from typing import Optional
 import os
 
-from config import settings
 from database import init_db
-from api.v1 import router as api_router
-from api.v1.health import router as health_router, set_startup_complete
-from api.v1.integrations import include_router as include_integrations_router
-from services.auth_service import get_current_user
-from core.logging_config import configure_logging, get_logger
-from models import User
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from integration.qa_framework_client import get_qa_test_suites
 from middleware.apm import APMMiddleware, init_app_info
-from middleware.security_headers import SecurityHeadersMiddleware
 from middleware.rate_limit import RateLimitMiddleware
+from middleware.security_headers import SecurityHeadersMiddleware
+from models import User
 from prometheus_client import make_asgi_app
+from services.auth_service import get_current_user
+
+from api.v1 import router as api_router
+from api.v1.health import router as health_router
+from api.v1.health import set_startup_complete
+from api.v1.integrations import include_router as include_integrations_router
+from config import settings
+from core.logging_config import configure_logging, get_logger
+from src.infrastructure.qa_visual import create_qa_visual_router
 
 # Configure structured logging
 log_level = os.getenv("LOG_LEVEL", "INFO")
@@ -65,6 +65,38 @@ app.include_router(health_router, prefix="/api/v1")
 # Include integration router
 include_integrations_router(app)
 
+# QA Visual router (Fase C) — vendored copy under dashboard/backend/src,
+# mounted behind the dashboard auth (S-1): every endpoint requires a valid
+# JWT via Depends(get_current_user).
+# S-1R: the backend is multi-tenant without roles and the report store is
+# global (cross-tenant BOLA, CVSS 5.4), so the router stays UNMOUNTED
+# (endpoints 404) unless the deploy explicitly opts in with
+# QA_VISUAL_ENABLED=1, pending owner-scoped reports / role checks.
+if os.getenv("QA_VISUAL_ENABLED") == "1":
+    app.include_router(create_qa_visual_router(dependencies=[Depends(get_current_user)]))
+
+# Accuracy testing router (card c9825844) — vendored copy under
+# dashboard/backend/src, same opt-in pattern as qa-visual. Security
+# contracts: L-1 per-tenant salt derived server-side (ACCURACY_SPLIT_SECRET,
+# required — the router factory fails closed on an empty secret) and L-2
+# owner-scoped resources with to_dict_full() served to superusers only.
+if os.getenv("ACCURACY_TESTING_ENABLED") == "1":
+    from src.infrastructure.accuracy_testing.endpoint import create_accuracy_router
+    from src.infrastructure.accuracy_testing.security import AccuracyPrincipal
+
+    def _accuracy_principal(user: User = Depends(get_current_user)) -> AccuracyPrincipal:
+        return AccuracyPrincipal(
+            owner=str(user.tenant_id) if user.tenant_id else f"user-{user.id}",
+            is_admin=bool(user.is_superuser),
+        )
+
+    app.include_router(
+        create_accuracy_router(
+            principal_dependency=_accuracy_principal,
+            split_secret=os.getenv("ACCURACY_SPLIT_SECRET", ""),
+        )
+    )
+
 # Add Prometheus metrics endpoint
 metrics_app = make_asgi_app()
 app.mount("/metrics", metrics_app)
@@ -76,13 +108,10 @@ async def startup_event():
     logger.info("Initializing QA-Framework Dashboard...")
     await init_db()
     set_startup_complete()
-    
+
     # Initialize APM
-    init_app_info(
-        version="0.1.0",
-        environment=settings.ENVIRONMENT
-    )
-    
+    init_app_info(version="0.1.0", environment=settings.ENVIRONMENT)
+
     logger.info("QA-Framework Dashboard initialized successfully")
 
 
@@ -109,13 +138,13 @@ async def get_qa_framework_suites(current_user: User = Depends(get_current_user)
         return {"suites": suites}
     except Exception as e:
         logger.error(f"Error getting QA-FRAMEWORK suites: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Error connecting to QA-FRAMEWORK: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error connecting to QA-FRAMEWORK: {str(e)}")
 
 
 # Only run uvicorn directly when executed as script, not when imported
 if __name__ == "__main__":
     import os
+
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "8000")))

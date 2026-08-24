@@ -1,15 +1,15 @@
 """User migrator for multi-tenant migration."""
 
 import logging
-from typing import List, Optional
+from typing import List
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from dashboard.backend.models import User as UserModel
-
 from domain.entities.tenant import Tenant
-from .migrator import DataMigrator
 
+from .migrator import DataMigrator
 
 logger = logging.getLogger(__name__)
 
@@ -87,9 +87,7 @@ class UserMigrator(DataMigrator):
                     self.migrated_users.append(user)
 
                 except Exception as e:
-                    error_msg = (
-                        f"Failed to migrate user {user.username}: {str(e)}"
-                    )
+                    error_msg = f"Failed to migrate user {user.username}: {str(e)}"
                     logger.error(error_msg)
                     self.add_error(error_msg)
                     self.errors.append(error_msg)
@@ -97,9 +95,7 @@ class UserMigrator(DataMigrator):
 
             if not self.dry_run:
                 await self.db_session.commit()
-                logger.info(
-                    f"Successfully migrated {self.stats['migrated_records']} users"
-                )
+                logger.info(f"Successfully migrated {self.stats['migrated_records']} users")
 
             return migrated_ids
 

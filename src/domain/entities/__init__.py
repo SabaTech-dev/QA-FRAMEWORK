@@ -1,8 +1,8 @@
 """Domain entities package"""
 
+from .permission import PERMISSIONS, Permission, validate_permission
+from .role import ROLE_PERMISSIONS, Role
 from .tenant import Tenant, TenantPlan, TenantStatus
-from .permission import Permission, PERMISSIONS, validate_permission
-from .role import Role, ROLE_PERMISSIONS
 
 __all__ = [
     "Tenant",
@@ -12,5 +12,5 @@ __all__ = [
     "PERMISSIONS",
     "validate_permission",
     "Role",
-    "ROLE_PERMISSIONS"
+    "ROLE_PERMISSIONS",
 ]

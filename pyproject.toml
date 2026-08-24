@@ -16,7 +16,7 @@ pytest-cov = "4.1.0"
 allure-pytest = "2.13.5"
 pytest-html = "4.1.1"
 httpx = "0.26.0"
-requests = "2.31.0"
+requests = "2.34.2"
 playwright = "1.41.0"
 selenium = "4.16.0"
 faker = "23.2.0"
@@ -24,15 +24,20 @@ factory-boy = "3.3.0"
 pydantic = "2.6.1"
 pydantic-settings = "2.1.0"
 pyyaml = "6.0.1"
-python-dotenv = "1.0.0"
+python-dotenv = "1.2.2"
 pydantic-extra-types = "2.6.0"
 locust = "2.22.0"
 bandit = "1.7.6"
 safety = ">=3.0.0"
 sqlalchemy = "^2.0"
 asyncpg = "0.29.0"
-aiomysql = "0.2.0"
+aiomysql = "0.3.2"
 aiosqlite = "0.19.0"
+fastapi = "0.115.4"
+python-jose = {version = ">=3.4.0,<4", extras = ["cryptography"]}
+bcrypt = "4.1.2"
+pyjwt = ">=2.8.0,<3"
+python-multipart = ">=0.0.27"
 redis = "5.0.1"
 psutil = "5.9.8"
 
@@ -79,3 +84,7 @@ markers = [
     "performance: Performance tests",
     "security: Security tests",
 ]
+
+[tool.isort]
+profile = "black"
+line_length = 100

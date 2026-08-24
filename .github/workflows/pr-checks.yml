@@ -65,7 +65,13 @@ jobs:
         id: changed-files
         run: |
           CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -E '\.py$' || true)
-          echo "changed_files=$CHANGED_FILES" >> $GITHUB_OUTPUT
+          # Multi-line values require the heredoc delimiter format
+          # (bare key=value breaks the runner: "Invalid format '<2nd line>'")
+          {
+            echo "changed_files<<EOF"
+            echo "$CHANGED_FILES"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
           echo "Changed files: $CHANGED_FILES"
 
       - name: Run tests for changed files
@@ -118,6 +124,63 @@ jobs:
                 throw error;
               }
             }
+
+  # Dashboard Backend Middleware Tests (conditional - runs when dashboard/backend/** changed)
+  dashboard-middleware-tests:
+    name: Dashboard Backend Middleware Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Check if dashboard/backend files changed
+        id: changed-files
+        run: |
+          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} 2>/dev/null || echo '')
+          echo "Changed files: $CHANGED_FILES"
+          if echo "$CHANGED_FILES" | grep -qE '^dashboard/backend/'; then
+            echo "run_middleware_tests=true" >> $GITHUB_OUTPUT
+          else
+            echo "run_middleware_tests=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Python
+        if: steps.changed-files.outputs.run_middleware_tests == 'true'
+        uses: actions/setup-python@v5 # v5.6.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip packages
+        if: steps.changed-files.outputs.run_middleware_tests == 'true'
+        uses: actions/cache@v4 # v4.2.3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-dashboard-${{ hashFiles('dashboard/backend/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-dashboard-
+
+      - name: Install dashboard backend dependencies
+        if: steps.changed-files.outputs.run_middleware_tests == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r dashboard/backend/requirements.txt
+
+      - name: Run middleware tests
+        if: steps.changed-files.outputs.run_middleware_tests == 'true'
+        run: |
+          cd dashboard/backend
+          python -m pytest tests/middleware -v \
+            --no-cov \
+            --junitxml=junit-middleware.xml
+
+      - name: Upload middleware test results
+        if: steps.changed-files.outputs.run_middleware_tests == 'true' && always()
+        uses: actions/upload-artifact@v4 # v4.6.2
+        with:
+          name: middleware-test-results
+          path: dashboard/backend/junit-middleware.xml
 
   # PR size check
   pr-size-check:

@@ -1,18 +1,18 @@
 """API middleware package"""
 
+from .rbac_middleware import (
+    RBACContext,
+    is_admin_only,
+    permission_required,
+    require_all_permissions,
+    require_any_permission,
+    require_permission,
+)
 from .tenant_context import (
     TenantContext,
     TenantContextMiddleware,
     get_tenant_context,
-    require_tenant
-)
-from .rbac_middleware import (
-    RBACContext,
-    require_permission,
-    permission_required,
-    require_any_permission,
-    require_all_permissions,
-    is_admin_only
+    require_tenant,
 )
 
 __all__ = [
@@ -25,5 +25,5 @@ __all__ = [
     "permission_required",
     "require_any_permission",
     "require_all_permissions",
-    "is_admin_only"
+    "is_admin_only",
 ]

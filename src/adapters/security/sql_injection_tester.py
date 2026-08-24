@@ -1,9 +1,8 @@
 """SQL Injection testing module"""
 
-import re
-from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class InjectionType(Enum):

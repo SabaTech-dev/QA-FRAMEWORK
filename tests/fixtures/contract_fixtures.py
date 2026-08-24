@@ -8,9 +8,7 @@ Provides fixtures for API contract testing:
 - Auto-validation hooks
 """
 
-import json
-from pathlib import Path
-from typing import Any, Dict, Generator, List, Optional, Tuple
+from typing import Any, Dict, Generator
 
 import pytest
 

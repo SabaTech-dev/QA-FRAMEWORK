@@ -4,14 +4,15 @@ Value Objects for AI Test Generation Domain
 Defines the core value objects used in the test generation system.
 """
 
-from enum import Enum
 from dataclasses import dataclass
-from typing import Optional, List
 from datetime import datetime, timezone
+from enum import Enum
+from typing import List, Optional
 
 
 class GenerationType(str, Enum):
     """Types of test generation methods."""
+
     FROM_REQUIREMENTS = "from_requirements"
     FROM_UI = "from_ui"
     FROM_CODE = "from_code"
@@ -22,6 +23,7 @@ class GenerationType(str, Enum):
 
 class TestFramework(str, Enum):
     """Supported test frameworks."""
+
     PYTEST = "pytest"
     PLAYWRIGHT = "playwright"
     CYPRESS = "cypress"
@@ -33,6 +35,7 @@ class TestFramework(str, Enum):
 
 class TestPriority(str, Enum):
     """Priority levels for generated tests."""
+
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
@@ -42,6 +45,7 @@ class TestPriority(str, Enum):
 
 class GenerationStatus(str, Enum):
     """Status of a test generation operation."""
+
     PENDING = "pending"
     ANALYZING = "analyzing"
     GENERATING = "generating"
@@ -53,9 +57,10 @@ class GenerationStatus(str, Enum):
 
 class ConfidenceLevel(str, Enum):
     """Confidence level for generated tests."""
-    HIGH = "high"       # 80-100%
-    MEDIUM = "medium"   # 50-79%
-    LOW = "low"         # 20-49%
+
+    HIGH = "high"  # 80-100%
+    MEDIUM = "medium"  # 50-79%
+    LOW = "low"  # 20-49%
     VERY_LOW = "very_low"  # 0-19%
 
     @classmethod
@@ -72,6 +77,7 @@ class ConfidenceLevel(str, Enum):
 
 class RequirementSource(str, Enum):
     """Source of requirements for test generation."""
+
     MARKDOWN = "markdown"
     JIRA = "jira"
     CONFLUENCE = "confluence"
@@ -84,6 +90,7 @@ class RequirementSource(str, Enum):
 @dataclass(frozen=True)
 class TestCaseMetadata:
     """Immutable metadata about a generated test case."""
+
     generated_at: datetime
     generator_version: str
     llm_model: Optional[str]
@@ -93,7 +100,7 @@ class TestCaseMetadata:
     generation_time_ms: int
     validated: bool
     validation_errors: List[str]
-    
+
     @classmethod
     def create_empty(cls) -> "TestCaseMetadata":
         """Create empty metadata."""
@@ -108,7 +115,7 @@ class TestCaseMetadata:
             validated=False,
             validation_errors=[],
         )
-    
+
     def with_validation(self, errors: List[str]) -> "TestCaseMetadata":
         """Create metadata with validation results."""
         return TestCaseMetadata(

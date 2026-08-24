@@ -10,17 +10,11 @@ Provides fixtures for mobile testing with Appium:
 
 import os
 from pathlib import Path
-from typing import Any, Generator, Optional
+from typing import Generator
 
 import pytest
 
-from src.adapters.mobile.appium_driver import (
-    AppiumDriver,
-    MobileCapabilities,
-    MobilePlatform,
-    create_android_driver,
-    create_ios_driver,
-)
+from src.adapters.mobile.appium_driver import AppiumDriver, create_android_driver, create_ios_driver
 from src.adapters.mobile.mobile_config import (
     DeviceProfile,
     MobileConfigManager,

@@ -10,22 +10,19 @@ Tests complete payment flows using Stripe test mode:
 Uses Stripe test cards: https://stripe.com/docs/testing
 """
 
-import asyncio
 import hashlib
 import hmac
 import json
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import httpx
 import pytest
 
 # Skip all tests in this file if stripe is not installed
 pytest.importorskip("stripe", reason="stripe not installed. Install with: pip install stripe")
 
-import stripe
+import stripe  # noqa: E402  # import tras setup de entorno
 
 # Stripe test cards
 STRIPE_TEST_CARDS = {
@@ -46,6 +43,7 @@ API_BASE_URL = "http://localhost:8000/api/v1"
 # =============================================================================
 # Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def mock_db_session():
@@ -82,7 +80,7 @@ def stripe_test_customer():
         "metadata": {
             "user_id": "test_user_123",
             "tenant_id": "test_tenant_123",
-        }
+        },
     }
 
 
@@ -97,22 +95,13 @@ def stripe_test_subscription():
         "current_period_end": int(datetime.now(timezone.utc).timestamp()) + 2592000,  # +30 days
         "items": {
             "data": [
-                {
-                    "id": "si_test_123",
-                    "price": {
-                        "id": "price_pro_monthly",
-                        "product": "prod_pro"
-                    }
-                }
+                {"id": "si_test_123", "price": {"id": "price_pro_monthly", "product": "prod_pro"}}
             ]
         },
         "latest_invoice": {
             "id": "in_test_123",
-            "payment_intent": {
-                "id": "pi_test_123",
-                "client_secret": "pi_test_123_secret_xyz"
-            }
-        }
+            "payment_intent": {"id": "pi_test_123", "client_secret": "pi_test_123_secret_xyz"},
+        },
     }
 
 
@@ -127,7 +116,7 @@ def stripe_test_payment_method():
             "last4": "4242",
             "exp_month": 12,
             "exp_year": 2025,
-        }
+        },
     }
 
 
@@ -145,7 +134,7 @@ def webhook_payload_payment_succeeded():
                 "amount_paid": 9900,
                 "currency": "usd",
             }
-        }
+        },
     }
 
 
@@ -163,10 +152,10 @@ def webhook_payload_payment_failed():
                 "attempt_count": 1,
                 "last_payment_error": {
                     "code": "card_declined",
-                    "message": "Your card was declined."
-                }
+                    "message": "Your card was declined.",
+                },
             }
-        }
+        },
     }
 
 
@@ -184,7 +173,7 @@ def webhook_payload_subscription_updated():
                 "current_period_start": int(datetime.now(timezone.utc).timestamp()),
                 "current_period_end": int(datetime.now(timezone.utc).timestamp()) + 2592000,
             }
-        }
+        },
     }
 
 
@@ -200,7 +189,7 @@ def webhook_payload_subscription_deleted():
                 "customer": "cus_test_e2e_123",
                 "status": "canceled",
             }
-        }
+        },
     }
 
 
@@ -208,18 +197,17 @@ def webhook_payload_subscription_deleted():
 # Test Classes
 # =============================================================================
 
+
 @pytest.mark.e2e
 class TestStripeCheckoutFlow:
     """
     E2E tests for complete checkout flow.
-    
+
     Flow: Create customer → Add payment method → Create subscription → Confirm payment
     """
-    
+
     @pytest.mark.asyncio
-    async def test_checkout_free_plan_no_payment_required(
-        self, mock_db_session, mock_user
-    ):
+    async def test_checkout_free_plan_no_payment_required(self, mock_db_session, mock_user):
         """
         GIVEN: A user with no existing subscription
         WHEN: They subscribe to the free plan
@@ -228,54 +216,60 @@ class TestStripeCheckoutFlow:
         # Free tier should not require Stripe
         mock_user.subscription_plan = "free"
         mock_user.subscription_status = "active"
-        
+
         # Verify no Stripe customer needed
         assert mock_user.stripe_customer_id is None
         assert mock_user.subscription_plan == "free"
         assert mock_user.subscription_status == "active"
-    
+
     @pytest.mark.asyncio
     async def test_checkout_pro_plan_creates_customer_and_subscription(
-        self, mock_db_session, mock_user, stripe_test_customer, 
-        stripe_test_subscription, stripe_test_payment_method
+        self,
+        mock_db_session,
+        mock_user,
+        stripe_test_customer,
+        stripe_test_subscription,
+        stripe_test_payment_method,
     ):
         """
         GIVEN: A user with no existing subscription
         WHEN: They subscribe to a paid plan (Pro)
         THEN: Stripe customer is created, subscription is created, payment succeeds
         """
-        with patch("stripe.Customer.create") as mock_customer_create, \
-             patch("stripe.PaymentMethod.attach") as mock_pm_attach, \
-             patch("stripe.Subscription.create") as mock_sub_create:
-            
+        with (
+            patch("stripe.Customer.create") as mock_customer_create,
+            patch("stripe.PaymentMethod.attach") as mock_pm_attach,
+            patch("stripe.Subscription.create") as mock_sub_create,
+        ):
+
             # Setup mocks
             mock_customer_create.return_value = MagicMock(**stripe_test_customer)
             mock_pm_attach.return_value = MagicMock(**stripe_test_payment_method)
             mock_sub_create.return_value = MagicMock(**stripe_test_subscription)
-            
+
             # Simulate subscription creation
             customer = stripe.Customer.create(
                 email=mock_user.email,
                 name=mock_user.username,
-                metadata={"user_id": str(mock_user.id)}
+                metadata={"user_id": str(mock_user.id)},
             )
-            
+
             # Verify customer created
             assert customer.id == "cus_test_e2e_123"
             mock_customer_create.assert_called_once()
-            
+
             # Create subscription
             subscription = stripe.Subscription.create(
                 customer=customer.id,
                 items=[{"price": "price_pro_monthly"}],
                 payment_behavior="default_incomplete",
             )
-            
+
             # Verify subscription created
             assert subscription.id == "sub_test_e2e_123"
             assert subscription.status == "active"
             mock_sub_create.assert_called_once()
-    
+
     @pytest.mark.asyncio
     async def test_checkout_with_declined_card_returns_error(
         self, mock_db_session, mock_user, stripe_test_customer
@@ -285,25 +279,22 @@ class TestStripeCheckoutFlow:
         WHEN: Payment method is declined
         THEN: Appropriate error is returned and subscription not created
         """
-        with patch("stripe.Customer.create") as mock_customer_create, \
-             patch("stripe.PaymentMethod.attach") as mock_pm_attach:
-            
+        with (
+            patch("stripe.Customer.create") as mock_customer_create,
+            patch("stripe.PaymentMethod.attach") as mock_pm_attach,
+        ):
+
             mock_customer_create.return_value = MagicMock(**stripe_test_customer)
-            
+
             # Simulate declined card
             mock_pm_attach.side_effect = stripe.error.CardError(
-                "Your card was declined.",
-                param="payment_method",
-                code="card_declined"
+                "Your card was declined.", param="payment_method", code="card_declined"
             )
-            
+
             # Verify error handling
             with pytest.raises(stripe.error.CardError) as exc_info:
-                stripe.PaymentMethod.attach(
-                    "pm_declined",
-                    customer="cus_test_e2e_123"
-                )
-            
+                stripe.PaymentMethod.attach("pm_declined", customer="cus_test_e2e_123")
+
             assert "declined" in str(exc_info.value).lower()
 
 
@@ -311,10 +302,10 @@ class TestStripeCheckoutFlow:
 class TestStripeSubscriptionManagement:
     """
     E2E tests for subscription lifecycle management.
-    
+
     Operations: Upgrade, Downgrade, Cancel
     """
-    
+
     @pytest.mark.asyncio
     async def test_upgrade_subscription_pro_to_enterprise(
         self, mock_db_session, mock_user, stripe_test_subscription
@@ -327,38 +318,41 @@ class TestStripeSubscriptionManagement:
         mock_user.stripe_customer_id = "cus_test_e2e_123"
         mock_user.stripe_subscription_id = "sub_test_e2e_123"
         mock_user.subscription_plan = "pro"
-        
-        with patch("stripe.Subscription.retrieve") as mock_retrieve, \
-             patch("stripe.Subscription.modify") as mock_modify:
-            
+
+        with (
+            patch("stripe.Subscription.retrieve") as mock_retrieve,
+            patch("stripe.Subscription.modify") as mock_modify,
+        ):
+
             # Setup mocks
             mock_retrieve.return_value = MagicMock(**stripe_test_subscription)
-            mock_modify.return_value = MagicMock(**{
-                **stripe_test_subscription,
-                "items": {"data": [{"id": "si_test_123", "price": {"id": "price_enterprise_monthly"}}]}
-            })
-            
+            mock_modify.return_value = MagicMock(
+                **{
+                    **stripe_test_subscription,
+                    "items": {
+                        "data": [{"id": "si_test_123", "price": {"id": "price_enterprise_monthly"}}]
+                    },
+                }
+            )
+
             # Retrieve current subscription
             current_sub = stripe.Subscription.retrieve(mock_user.stripe_subscription_id)
             assert current_sub.id == "sub_test_e2e_123"
-            
+
             # Upgrade to Enterprise - access items correctly from mock dict
             items_data = stripe_test_subscription["items"]["data"]
             item_id = items_data[0]["id"]
-            
-            updated_sub = stripe.Subscription.modify(
+
+            _updated_sub = stripe.Subscription.modify(
                 mock_user.stripe_subscription_id,
-                items=[{
-                    "id": item_id,
-                    "price": "price_enterprise_monthly"
-                }]
+                items=[{"id": item_id, "price": "price_enterprise_monthly"}],
             )
-            
+
             # Verify upgrade
             mock_modify.assert_called_once()
             call_args = mock_modify.call_args
             assert call_args[1]["items"][0]["price"] == "price_enterprise_monthly"
-    
+
     @pytest.mark.asyncio
     async def test_downgrade_subscription_enterprise_to_pro(
         self, mock_db_session, mock_user, stripe_test_subscription
@@ -371,24 +365,23 @@ class TestStripeSubscriptionManagement:
         mock_user.stripe_customer_id = "cus_test_e2e_123"
         mock_user.stripe_subscription_id = "sub_test_e2e_123"
         mock_user.subscription_plan = "enterprise"
-        
-        with patch("stripe.Subscription.retrieve") as mock_retrieve, \
-             patch("stripe.Subscription.modify") as mock_modify:
-            
+
+        with (
+            patch("stripe.Subscription.retrieve") as mock_retrieve,
+            patch("stripe.Subscription.modify") as mock_modify,
+        ):
+
             mock_retrieve.return_value = MagicMock(**stripe_test_subscription)
             mock_modify.return_value = MagicMock(**stripe_test_subscription)
-            
+
             # Downgrade to Pro
-            updated_sub = stripe.Subscription.modify(
+            _updated_sub = stripe.Subscription.modify(
                 mock_user.stripe_subscription_id,
-                items=[{
-                    "id": "si_test_123",
-                    "price": "price_pro_monthly"
-                }]
+                items=[{"id": "si_test_123", "price": "price_pro_monthly"}],
             )
-            
+
             mock_modify.assert_called_once()
-    
+
     @pytest.mark.asyncio
     async def test_cancel_subscription_at_period_end(
         self, mock_db_session, mock_user, stripe_test_subscription
@@ -401,25 +394,20 @@ class TestStripeSubscriptionManagement:
         mock_user.stripe_customer_id = "cus_test_e2e_123"
         mock_user.stripe_subscription_id = "sub_test_e2e_123"
         mock_user.subscription_plan = "pro"
-        
+
         with patch("stripe.Subscription.modify") as mock_modify:
-            mock_modify.return_value = MagicMock(**{
-                **stripe_test_subscription,
-                "cancel_at_period_end": True
-            })
-            
+            mock_modify.return_value = MagicMock(
+                **{**stripe_test_subscription, "cancel_at_period_end": True}
+            )
+
             # Cancel at period end
-            result = stripe.Subscription.modify(
-                mock_user.stripe_subscription_id,
-                cancel_at_period_end=True
+            _result = stripe.Subscription.modify(
+                mock_user.stripe_subscription_id, cancel_at_period_end=True
             )
-            
+
             # Verify cancellation scheduled
-            mock_modify.assert_called_once_with(
-                "sub_test_e2e_123",
-                cancel_at_period_end=True
-            )
-    
+            mock_modify.assert_called_once_with("sub_test_e2e_123", cancel_at_period_end=True)
+
     @pytest.mark.asyncio
     async def test_cancel_subscription_immediately(
         self, mock_db_session, mock_user, stripe_test_subscription
@@ -431,16 +419,15 @@ class TestStripeSubscriptionManagement:
         """
         mock_user.stripe_customer_id = "cus_test_e2e_123"
         mock_user.stripe_subscription_id = "sub_test_e2e_123"
-        
+
         with patch("stripe.Subscription.delete") as mock_delete:
-            mock_delete.return_value = MagicMock(**{
-                **stripe_test_subscription,
-                "status": "canceled"
-            })
-            
+            mock_delete.return_value = MagicMock(
+                **{**stripe_test_subscription, "status": "canceled"}
+            )
+
             # Cancel immediately
-            result = stripe.Subscription.delete(mock_user.stripe_subscription_id)
-            
+            _result = stripe.Subscription.delete(mock_user.stripe_subscription_id)
+
             # Verify deletion
             mock_delete.assert_called_once_with("sub_test_e2e_123")
 
@@ -449,10 +436,10 @@ class TestStripeSubscriptionManagement:
 class TestStripeWebhookHandling:
     """
     E2E tests for Stripe webhook event processing.
-    
+
     Events: payment_succeeded, payment_failed, subscription_updated, subscription_deleted
     """
-    
+
     @pytest.mark.asyncio
     async def test_webhook_payment_succeeded_activates_subscription(
         self, mock_db_session, mock_user, webhook_payload_payment_succeeded
@@ -464,21 +451,21 @@ class TestStripeWebhookHandling:
         """
         mock_user.stripe_customer_id = "cus_test_e2e_123"
         mock_user.subscription_status = "incomplete"
-        
+
         # Simulate webhook processing
         event_type = webhook_payload_payment_succeeded["type"]
         customer_id = webhook_payload_payment_succeeded["data"]["object"]["customer"]
-        
+
         # Verify event type
         assert event_type == "invoice.payment_succeeded"
-        
+
         # Simulate status update
         if customer_id == mock_user.stripe_customer_id:
             mock_user.subscription_status = "active"
-        
+
         # Verify subscription activated
         assert mock_user.subscription_status == "active"
-    
+
     @pytest.mark.asyncio
     async def test_webhook_payment_failed_marks_past_due(
         self, mock_db_session, mock_user, webhook_payload_payment_failed
@@ -490,18 +477,18 @@ class TestStripeWebhookHandling:
         """
         mock_user.stripe_customer_id = "cus_test_e2e_123"
         mock_user.subscription_status = "active"
-        
+
         event_type = webhook_payload_payment_failed["type"]
         customer_id = webhook_payload_payment_failed["data"]["object"]["customer"]
-        
+
         assert event_type == "invoice.payment_failed"
-        
+
         # Simulate status update
         if customer_id == mock_user.stripe_customer_id:
             mock_user.subscription_status = "past_due"
-        
+
         assert mock_user.subscription_status == "past_due"
-    
+
     @pytest.mark.asyncio
     async def test_webhook_subscription_updated_syncs_status(
         self, mock_db_session, mock_user, webhook_payload_subscription_updated
@@ -513,18 +500,18 @@ class TestStripeWebhookHandling:
         """
         mock_user.stripe_customer_id = "cus_test_e2e_123"
         mock_user.stripe_subscription_id = "sub_test_e2e_123"
-        
+
         event = webhook_payload_subscription_updated
         event_type = event["type"]
         sub_data = event["data"]["object"]
-        
+
         assert event_type == "customer.subscription.updated"
-        
+
         # Simulate sync
         mock_user.subscription_status = sub_data["status"]
-        
+
         assert mock_user.subscription_status == "active"
-    
+
     @pytest.mark.asyncio
     async def test_webhook_subscription_deleted_downgrades_to_free(
         self, mock_db_session, mock_user, webhook_payload_subscription_deleted
@@ -538,25 +525,23 @@ class TestStripeWebhookHandling:
         mock_user.stripe_subscription_id = "sub_test_e2e_123"
         mock_user.subscription_plan = "pro"
         mock_user.subscription_status = "active"
-        
+
         event = webhook_payload_subscription_deleted
         event_type = event["type"]
-        
+
         assert event_type == "customer.subscription.deleted"
-        
+
         # Simulate downgrade
         mock_user.subscription_plan = "free"
         mock_user.subscription_status = "canceled"
         mock_user.stripe_subscription_id = None
-        
+
         assert mock_user.subscription_plan == "free"
         assert mock_user.subscription_status == "canceled"
         assert mock_user.stripe_subscription_id is None
-    
+
     @pytest.mark.asyncio
-    async def test_webhook_signature_validation(
-        self, webhook_payload_payment_succeeded
-    ):
+    async def test_webhook_signature_validation(self, webhook_payload_payment_succeeded):
         """
         GIVEN: A webhook payload with signature
         WHEN: Signature is validated
@@ -565,17 +550,15 @@ class TestStripeWebhookHandling:
         webhook_secret = "whsec_test_secret"
         payload = json.dumps(webhook_payload_payment_succeeded)
         timestamp = int(time.time())
-        
+
         # Generate valid signature
         signed_payload = f"{timestamp}.{payload}"
         signature = hmac.new(
-            webhook_secret.encode(),
-            signed_payload.encode(),
-            hashlib.sha256
+            webhook_secret.encode(), signed_payload.encode(), hashlib.sha256
         ).hexdigest()
-        
+
         stripe_signature = f"t={timestamp},v1={signature}"
-        
+
         # Verify signature format
         assert "t=" in stripe_signature
         assert "v1=" in stripe_signature
@@ -585,14 +568,12 @@ class TestStripeWebhookHandling:
 class TestStripeErrorHandling:
     """
     E2E tests for payment error scenarios.
-    
+
     Scenarios: Card declined, insufficient funds, processing errors
     """
-    
+
     @pytest.mark.asyncio
-    async def test_payment_declined_generic(
-        self, mock_db_session, mock_user
-    ):
+    async def test_payment_declined_generic(self, mock_db_session, mock_user):
         """
         GIVEN: A payment attempt with declined card
         WHEN: Card is declined
@@ -600,25 +581,18 @@ class TestStripeErrorHandling:
         """
         with patch("stripe.PaymentIntent.create") as mock_create:
             mock_create.side_effect = stripe.error.CardError(
-                "Your card was declined.",
-                param=None,
-                code="card_declined"
+                "Your card was declined.", param=None, code="card_declined"
             )
-            
+
             with pytest.raises(stripe.error.CardError) as exc_info:
                 stripe.PaymentIntent.create(
-                    amount=9900,
-                    currency="usd",
-                    payment_method="pm_declined",
-                    confirm=True
+                    amount=9900, currency="usd", payment_method="pm_declined", confirm=True
                 )
-            
+
             assert exc_info.value.code == "card_declined"
-    
+
     @pytest.mark.asyncio
-    async def test_payment_insufficient_funds(
-        self, mock_db_session, mock_user
-    ):
+    async def test_payment_insufficient_funds(self, mock_db_session, mock_user):
         """
         GIVEN: A payment attempt with insufficient funds card
         WHEN: Payment is processed
@@ -626,25 +600,18 @@ class TestStripeErrorHandling:
         """
         with patch("stripe.PaymentIntent.create") as mock_create:
             mock_create.side_effect = stripe.error.CardError(
-                "Your card has insufficient funds.",
-                param=None,
-                code="insufficient_funds"
+                "Your card has insufficient funds.", param=None, code="insufficient_funds"
             )
-            
+
             with pytest.raises(stripe.error.CardError) as exc_info:
                 stripe.PaymentIntent.create(
-                    amount=9900,
-                    currency="usd",
-                    payment_method="pm_insufficient",
-                    confirm=True
+                    amount=9900, currency="usd", payment_method="pm_insufficient", confirm=True
                 )
-            
+
             assert exc_info.value.code == "insufficient_funds"
-    
+
     @pytest.mark.asyncio
-    async def test_payment_expired_card(
-        self, mock_db_session, mock_user
-    ):
+    async def test_payment_expired_card(self, mock_db_session, mock_user):
         """
         GIVEN: A payment attempt with expired card
         WHEN: Payment is processed
@@ -652,25 +619,18 @@ class TestStripeErrorHandling:
         """
         with patch("stripe.PaymentIntent.create") as mock_create:
             mock_create.side_effect = stripe.error.CardError(
-                "Your card has expired.",
-                param="exp_month",
-                code="expired_card"
+                "Your card has expired.", param="exp_month", code="expired_card"
             )
-            
+
             with pytest.raises(stripe.error.CardError) as exc_info:
                 stripe.PaymentIntent.create(
-                    amount=9900,
-                    currency="usd",
-                    payment_method="pm_expired",
-                    confirm=True
+                    amount=9900, currency="usd", payment_method="pm_expired", confirm=True
                 )
-            
+
             assert exc_info.value.code == "expired_card"
-    
+
     @pytest.mark.asyncio
-    async def test_payment_incorrect_cvc(
-        self, mock_db_session, mock_user
-    ):
+    async def test_payment_incorrect_cvc(self, mock_db_session, mock_user):
         """
         GIVEN: A payment attempt with incorrect CVC
         WHEN: Payment is processed
@@ -678,25 +638,18 @@ class TestStripeErrorHandling:
         """
         with patch("stripe.PaymentIntent.create") as mock_create:
             mock_create.side_effect = stripe.error.CardError(
-                "Your card's security code is incorrect.",
-                param="cvc",
-                code="incorrect_cvc"
+                "Your card's security code is incorrect.", param="cvc", code="incorrect_cvc"
             )
-            
+
             with pytest.raises(stripe.error.CardError) as exc_info:
                 stripe.PaymentIntent.create(
-                    amount=9900,
-                    currency="usd",
-                    payment_method="pm_wrong_cvc",
-                    confirm=True
+                    amount=9900, currency="usd", payment_method="pm_wrong_cvc", confirm=True
                 )
-            
+
             assert exc_info.value.code == "incorrect_cvc"
-    
+
     @pytest.mark.asyncio
-    async def test_api_connection_error_retry(
-        self, mock_db_session, mock_user
-    ):
+    async def test_api_connection_error_retry(self, mock_db_session, mock_user):
         """
         GIVEN: Stripe API is temporarily unavailable
         WHEN: API call fails with connection error
@@ -706,12 +659,9 @@ class TestStripeErrorHandling:
             mock_create.side_effect = stripe.error.APIConnectionError(
                 "Unexpected error communicating with Stripe."
             )
-            
+
             with pytest.raises(stripe.error.APIConnectionError):
-                stripe.Customer.create(
-                    email=mock_user.email,
-                    name=mock_user.username
-                )
+                stripe.Customer.create(email=mock_user.email, name=mock_user.username)
 
 
 # Skip tests that depend on import paths
@@ -722,15 +672,18 @@ class TestStripeErrorHandling:
 class TestStripeCompleteFlows:
     """
     Complete end-to-end flow tests.
-    
+
     Tests the entire subscription lifecycle from signup to cancellation.
     """
-    
+
     @pytest.mark.asyncio
     async def test_complete_subscription_lifecycle(
-        self, mock_db_session, mock_user, 
-        stripe_test_customer, stripe_test_subscription, 
-        stripe_test_payment_method
+        self,
+        mock_db_session,
+        mock_user,
+        stripe_test_customer,
+        stripe_test_subscription,
+        stripe_test_payment_method,
     ):
         """
         GIVEN: A new user
@@ -740,49 +693,43 @@ class TestStripeCompleteFlows:
         # Phase 1: Create customer
         with patch("stripe.Customer.create") as mock_customer:
             mock_customer.return_value = MagicMock(**stripe_test_customer)
-            customer = stripe.Customer.create(
-                email=mock_user.email,
-                name=mock_user.username
-            )
+            customer = stripe.Customer.create(email=mock_user.email, name=mock_user.username)
             assert customer.id == "cus_test_e2e_123"
             mock_user.stripe_customer_id = customer.id
-        
+
         # Phase 2: Create subscription (Pro)
         with patch("stripe.Subscription.create") as mock_sub:
             mock_sub.return_value = MagicMock(**stripe_test_subscription)
             subscription = stripe.Subscription.create(
-                customer=mock_user.stripe_customer_id,
-                items=[{"price": "price_pro_monthly"}]
+                customer=mock_user.stripe_customer_id, items=[{"price": "price_pro_monthly"}]
             )
             assert subscription.status == "active"
             mock_user.subscription_plan = "pro"
             mock_user.subscription_status = "active"
-        
+
         # Phase 3: Upgrade to Enterprise
-        with patch("stripe.Subscription.retrieve") as mock_retrieve, \
-             patch("stripe.Subscription.modify") as mock_modify:
-            
+        with (
+            patch("stripe.Subscription.retrieve") as mock_retrieve,
+            patch("stripe.Subscription.modify") as mock_modify,
+        ):
+
             mock_retrieve.return_value = MagicMock(**stripe_test_subscription)
             mock_modify.return_value = MagicMock(**stripe_test_subscription)
-            
+
             stripe.Subscription.modify(
                 mock_user.stripe_subscription_id,
-                items=[{"id": "si_test_123", "price": "price_enterprise_monthly"}]
+                items=[{"id": "si_test_123", "price": "price_enterprise_monthly"}],
             )
             mock_user.subscription_plan = "enterprise"
-        
+
         # Phase 4: Cancel at period end
         with patch("stripe.Subscription.modify") as mock_modify:
-            mock_modify.return_value = MagicMock(**{
-                **stripe_test_subscription,
-                "cancel_at_period_end": True
-            })
-            stripe.Subscription.modify(
-                mock_user.stripe_subscription_id,
-                cancel_at_period_end=True
+            mock_modify.return_value = MagicMock(
+                **{**stripe_test_subscription, "cancel_at_period_end": True}
             )
+            stripe.Subscription.modify(mock_user.stripe_subscription_id, cancel_at_period_end=True)
             mock_user.subscription_status = "canceling"
-        
+
         # Verify final state
         assert mock_user.stripe_customer_id == "cus_test_e2e_123"
         assert mock_user.subscription_plan == "enterprise"
@@ -793,30 +740,31 @@ class TestStripeCompleteFlows:
 # Test Cards Reference
 # =============================================================================
 
+
 @pytest.mark.e2e
 class TestStripeTestCards:
     """
     Reference tests for Stripe test card numbers.
-    
+
     Documents all available test cards for easy reference.
     """
-    
+
     def test_visa_success(self):
         """Visa card that succeeds: 4242424242424242"""
         assert STRIPE_TEST_CARDS["success"] == "4242424242424242"
-    
+
     def test_visa_declined(self):
         """Visa card that's declined: 4000000000000002"""
         assert STRIPE_TEST_CARDS["declined"] == "4000000000000002"
-    
+
     def test_insufficient_funds(self):
         """Card with insufficient funds: 4000000000009995"""
         assert STRIPE_TEST_CARDS["insufficient_funds"] == "4000000000009995"
-    
+
     def test_expired_card(self):
         """Expired card: 4000000000000069"""
         assert STRIPE_TEST_CARDS["expired_card"] == "4000000000000069"
-    
+
     def test_3ds_required(self):
         """Card requiring 3D Secure: 4000002500003155"""
         assert STRIPE_TEST_CARDS["3ds_required"] == "4000002500003155"
@@ -827,11 +775,14 @@ class TestStripeTestCards:
 # =============================================================================
 
 if __name__ == "__main__":
-    pytest.main([
-        __file__,
-        "-v",
-        "--tb=short",
-        "-m", "e2e",
-        "--cov=dashboard/backend/services/stripe_service",
-        "--cov-report=term-missing"
-    ])
+    pytest.main(
+        [
+            __file__,
+            "-v",
+            "--tb=short",
+            "-m",
+            "e2e",
+            "--cov=dashboard/backend/services/stripe_service",
+            "--cov-report=term-missing",
+        ]
+    )

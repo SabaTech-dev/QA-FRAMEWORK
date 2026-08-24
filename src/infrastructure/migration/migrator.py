@@ -2,14 +2,13 @@
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
 from enum import Enum
+from typing import Any, Dict
 
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.entities.tenant import Tenant, TenantPlan, TenantStatus
-
+from domain.entities.tenant import Tenant
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +23,7 @@ class DataMigrator:
 
     class MigrationStatus(Enum):
         """Migration status types"""
+
         PENDING = "pending"
         IN_PROGRESS = "in_progress"
         COMPLETED = "completed"
@@ -105,9 +105,7 @@ class DataMigrator:
                 return existing_tenant
 
             if self.dry_run:
-                logger.info(
-                    f"[DRY RUN] Would create default tenant: {default_tenant_slug}"
-                )
+                logger.info(f"[DRY RUN] Would create default tenant: {default_tenant_slug}")
                 return None
 
             # Create default tenant
@@ -194,9 +192,7 @@ class DataMigrator:
         """Context manager exit."""
         if exc_type is not None:
             self.stats["status"] = self.MigrationStatus.FAILED
-            self.stats["errors"].append(
-                f"Migration failed with exception: {str(exc_val)}"
-            )
+            self.stats["errors"].append(f"Migration failed with exception: {str(exc_val)}")
             logger.error(f"Migration failed: {str(exc_val)}")
         else:
             await self.complete(success=True)

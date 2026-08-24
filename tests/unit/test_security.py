@@ -9,26 +9,25 @@ This module tests the security testing adapters including:
 - SecurityClient
 """
 
-import pytest
-import asyncio
-from unittest.mock import Mock, AsyncMock, patch
-from pathlib import Path
-
 # Add src to path
 import sys
+from pathlib import Path
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from src.adapters.security import (
+    AuthTester,
+    RateLimitTester,
     SecurityClient,
     SQLInjectionTester,
     XSSTester,
-    AuthTester,
-    RateLimitTester,
 )
-from src.adapters.security.sql_injection_tester import SQLInjectionPayload, InjectionType
-from src.adapters.security.xss_tester import XSSPayload, XSSType
 from src.adapters.security.auth_tester import AuthTestCase, AuthTestType
+from src.adapters.security.sql_injection_tester import InjectionType, SQLInjectionPayload
+from src.adapters.security.xss_tester import XSSPayload, XSSType
 
 
 class TestSQLInjectionTester:
