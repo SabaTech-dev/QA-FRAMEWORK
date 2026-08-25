@@ -2,6 +2,8 @@
 # QA-FRAMEWORK SaaS - Railway Deploy Workflow
 # Automatically deploy to Railway on merge to main
 # Tests are handled by CI/CD Pipeline workflow
+# Security: deploy is GATED by blocking Trivy + provenance checks
+# (card 650387a1 — supply-chain R3, fail-closed)
 # ========================================
 
 name: Deploy to Railway
@@ -13,22 +15,139 @@ on:
     paths:
       - 'dashboard/**'
       - '.github/workflows/deploy-railway.yml'
+      - '.trivyignore'
+      - 'trivy.yaml'
   workflow_dispatch:
+    inputs:
+      force-fail-gate:
+        description: 'TEST ONLY: force the security gate to FAIL (deploy must be skipped)'
+        required: false
+        type: boolean
+        default: false
 
 env:
   RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
+permissions:
+  contents: read
+
 jobs:
   # ========================================
+  # Security Gate (BLOCKING, fail-closed) — card 650387a1 (R3)
+  # Consumes & enforces the security signals that already exist in CI:
+  #   1. Trivy CRITICAL scans: repo fs + backend/frontend images
+  #      - Blocked unless waived in .trivyignore (justification + expiry required)
+  #   2. SBOM (CycloneDX) for both deploy artifacts — fail if it cannot be produced
+  #   3. SLSA provenance: attest + verify the SBOMs (sigstore via GitHub OIDC)
+  # If this job fails → deploy & migrate are SKIPPED (fail-closed).
+  # ========================================
+  security-gate:
+    name: Deploy Security Gate (Trivy + Provenance)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write          # OIDC for attest-build-provenance
+      attestations: write    # write + read attestations
+    env:
+      TRIVY_VERSION: "0.71.0"
+      TRIVY_DB_REPOSITORY: "mirror.gcr.io/aquasec/trivy-db:2"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4 # v4.2.2
+
+      # AC2 test hook: proves the gate blocks the deploy when it fails
+      - name: Force-fail hook (TEST ONLY — workflow_dispatch input)
+        if: github.event_name == 'workflow_dispatch' && inputs.force-fail-gate
+        run: |
+          echo "::error::SIMULATED GATE FAILURE (force-fail-gate=true) — deploy MUST be skipped"
+          exit 1
+
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin "v${TRIVY_VERSION}"
+          trivy --version
+
+      - name: Build backend image (scan target)
+        run: docker build -t qa-framework-backend:gate -f dashboard/backend/Dockerfile dashboard/backend
+
+      - name: Build frontend image (scan target)
+        run: docker build -t qa-framework-frontend:gate -f dashboard/frontend/Dockerfile dashboard/frontend
+
+      - name: 'Gate 1/4: Trivy repo fs scan (vuln+secret, CRITICAL blocks)'
+        run: trivy fs --exit-code 1 --severity CRITICAL --scanners vuln,secret .
+        env:
+          TRIVY_JAVA_DB_REPOSITORY: ""
+
+      - name: 'Gate 2/4: Trivy backend image scan (CRITICAL blocks)'
+        run: trivy image --exit-code 1 --severity CRITICAL qa-framework-backend:gate
+
+      - name: 'Gate 3/4: Trivy frontend image scan (CRITICAL blocks)'
+        run: trivy image --exit-code 1 --severity CRITICAL qa-framework-frontend:gate
+
+      - name: 'Gate 4/4: SBOM + SLSA provenance (fail-closed)'
+        run: |
+          set -euo pipefail
+          # SBOM for both deploy artifacts (consumes ci-cd.yml stage 8b signal at deploy time)
+          trivy image --format cyclonedx --output sbom-backend.cdx.json qa-framework-backend:gate
+          trivy image --format cyclonedx --output sbom-frontend.cdx.json qa-framework-frontend:gate
+          for f in sbom-backend.cdx.json sbom-frontend.cdx.json; do
+            test -s "$f" || { echo "::error::$f missing or empty (SBOM generation failed)"; exit 1; }
+            echo "$f: $(wc -c < "$f") bytes, $(jq '.components | length' "$f") components"
+          done
+          echo "SBOM_OK=true" >> "$GITHUB_ENV"
+
+      - name: 'Gate 4/4b: SLSA provenance attestation (SBOM subjects)'
+        uses: actions/attest-build-provenance@v2 # v2.4.0
+        with:
+          subject-path: |
+            sbom-backend.cdx.json
+            sbom-frontend.cdx.json
+
+      - name: 'Gate 4/4c: Verify provenance attestations (fail-closed)'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for f in sbom-backend.cdx.json sbom-frontend.cdx.json; do
+            ok=false
+            for attempt in 1 2 3; do
+              if gh attestation verify "$f" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+                echo "✅ provenance verified: $f"
+                ok=true; break
+              fi
+              echo "attempt $attempt/3 failed for $f — retrying in 10s (API propagation)"
+              sleep 10
+            done
+            [ "$ok" = true ] || { echo "::error::provenance verification FAILED for $f — deploy blocked"; exit 1; }
+          done
+
+      - name: Gate summary
+        if: always()
+        run: |
+          {
+            echo "## 🛡️ Deploy Security Gate"
+            echo ""
+            echo "| Check | Policy |"
+            echo "|-------|--------|"
+            echo "| Trivy fs + backend/frontend images | **CRITICAL-blocking** (waivers: \`.trivyignore\`, expiring) |"
+            echo "| SBOM (CycloneDX) | required for both deploy artifacts |"
+            echo "| SLSA provenance | attested + verified (sigstore/GitHub OIDC) |"
+            echo ""
+            echo "Fail-closed: \`deploy\` and \`migrate\` only run when this gate passes."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ========================================
   # Deploy to Railway (tests run in CI/CD Pipeline)
+  # BLOCKED until security-gate passes (fail-closed — card 650387a1)
   # ========================================
   deploy:
+    needs: security-gate
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7 # v4.2.2
+        uses: actions/checkout@v4 # v4.2.2
 
       - name: Install Railway CLI
         run: npm install -g @railway/cli
@@ -76,7 +195,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7 # v4.2.2
+        uses: actions/checkout@v4 # v4.2.2
 
       - name: Set up Python
         uses: actions/setup-python@v5 # v5.6.0
