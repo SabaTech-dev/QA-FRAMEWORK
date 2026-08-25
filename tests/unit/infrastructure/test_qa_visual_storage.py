@@ -9,7 +9,13 @@ from src.infrastructure.qa_visual.models import AnalyzeResponse, QAAnalysis
 from src.infrastructure.qa_visual.storage import QAVisualReportStore
 
 
-def make_response(report_id="r1", target="amc", score=95, passed=True) -> AnalyzeResponse:
+def make_response(
+    report_id="r1",
+    target="amc",
+    score=95,
+    passed=True,
+    owner=None,
+) -> AnalyzeResponse:
     return AnalyzeResponse(
         report_id=report_id,
         target=target,
@@ -21,6 +27,7 @@ def make_response(report_id="r1", target="amc", score=95, passed=True) -> Analyz
         latency_s=4.37,
         model="deepseek-v4-flash-vision-exp",
         regression_detected=False,
+        owner=owner,
     )
 
 
@@ -88,6 +95,53 @@ class TestListAndGet:
 
     def test_get_missing_returns_none(self, store):
         assert store.get_report("nope", is_admin=True) is None
+
+
+class TestOwnerGuardFailClosed:
+    """PR #134 advisory item 1: a blank owner must never act as a report scope.
+
+    ``QAVisualPrincipal`` rejects blank owners, but ``AnalyzeResponse.owner``
+    has no such validator — reports stamped ``owner=""`` can reach disk via
+    direct ``store.save()`` or a buggy producer. The storage guard must
+    therefore fail closed on ANY blank owner (None, "", whitespace) instead
+    of matching blank-scope reads against blank-stamped reports.
+    """
+
+    def test_get_report_with_none_owner_fails_closed(self, store):
+        store.save(make_response(report_id="r-none", target="amc"))
+        with pytest.raises(ValueError):
+            store.get_report("r-none", owner=None, is_admin=False)
+
+    def test_get_report_with_empty_owner_string_fails_closed(self, store):
+        store.save(make_response(report_id="r-blank", target="amc", owner=""))
+        with pytest.raises(ValueError):
+            store.get_report("r-blank", owner="")
+
+    def test_get_report_with_whitespace_owner_fails_closed(self, store):
+        store.save(make_response(report_id="r-space", target="amc", owner="  "))
+        with pytest.raises(ValueError):
+            store.get_report("r-space", owner="  ")
+
+    def test_admin_still_reads_blank_owner_report(self, store):
+        """Admins keep their documented escape hatch for malformed reports."""
+        store.save(make_response(report_id="r-blank", target="amc", owner=""))
+        report = store.get_report("r-blank", is_admin=True)
+        assert report is not None
+        assert report["report_id"] == "r-blank"
+
+    def test_is_admin_true_alone_authorizes_cross_owner_read(self, tmp_path):
+        """PR #134 advisory item 3: is_admin=True by itself lifts owner scoping.
+
+        Standalone by design: own store, own seed, no shared fixtures — the
+        admin authorization contract must not depend on test order or on
+        principals minted by other tests.
+        """
+        store = QAVisualReportStore(reports_dir=str(tmp_path / "qa-visual"))
+        store.save(make_response(report_id="r-alice", target="amc", owner="alice"))
+        report = store.get_report("r-alice", is_admin=True)
+        assert report is not None
+        assert report["report_id"] == "r-alice"
+        assert report["owner"] == "alice"
 
 
 class TestBaseline:

@@ -96,16 +96,19 @@ class QAVisualReportStore:
 
         Fail-closed: callers must state who is asking — an explicit
         ``owner`` to scope the read, or ``is_admin=True`` to lift the
-        scoping. A call with neither is a programming error, so a new
-        caller can never silently read every tenant's reports.
+        scoping. A call with neither, or with a blank owner (``None``,
+        ``""``, whitespace), is a programming error, so a new caller can
+        never silently read every tenant's reports — nor can a blank
+        scope match reports stamped with a blank owner.
 
         Returns ``None`` when no report with that id exists; raises
         ``ReportAccessDenied`` when it exists but belongs to another
         owner (legacy unowned reports are admin-only, as everywhere).
         """
-        if owner is None and not is_admin:
+        # PR #134 advisory item 1: blank owners are not scopes (fail-closed).
+        if not (owner or "").strip() and not is_admin:
             raise ValueError(
-                "get_report() requires an explicit owner or is_admin=True (fail-closed)"
+                "get_report() requires a non-empty owner or is_admin=True (fail-closed)"
             )
         for path in self._dir.glob("*.json") if self._dir.exists() else []:
             report = self._read_report(path)

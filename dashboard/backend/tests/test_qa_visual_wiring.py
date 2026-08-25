@@ -66,6 +66,20 @@ class TestMainAppAuthEnforcement:
         for path in GET_PATHS:
             assert main_client.get(path).status_code in (401, 403), path
 
+    def test_no_credentials_exact_401_under_fastapi_ge_0122(self, main_client):
+        """PR #134 advisory item 2: exact unauthenticated-status pin.
+
+        fastapi>=0.122 changed HTTPBearer (auto_error=True) to answer 401
+        "Not authenticated" for missing credentials — 403 before 0.122.
+        backend requirements pin fastapi==0.122.0, so the exact pin on this
+        stack is 401; if this fails after a fastapi bump/downgrade, the
+        unauthenticated-status semantics regressed and dependent 403 pins
+        must be re-audited.
+        """
+        for path in GET_PATHS:
+            response = main_client.get(path)
+            assert response.status_code == 401, (path, response.status_code)
+
     def test_no_credentials_rejected_analyze(self, main_client):
         response = main_client.post(
             "/api/v1/qa-visual/analyze",
