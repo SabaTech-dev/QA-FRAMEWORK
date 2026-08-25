@@ -20,10 +20,7 @@ import pytest
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
-from src.api.middleware.tenant_context import (
-    TenantContextMiddleware,
-    get_tenant_context,
-)
+from src.api.middleware.tenant_context import TenantContextMiddleware, get_tenant_context
 from src.domain.entities.tenant import Tenant, TenantPlan, TenantStatus
 from src.infrastructure.persistence.tenant_repository import InMemoryTenantRepository
 
