@@ -67,3 +67,7 @@ playwright-report/
 # QA Visual runtime artifacts (reports + hook screenshots)
 reports/qa-visual/
 dashboard/monitoring/alertmanager/.secrets/
+
+# Drift closure (card 290458d4): build-time env + mkdocs output — nunca commit
+dashboard/frontend/.env.production
+site/
