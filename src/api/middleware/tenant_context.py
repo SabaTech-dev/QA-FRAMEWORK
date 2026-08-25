@@ -8,11 +8,12 @@ This middleware:
 """
 
 import logging
+import uuid
 from collections.abc import Callable
 
 from fastapi import HTTPException, Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 
 from src.domain.entities.tenant import Tenant
 from src.infrastructure.persistence.tenant_repository import TenantRepositoryInterface
@@ -117,15 +118,28 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
         # Method 1: Try X-Tenant-ID header
         tenant_id = request.headers.get("X-Tenant-ID")
         if tenant_id:
+            # Fail-closed: reject malformed tenant IDs with 400 instead of
+            # silently continuing (or crashing with 500) on parse errors.
             try:
-                from uuid import UUID
+                tenant_uuid = uuid.UUID(tenant_id)
+            except (ValueError, TypeError, AttributeError) as e:
+                logger.warning(f"Invalid tenant ID in header: {tenant_id!r}, error: {e}")
+                return JSONResponse(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    content={"detail": "Invalid X-Tenant-ID header: must be a valid UUID"},
+                )
 
-                tenant = await self.tenant_repository.get_by_id(UUID(tenant_id))
-                if tenant:
-                    resolved_from = "header"
-                    logger.debug(f"Resolved tenant {tenant.slug} from header")
+            try:
+                tenant = await self.tenant_repository.get_by_id(tenant_uuid)
             except Exception as e:
-                logger.warning(f"Invalid tenant ID in header: {tenant_id}, error: {e}")
+                # Repository failures must never surface as 500 from this
+                # middleware: treat as unresolved tenant (fail-closed below).
+                logger.warning(f"Tenant lookup failed for ID: {tenant_id}, error: {e}")
+                tenant = None
+
+            if tenant:
+                resolved_from = "header"
+                logger.debug(f"Resolved tenant {tenant.slug} from header")
 
         # Method 2: Try subdomain from host
         if not tenant:
@@ -142,18 +156,23 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
         tenant_context = TenantContext(tenant, resolved_from)
         request.state.tenant_context = tenant_context
 
-        # Check if tenant is required but not resolved
+        # Check if tenant is required but not resolved.
+        # NOTE: never raise HTTPException here — BaseHTTPMiddleware sits
+        # outside the app's exception handlers, so raising would surface as
+        # a 500. Return the error response directly instead (fail-closed).
         if self.require_tenant and not tenant_context.is_authenticated:
             logger.warning(f"Tenant required but not resolved for path: {request.url.path}")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Tenant context required"
+            return JSONResponse(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                content={"detail": "Tenant context required"},
             )
 
         # Check if tenant is suspended
         if tenant and tenant.is_suspended():
             logger.warning(f"Tenant {tenant.slug} is suspended")
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Tenant account is suspended"
+            return JSONResponse(
+                status_code=status.HTTP_403_FORBIDDEN,
+                content={"detail": "Tenant account is suspended"},
             )
 
         # Continue processing request
