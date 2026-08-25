@@ -23,8 +23,8 @@ class TestTestCache:
 
     @pytest.fixture
     def redis_url(self):
-        """Get Redis URL from environment or use Railway."""
-        return os.getenv("REDIS_URL", "redis://default:ygZpOipKeuDfOvlxRPrRNGxxeJKsPrPD@centerbeam.proxy.rlwy.net:20994")
+        """Get Redis URL from environment or use local Redis."""
+        return os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
 
     @pytest.fixture
     def mock_redis(self):

@@ -3,11 +3,13 @@ Pytest configuration and fixtures
 
 This file configures pytest to work with the backend module structure.
 """
-import sys
+
 import os
+import sys
 from pathlib import Path
-from dotenv import load_dotenv
 from unittest.mock import MagicMock
+
+from dotenv import load_dotenv
 
 # Mock Redis to avoid connection errors during import
 _mock_redis = MagicMock()
@@ -37,15 +39,14 @@ else:
         load_dotenv(root_env)
         print(f"Loaded environment from: {root_env}")
 
-# Set Railway Redis URL if not already set (fallback for CI/testing)
+# Local Redis fallback for CI/testing (no credentials; redis is mocked in tests)
 if not os.getenv("REDIS_URL"):
-    railway_redis = "redis://default:ygZpOipKeuDfOvlxRPrRNGxxeJKsPrPD@centerbeam.proxy.rlwy.net:20994"
-    os.environ["REDIS_URL"] = railway_redis
-    print("Using Railway Redis URL for testing")
+    os.environ["REDIS_URL"] = "redis://127.0.0.1:6379/0"
 
 print(f"Backend directory: {backend_dir}")
 print(f"Python path: {sys.path[:3]}")  # Show first 3 paths
 
 # Configure logging before any tests run
 from core.logging_config import configure_logging
+
 configure_logging(log_level="WARNING", environment="test")

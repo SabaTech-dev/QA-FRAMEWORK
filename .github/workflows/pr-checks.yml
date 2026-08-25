@@ -175,12 +175,22 @@ jobs:
             --no-cov \
             --junitxml=junit-middleware.xml
 
+      - name: Run dashboard wiring tests
+        if: steps.changed-files.outputs.run_middleware_tests == 'true'
+        run: |
+          cd dashboard/backend
+          python -m pytest tests/test_accuracy_wiring.py tests/test_qa_visual_wiring.py tests/test_qa_visual_feature_flag.py -v \
+            --no-cov \
+            --junitxml=junit-wiring.xml
+
       - name: Upload middleware test results
         if: steps.changed-files.outputs.run_middleware_tests == 'true' && always()
         uses: actions/upload-artifact@v4 # v4.6.2
         with:
           name: middleware-test-results
-          path: dashboard/backend/junit-middleware.xml
+          path: |
+            dashboard/backend/junit-middleware.xml
+            dashboard/backend/junit-wiring.xml
 
   # PR size check
   pr-size-check:

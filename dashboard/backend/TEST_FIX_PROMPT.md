@@ -8,9 +8,9 @@ You're working on QA-FRAMEWORK backend. We fixed Redis connection to use Railway
 - **698 passing (92%)** - These use real Redis correctly
 - **59 failing (8%)** - These expect mocks
 
-## Railway Redis (ALREADY WORKING)
+## Local Redis
 ```
-REDIS_URL=redis://default:ygZpOipKeuDfOvlxRPrRNGxxeJKsPrPD@centerbeam.proxy.rlwy.net:20994
+REDIS_URL=redis://127.0.0.1:6379/0
 ```
 
 Configured in:
