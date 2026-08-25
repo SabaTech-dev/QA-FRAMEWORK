@@ -48,34 +48,32 @@ export default function Layout({ children, sidebarOpen, onSidebarToggle }: Layou
   const toggleHelp = () => setIsHelpOpen(!isHelpOpen)
 
   // Register keyboard shortcuts
-  useKeyboardShortcuts({
-    shortcuts: [
-      {
-        key: '/',
-        description: 'Focus search',
-        action: () => {
-          // Focus search input if exists
-          const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
-          if (searchInput) searchInput.focus();
-        },
+  useKeyboardShortcuts([
+    {
+      key: '/',
+      description: 'Focus search',
+      action: () => {
+        // Focus search input if exists
+        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
+        if (searchInput) searchInput.focus();
       },
-      {
-        key: 'n',
-        description: 'New test',
-        action: () => navigate('/suites'),
-      },
-      {
-        key: 'h',
-        description: 'Go home',
-        action: () => navigate('/'),
-      },
-      {
-        key: '?',
-        description: 'Show shortcuts',
-        action: toggleHelp,
-      },
-    ],
-  });
+    },
+    {
+      key: 'n',
+      description: 'New test',
+      action: () => navigate('/suites'),
+    },
+    {
+      key: 'h',
+      description: 'Go home',
+      action: () => navigate('/'),
+    },
+    {
+      key: '?',
+      description: 'Show shortcuts',
+      action: toggleHelp,
+    },
+  ]);
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },

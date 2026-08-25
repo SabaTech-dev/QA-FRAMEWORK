@@ -247,7 +247,7 @@ export default function Billing() {
     }))
   }
 
-  const plans = (plansData?.plans || defaultPlans).map((plan: any) => ({
+  const plans = (plansData?.data?.plans || defaultPlans).map((plan: any) => ({
     ...plan,
     features: transformFeatures(plan.features)
   }))

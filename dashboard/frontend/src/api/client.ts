@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios, { type AxiosResponse } from 'axios'
 import useAuthStore from '../stores/authStore'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
@@ -121,7 +121,15 @@ export const executionsAPI = {
     apiClient.post(`/executions/${id}/stop`),
 }
 
-export const dashboardAPI = {
+interface DashboardAPI {
+  getStats: () => Promise<AxiosResponse<any, any>>
+  getTrends: (days?: number) => Promise<AxiosResponse<any, any>>
+  getRecentExecutions: (limit?: number) => Promise<AxiosResponse<any, any>>
+  // Backend endpoint not implemented yet; callers must handle absence (getTokenUsage?.()).
+  getTokenUsage?: () => Promise<AxiosResponse<any, any>>
+}
+
+export const dashboardAPI: DashboardAPI = {
   getStats: () =>
     apiClient.get('/dashboard/stats'),
 
