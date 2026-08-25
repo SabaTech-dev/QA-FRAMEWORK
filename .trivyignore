@@ -6,3 +6,20 @@
 #
 # Example:
 # CVE-2024-12345 # Accepted: only affects Windows, we run Linux. Reviewed by security 2026-06-04
+#
+# ⚠️ Deploy gates (deploy-railway.yml / pr-deploy-coolify.yml) are FAIL-CLOSED
+# on CRITICAL findings: they block deploys unless the CVE is waived HERE.
+# Every waiver MUST have a justification and an expiry (# exp:) — expired
+# waivers stop applying automatically and the gate blocks again.
+# Baseline snapshot 2026-08-25 (card 650387a1 / R3): 4 CRITICALs accepted
+# below, all pre-existing on main. Any NEW CRITICAL blocks deploys.
+
+# --- Deploy gate baseline waivers (2026-08-25, devops — card 650387a1) ---
+# exp: 2026-11-23
+CVE-2026-47429 # vitest dev-only tool shipped in frontend prod image (npm ci installs devDeps); fix = drop devDeps from image build. devops 2026-08-25
+# exp: 2026-11-23
+CVE-2024-24790 # esbuild binary (Go stdlib) in frontend image — build-time tool, no runtime exposure. devops 2026-08-25
+# exp: 2026-11-23
+CVE-2025-68121 # esbuild binary (Go stdlib) in frontend image — build-time tool, no runtime exposure. devops 2026-08-25
+# exp: 2026-11-23
+CVE-2025-47241 # browser_use 0.1.8 (backend image) — upgrade path tracked; 90d window. devops 2026-08-25

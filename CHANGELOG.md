@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **Supply-chain R3 — deploy security gates (fail-closed)**: production and
+  preview deploys are now GATED by a blocking `security-gate` job in
+  `deploy-railway.yml` and `pr-deploy-coolify.yml` (card 650387a1):
+  Trivy CRITICAL scans (repo fs incl. dev-deps + backend/frontend images
+  built with the exact deploy build contexts), mandatory CycloneDX SBOM for
+  both deploy artifacts, and SLSA provenance attestation + verification
+  (sigstore via GitHub OIDC; skipped for dependabot PRs where OIDC is
+  restricted — vuln gates still enforced). Known CRITICALs are waived
+  explicitly in `.trivyignore` with justification + expiry (waivers stop
+  applying automatically once expired). If the gate fails, deploy jobs are
+  SKIPPED (fail-closed). Test hooks: `workflow_dispatch` input
+  `force-fail-gate` (Railway) and PR label `gate-force-fail` (Coolify).
+
 - **Auth hardening (cards L-1, L-2, adv-1, JWT edges)**: four fixes on the
   QA Visual auth path. L-1: `get_current_user` (and the optional-auth and
   QA Visual principal paths behind it) now rejects refresh tokens — the
