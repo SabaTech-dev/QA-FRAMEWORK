@@ -32,6 +32,7 @@ from src.infrastructure.qa_visual.analyzer import (
     build_trend_report,
 )
 from src.infrastructure.qa_visual.models import AnalyzeResponse, QAVisualPrincipal
+from src.infrastructure.qa_visual.storage import ReportAccessDenied
 
 logger = logging.getLogger(__name__)
 
@@ -52,22 +53,31 @@ def _owner_scope(principal: QAVisualPrincipal | None) -> str | None:
     """Owner a non-admin principal is scoped to; None sees everything."""
     if principal is None or principal.is_admin:
         return None
+    # JWT edge (b): a blank identity must never become a report scope.
+    if not principal.owner or not principal.owner.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Principal owner must be a non-empty string",
+        )
     return principal.owner
 
 
-def _require_report_access(report: dict, principal: QAVisualPrincipal | None) -> None:
-    """Raise 403 unless the principal owns the report or is an admin.
+def _stamp_owner(principal: QAVisualPrincipal | None) -> str | None:
+    """Owner stamped on newly created reports (analyze).
 
-    S-1R: reports persisted before owner-scoping (owner absent) belong to
-    no regular user, so only admins may read them.
+    Admins without a usable identity produce unowned reports (admin-only
+    reads) instead of reports scoped to a blank owner.
     """
-    if principal is None or principal.is_admin:
-        return
-    if report.get("owner") != principal.owner:
+    if principal is None:
+        return None
+    if not principal.owner or not principal.owner.strip():
+        if principal.is_admin:
+            return None
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not allowed to access this report",
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Principal owner must be a non-empty string",
         )
+    return principal.owner
 
 
 async def _read_capped(upload: UploadFile) -> bytes:
@@ -171,7 +181,7 @@ def create_qa_visual_router(
             response = await get_analyzer().analyze(
                 image_bytes,
                 target=target,
-                owner=principal.owner if principal else None,
+                owner=_stamp_owner(principal),
             )
         except QAVisualAnalysisError as exc:
             # S-3 (CWE-209): full detail goes to server logs only; the HTTP
@@ -211,13 +221,24 @@ def create_qa_visual_router(
         principal: QAVisualPrincipal | None = Depends(principal_dependency),
     ) -> dict:
         """Return one stored report by id (owner or admin only)."""
-        report = get_analyzer().store.get_report(report_id)
+        try:
+            report = get_analyzer().store.get_report(
+                report_id,
+                owner=_owner_scope(principal),
+                # Standalone mounts (no principal) keep their documented
+                # legacy unscoped behaviour: an explicit privileged read.
+                is_admin=principal is None or principal.is_admin,
+            )
+        except ReportAccessDenied:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not allowed to access this report",
+            )
         if report is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Report '{report_id}' not found",
             )
-        _require_report_access(report, principal)
         return report
 
     @router.get("/trends")

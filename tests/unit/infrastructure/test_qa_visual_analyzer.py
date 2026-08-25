@@ -76,7 +76,9 @@ class TestAnalyze:
     @pytest.mark.asyncio
     async def test_report_persisted(self, analyzer, store):
         response = await analyzer.analyze(b"png", target="amc")
-        saved = store.get_report(response.report_id)
+        # analyze() ran without an owner, so the persisted report is
+        # unowned (legacy shape): only an explicit admin read sees it.
+        saved = store.get_report(response.report_id, is_admin=True)
         assert saved is not None
         assert saved["score"] == 95
 

@@ -7,7 +7,7 @@ is prompted to return (validated in Fase A: 5/5 literal texts, 0 hallucinations)
 from datetime import UTC, datetime
 from enum import Enum
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class Severity(str, Enum):
@@ -111,6 +111,16 @@ class QAVisualPrincipal(BaseModel):
 
     owner: str
     is_admin: bool = False
+
+    @field_validator("owner")
+    @classmethod
+    def _owner_not_blank(cls, value: str) -> str:
+        # JWT edge (b): an empty identity must never become a report
+        # scope (empty-owner reports would be readable by empty-owner
+        # principals).
+        if not value or not value.strip():
+            raise ValueError("owner must be a non-empty string")
+        return value
 
 
 class TrendPoint(BaseModel):

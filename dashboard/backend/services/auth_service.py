@@ -27,6 +27,11 @@ logger = get_logger(__name__)
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# L-1: only these values of the ``type`` claim may authenticate access
+# endpoints. ``None`` keeps tokens minted before the type tag valid;
+# anything else (``refresh``, unknown types) must use its own flow.
+ACCESS_TOKEN_TYPES = (None, "access")
+
 # Security scheme
 security = HTTPBearer()
 
@@ -52,7 +57,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     else:
         expire = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
 
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "type": "access"})
     encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
     return encoded_jwt
 
@@ -103,6 +108,14 @@ async def get_current_user(
         if username is None:
             logger.warning("JWT validation failed - no subject claim")
             raise credentials_exception
+        # L-1: a refresh token (or any non-access type) must never
+        # authenticate an access-token endpoint.
+        if payload.get("type") not in ACCESS_TOKEN_TYPES:
+            logger.warning(
+                "JWT validation failed - invalid token type",
+                token_type=payload.get("type"),
+            )
+            raise credentials_exception
     except JWTError as e:
         logger.warning("JWT validation failed", error=str(e))
         raise credentials_exception
@@ -113,6 +126,16 @@ async def get_current_user(
     if user is None:
         logger.warning("JWT validation failed - user not found", username=username)
         raise credentials_exception
+
+    # L-2: deactivated users lose API access immediately, mirroring the
+    # refresh and optional paths.
+    if not user.is_active:
+        logger.warning("JWT validation failed - user inactive", username=username, user_id=user.id)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is inactive",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     logger.debug("JWT token validated successfully", username=username, user_id=user.id)
     return user
@@ -219,6 +242,14 @@ async def get_qa_visual_principal(
     ``owner`` is the username reports are scoped to; ``is_superuser`` is
     the dashboard's existing admin role and bypasses the scoping.
     """
+    # JWT edge (b): an empty identity must never scope reports to an
+    # empty owner; reject it before it reaches the module.
+    if not current_user.username or not current_user.username.strip():
+        logger.warning("QA Visual principal rejected - empty username", user_id=current_user.id)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Authenticated user has no usable username to scope reports",
+        )
     return QAVisualPrincipal(
         owner=current_user.username,
         is_admin=bool(current_user.is_superuser),
@@ -246,6 +277,11 @@ async def get_current_user_optional(
         )
         username: str = payload.get("sub")
         if username is None:
+            return None
+        # L-1: refresh tokens are anonymous on optional endpoints, same
+        # rule as get_current_user.
+        if payload.get("type") not in ACCESS_TOKEN_TYPES:
+            logger.debug("Optional auth - non-access token type, returning None")
             return None
 
         result = await db.execute(select(User).where(User.username == username))

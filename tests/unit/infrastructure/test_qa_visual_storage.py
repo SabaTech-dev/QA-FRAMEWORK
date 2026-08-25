@@ -82,12 +82,12 @@ class TestListAndGet:
 
     def test_get_by_id(self, store):
         store.save(make_response(report_id="wanted", target="amc"))
-        report = store.get_report("wanted")
+        report = store.get_report("wanted", is_admin=True)
         assert report is not None
         assert report["report_id"] == "wanted"
 
     def test_get_missing_returns_none(self, store):
-        assert store.get_report("nope") is None
+        assert store.get_report("nope", is_admin=True) is None
 
 
 class TestBaseline:

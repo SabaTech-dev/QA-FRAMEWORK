@@ -22,13 +22,13 @@ level in tests/unit/infrastructure/test_qa_visual_owner_scoping.py).
 """
 
 import importlib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from database import get_db_session
 from fastapi.testclient import TestClient
 from models import User
-from services.auth_service import create_access_token
+from services.auth_service import create_access_token, create_refresh_token
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from src.infrastructure.qa_visual.models import AnalyzeResponse, QAAnalysis
@@ -126,6 +126,13 @@ async def auth_headers(qa_app):
                     is_active=True,
                     is_superuser=True,
                 ),
+                User(
+                    username="dormant",
+                    email="dormant@example.com",
+                    hashed_password="x",
+                    is_active=False,
+                    is_superuser=False,
+                ),
             ]
         )
         await session.commit()
@@ -140,6 +147,16 @@ async def auth_headers(qa_app):
             "alice": {"Authorization": f"Bearer {create_access_token({'sub': 'alice'})}"},
             "bob": {"Authorization": f"Bearer {create_access_token({'sub': 'bob'})}"},
             "admin": {"Authorization": f"Bearer {create_access_token({'sub': 'root'})}"},
+            # L-2: valid credentials for a deactivated account.
+            "dormant": {"Authorization": f"Bearer {create_access_token({'sub': 'dormant'})}"},
+            # L-1: valid refresh token minted for alice.
+            "alice_refresh": {"Authorization": f"Bearer {create_refresh_token({'sub': 'alice'})}"},
+            # JWT edge (a): well-formed but expired access token.
+            "expired": {
+                "Authorization": (
+                    f"Bearer {create_access_token({'sub': 'alice'}, expires_delta=timedelta(minutes=-5))}"
+                )
+            },
         }
     finally:
         qa_app.dependency_overrides.pop(get_db_session, None)
@@ -240,3 +257,48 @@ class TestPrincipalAdapter:
         principal = await get_qa_visual_principal(current_user=user)
         assert principal.owner == "root"
         assert principal.is_admin is True
+
+
+class TestAuthHardeningMatrix:
+    """Auth regression matrix (cards L-1, L-2, JWT edges) on the real app.
+
+    Rows: valid access / refresh-as-access / expired / inactive / admin.
+    """
+
+    def test_valid_access_token_still_authenticates(self, client, auth_headers):
+        response = client.get("/api/v1/qa-visual/reports", headers=auth_headers["alice"])
+        assert response.status_code == 200
+
+    def test_refresh_token_as_access_rejected_401(self, client, auth_headers):
+        response = client.get("/api/v1/qa-visual/reports", headers=auth_headers["alice_refresh"])
+        assert response.status_code == 401
+
+    def test_refresh_token_on_single_report_rejected_401(self, client, auth_headers):
+        response = client.get(
+            "/api/v1/qa-visual/reports/rep-alice-1", headers=auth_headers["alice_refresh"]
+        )
+        assert response.status_code == 401
+
+    def test_expired_token_rejected_401_not_500(self, client, auth_headers):
+        response = client.get("/api/v1/qa-visual/reports", headers=auth_headers["expired"])
+        assert response.status_code == 401
+
+    def test_inactive_user_rejected_403(self, client, auth_headers):
+        response = client.get("/api/v1/qa-visual/reports", headers=auth_headers["dormant"])
+        assert response.status_code in (401, 403)
+
+    def test_admin_access_token_still_sees_all(self, client, auth_headers):
+        body = client.get("/api/v1/qa-visual/reports", headers=auth_headers["admin"]).json()
+        assert len(body) == 3
+
+    def test_refresh_token_on_optional_endpoint_is_anonymous(self, client, auth_headers):
+        """L-1 on get_current_user_optional: a refresh token on the
+        anonymous-friendly feedback endpoint must not authenticate."""
+        response = client.post(
+            "/api/v1/feedback",
+            json={"type": "bug", "title": "x", "description": "y"},
+            headers=auth_headers["alice_refresh"],
+        )
+        assert response.status_code != 500
+        if response.status_code == 201:
+            assert response.json().get("user_id") is None
