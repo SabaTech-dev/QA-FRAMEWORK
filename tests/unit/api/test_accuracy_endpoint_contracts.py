@@ -264,9 +264,7 @@ class _FailingProvider:
     """IResponseProvider whose gateway call fails (raises provider error)."""
 
     def get_response(self, prompt: str, model: str = "") -> str:
-        from src.infrastructure.accuracy_testing.llm_gateway_provider import (
-            LLMGatewayProviderError,
-        )
+        from src.infrastructure.accuracy_testing.llm_gateway_provider import LLMGatewayProviderError
 
         raise LLMGatewayProviderError("Gateway HTTP 500")
 
