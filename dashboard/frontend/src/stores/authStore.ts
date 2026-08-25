@@ -5,6 +5,9 @@ interface User {
   id: number
   username: string
   email: string
+  full_name?: string | null
+  subscription_plan?: string | null
+  subscription_status?: string | null
   is_active: boolean
   is_superuser: boolean
   onboarding_completed?: boolean

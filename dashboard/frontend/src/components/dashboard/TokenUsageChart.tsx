@@ -103,7 +103,10 @@ export default function TokenUsageChart({ data: propData, loading }: TokenUsageC
   // Use provided data or fetch from API
   const { data: apiData, isLoading } = useQuery(
     'token-usage',
-    () => dashboardAPI.getTokenUsage?.() || Promise.resolve({ data: [] }),
+    async (): Promise<{ data: TokenUsageData[] }> => {
+      const response = await dashboardAPI.getTokenUsage?.()
+      return response ?? { data: [] }
+    },
     { enabled: !propData }
   )
 

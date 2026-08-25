@@ -81,12 +81,14 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   // Toggle between light, dark, and system
   const toggleTheme = useCallback(() => {
-    setMode((prevMode) => {
-      if (prevMode === 'light') return 'dark'
-      if (prevMode === 'dark') return 'system'
-      return 'light'
-    })
-  }, [setMode])
+    if (mode === 'light') {
+      setMode('dark')
+    } else if (mode === 'dark') {
+      setMode('system')
+    } else {
+      setMode('light')
+    }
+  }, [mode, setMode])
 
   // Memoize theme object
   const theme = useMemo(() => {

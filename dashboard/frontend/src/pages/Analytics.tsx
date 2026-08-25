@@ -6,7 +6,6 @@ import {
   Typography,
   Box,
   Chip,
-  CircularProgress,
   Table,
   TableBody,
   TableCell,
@@ -16,7 +15,6 @@ import {
   Paper,
   useTheme,
   alpha,
-  Tooltip,
 } from '@mui/material'
 import {
   TrendingUp,
@@ -41,7 +39,7 @@ import {
 } from 'chart.js'
 import { Line, Bar, Doughnut } from 'react-chartjs-2'
 import { analyticsAPI } from '../api/client'
-import SkeletonLoader, { CardSkeleton, ChartSkeleton } from '../components/common/SkeletonLoader'
+import { CardSkeleton, ChartSkeleton } from '../components/common/SkeletonLoader'
 
 ChartJS.register(
   CategoryScale,
@@ -65,8 +63,6 @@ interface KPICardProps {
 }
 
 function KPICard({ title, value, trend, icon, color }: KPICardProps) {
-  const theme = useTheme()
-  
   return (
     <Card sx={{ height: '100%' }}>
       <CardContent>
@@ -119,7 +115,7 @@ function KPICard({ title, value, trend, icon, color }: KPICardProps) {
 export default function Analytics() {
   const theme = useTheme()
 
-  const { data: dashboard, isLoading: dashboardLoading } = useQuery('analytics-dashboard', () =>
+  const { isLoading: dashboardLoading } = useQuery('analytics-dashboard', () =>
     analyticsAPI.getDashboard()
   )
 
@@ -164,11 +160,10 @@ export default function Analytics() {
     )
   }
 
-  const dashboardData = dashboard?.data?.data || {}
   const usersData = users?.data?.data || {}
   const testsData = tests?.data?.data || {}
   const revenueData = revenue?.data?.data || {}
-  const featuresData = features?.data?.data || {}
+  const featuresData: Record<string, { usage_count?: number }> = features?.data?.data || {}
 
   // KPI Metrics
   const totalTests = testsData.total_executions || 0

@@ -1,4 +1,4 @@
-"""Frontend WebSocket client for real-time notifications."""
+// Frontend WebSocket client for real-time notifications.
 import { useEffect, useRef, useState } from 'react';
 
 interface Notification {
