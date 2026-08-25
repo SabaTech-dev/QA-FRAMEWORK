@@ -10,10 +10,21 @@ from typing import List
 from database import get_db_session
 from services.oauth_service import oauth_service, OAuthService
 from services.api_key_service import api_key_service, get_user_from_api_key
-from services.auth_service import login_for_access_token, get_current_user
+from services.auth_service import (
+    login_for_access_token,
+    get_current_user,
+    revoke_refresh_token,
+)
 from schemas import (
-    LoginRequest, TokenResponse, OAuthLoginRequest, OAuthUrlResponse,
-    ApiKeyCreate, ApiKeyResponse, UserCreate, UserResponse, RefreshTokenRequest
+    LoginRequest,
+    TokenResponse,
+    OAuthLoginRequest,
+    OAuthUrlResponse,
+    ApiKeyCreate,
+    ApiKeyResponse,
+    UserCreate,
+    UserResponse,
+    RefreshTokenRequest,
 )
 from models import User
 from core.logging_config import get_logger
@@ -31,20 +42,18 @@ async def login(login_request: LoginRequest, db: AsyncSession = Depends(get_db_s
 
 # User Registration
 @router.post("/register", response_model=UserResponse)
-async def register(
-    user_create: UserCreate,
-    db: AsyncSession = Depends(get_db_session)
-):
+async def register(user_create: UserCreate, db: AsyncSession = Depends(get_db_session)):
     """
     Register a new user with email/password
-    
+
     Args:
         user_create: User registration data (email, username, password)
-        
+
     Returns:
         UserResponse with user info (without password)
     """
     from services.user_service import create_user_service
+
     return await create_user_service(user_create, db)
 
 
@@ -52,20 +61,23 @@ async def register(
 @router.get("/oauth/{provider}/url", response_model=OAuthUrlResponse)
 async def get_oauth_url(provider: str):
     import secrets
+
     state = secrets.token_urlsafe(16)
-    
+
     if provider == "google":
         url = OAuthService.get_google_auth_url(state)
     elif provider == "github":
         url = OAuthService.get_github_auth_url(state)
     else:
         raise HTTPException(status_code=400, detail=f"Unsupported provider: {provider}")
-    
+
     return OAuthUrlResponse(provider=provider, authorization_url=url, state=state)
 
 
 @router.post("/oauth/callback", response_model=TokenResponse)
-async def oauth_callback(oauth_request: OAuthLoginRequest, db: AsyncSession = Depends(get_db_session)):
+async def oauth_callback(
+    oauth_request: OAuthLoginRequest, db: AsyncSession = Depends(get_db_session)
+):
     return await oauth_service.oauth_login(db, oauth_request)
 
 
@@ -76,7 +88,7 @@ async def oauth_callback(oauth_request: OAuthLoginRequest, db: AsyncSession = De
 async def create_api_key(
     key_request: ApiKeyCreate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_session)
+    db: AsyncSession = Depends(get_db_session),
 ):
     """Create API key for current user (REQUIRES JWT authentication)"""
     return await api_key_service.create_api_key(db, current_user.id, key_request)
@@ -84,8 +96,7 @@ async def create_api_key(
 
 @router.get("/api-keys", response_model=List[ApiKeyResponse])
 async def list_api_keys(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_session)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_session)
 ):
     """List API keys for current user (REQUIRES JWT authentication)"""
     return await api_key_service.list_api_keys(db, current_user.id)
@@ -95,7 +106,7 @@ async def list_api_keys(
 async def revoke_api_key(
     key_id: str,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_session)
+    db: AsyncSession = Depends(get_db_session),
 ):
     """Revoke API key for current user (REQUIRES JWT authentication)"""
     success = await api_key_service.revoke_api_key(db, current_user.id, key_id)
@@ -107,21 +118,32 @@ async def revoke_api_key(
 # Session Management
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh_token(
-    refresh_request: RefreshTokenRequest,
-    db: AsyncSession = Depends(get_db_session)
+    refresh_request: RefreshTokenRequest, db: AsyncSession = Depends(get_db_session)
 ):
     """Refresh access token using refresh token"""
     from services.auth_service import refresh_access_token
-    
+
     return await refresh_access_token(refresh_request.refresh_token, db)
 
 
+@router.post("/revoke")
+async def revoke_token(refresh_request: RefreshTokenRequest):
+    """Explicit logout: revoke a refresh token server-side (RFC 7009-style).
+
+    The presented refresh token is denylisted and its token family
+    tombstoned, so rotated descendants die too. Idempotent: unknown or
+    already-invalid tokens still return 200 (they reveal nothing).
+    """
+    revoked = await revoke_refresh_token(refresh_request.refresh_token)
+    if revoked:
+        return {"message": "Refresh token revoked", "revoked": True}
+    return {"message": "No refresh token revoked (unknown or expired)", "revoked": False}
+
+
 @router.post("/logout")
-async def logout(
-    current_user: User = Depends(get_current_user)
-):
+async def logout(current_user: User = Depends(get_current_user)):
     """Logout current user (client should discard token)"""
     logger.info("User logged out", user_id=current_user.id, username=current_user.username)
-    # Note: JWT tokens are stateless, so logout is handled client-side by discarding the token
-    # For more advanced logout (token blacklist), implement Redis-based token blacklist
+    # Server-side revocation of the refresh token family lives in
+    # POST /auth/revoke; this endpoint remains the client-side discard.
     return {"message": "Logout successful. Please discard your tokens."}
