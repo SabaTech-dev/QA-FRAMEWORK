@@ -17,6 +17,12 @@ _mock_redis.Redis = MagicMock(return_value=MagicMock(ping=MagicMock(return_value
 _mock_redis.from_url = MagicMock(return_value=MagicMock(ping=MagicMock(return_value=True)))
 sys.modules.setdefault("redis", _mock_redis)
 sys.modules.setdefault("redis.asyncio", MagicMock())
+# Keep ``from redis.exceptions import RedisError`` importable under the
+# mock (used by the refresh-token store); Exception keeps except-clauses
+# functional. Suites that need the REAL client pop these entries first.
+_mock_exceptions = MagicMock()
+_mock_exceptions.RedisError = Exception
+sys.modules.setdefault("redis.exceptions", _mock_exceptions)
 
 # Add the backend directory to Python path
 backend_dir = Path(__file__).parent.parent

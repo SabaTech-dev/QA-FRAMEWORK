@@ -2,10 +2,17 @@
 Authentication Service
 
 Provides JWT token generation and validation, password hashing, and user authentication.
+
+Refresh tokens rotate on every use (OWASP API2): each carries a unique
+``jti`` plus a ``fam`` (family) identifier, consumed tokens are denied in
+Redis until their own expiry, and replaying a consumed token revokes the
+whole family with a security alarm.
 """
 
+import time
 from datetime import datetime, timedelta
 from typing import Optional
+from uuid import uuid4
 
 from database import get_db_session
 from fastapi import Depends, HTTPException, status
@@ -20,12 +27,43 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from config import settings
 from core.logging_config import get_logger, set_request_id
 from src.infrastructure.qa_visual.models import QAVisualPrincipal
+from src.infrastructure.refresh_tokens.store import (
+    RefreshTokenStore,
+    TokenStoreUnavailableError,
+)
 
 # Initialize logger
 logger = get_logger(__name__)
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Refresh token rotation constants (card 3ae2e5c1, F-2 / OWASP API2)
+REFRESH_TOKEN_LIFETIME = timedelta(days=7)
+# A family tombstone only needs to outlive the longest-lived member of the
+# family, which is bounded by the refresh token lifetime itself.
+FAMILY_REVOCATION_TTL_SECONDS = int(REFRESH_TOKEN_LIFETIME.total_seconds())
+
+_refresh_token_store: RefreshTokenStore | None = None
+
+
+def _redis_url_from_settings() -> str:
+    """Build the Redis URL from environment-driven settings only.
+
+    Credentials are never hardcoded: REDIS_PASSWORD comes exclusively from
+    the environment (unset for local/CI deployments on 127.0.0.1).
+    """
+    password_part = f":{settings.redis_password}@" if settings.redis_password else ""
+    return f"redis://{password_part}{settings.redis_host}:{settings.redis_port}/0"
+
+
+def get_refresh_token_store() -> RefreshTokenStore:
+    """Lazily create the shared refresh token store (Redis denylist)."""
+    global _refresh_token_store
+    if _refresh_token_store is None:
+        _refresh_token_store = RefreshTokenStore(url=_redis_url_from_settings())
+    return _refresh_token_store
+
 
 # L-1: only these values of the ``type`` claim may authenticate access
 # endpoints. ``None`` keeps tokens minted before the type tag valid;
@@ -163,24 +201,55 @@ async def login_for_access_token(auth_request: LoginRequest, db: AsyncSession) -
     )
 
 
-def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """Create a refresh token with longer expiry"""
+def create_refresh_token(
+    data: dict,
+    expires_delta: Optional[timedelta] = None,
+    family_id: str | None = None,
+) -> str:
+    """Create a rotating refresh token with a unique ``jti`` per emission.
+
+    Every token also carries a ``fam`` (family) identifier: fresh at login,
+    inherited across rotations so a detected reuse can revoke the whole
+    family (OWASP API2).
+    """
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        # Default refresh token expiry: 7 days
-        expire = datetime.utcnow() + timedelta(days=7)
+        expire = datetime.utcnow() + REFRESH_TOKEN_LIFETIME
 
-    to_encode.update({"exp": expire, "type": "refresh"})
+    to_encode.update(
+        {
+            "exp": expire,
+            "type": "refresh",
+            "jti": str(uuid4()),
+            "fam": family_id or str(uuid4()),
+        }
+    )
     encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
     logger.debug("Refresh token created", expiry=expire.isoformat())
     return encoded_jwt
 
 
-async def refresh_access_token(refresh_token: str, db: AsyncSession) -> TokenResponse:
-    """Refresh access token using refresh token"""
+async def refresh_access_token(
+    refresh_token: str,
+    db: AsyncSession,
+    store: RefreshTokenStore | None = None,
+) -> TokenResponse:
+    """Rotate a refresh token: issue a new pair and deny the consumed one.
+
+    OWASP API2 hardening (card 3ae2e5c1, F-2):
+
+    - every successful refresh mints a NEW access + refresh token pair and
+      denylists the consumed ``jti`` in Redis (TTL = remaining lifetime);
+    - replaying a consumed token answers 401, revokes its whole family and
+      raises a security alarm log;
+    - tokens from an already-revoked family are rejected outright;
+    - if the Redis store is unavailable the refresh fails CLOSED (503):
+      a denylist that cannot be checked must not be bypassed.
+    """
     logger.info("Refreshing access token")
+    token_store = store if store is not None else get_refresh_token_store()
 
     try:
         payload = jwt.decode(
@@ -219,11 +288,67 @@ async def refresh_access_token(refresh_token: str, db: AsyncSession) -> TokenRes
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Create new access token
+        jti = payload.get("jti")
+        family_id = payload.get("fam")
+
+        # Family already revoked: any presentation is a replay attempt.
+        if family_id and await token_store.is_family_revoked(family_id):
+            logger.error(
+                "SECURITY: refresh token presented for revoked family "
+                "(possible replay or stolen token)",
+                username=username,
+                jti=jti,
+                fam=family_id,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid refresh token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # Reuse detection: atomically consume the jti. If it was already
+        # consumed (SET-NX lost the race or an outright replay), revoke
+        # the whole family and raise the security alarm.
+        if jti is not None:
+            exp = payload.get("exp")
+            remaining_seconds = max(1, int(exp - time.time())) if exp else 1
+            consumed = await token_store.try_consume_jti(jti, ttl_seconds=remaining_seconds)
+            if not consumed:
+                if family_id:
+                    await token_store.revoke_family(
+                        family_id, ttl_seconds=FAMILY_REVOCATION_TTL_SECONDS
+                    )
+                logger.error(
+                    "SECURITY: refresh token reuse detected - token family revoked",
+                    username=username,
+                    jti=jti,
+                    fam=family_id,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid refresh token",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+        if jti is None:
+            # Tokens minted before rotation shipped carry no jti; upgrade
+            # them once (they cannot be denylisted, but they still expire).
+            logger.warning(
+                "Legacy refresh token without jti accepted for one-time upgrade",
+                username=username,
+            )
+
+        # ROTATION complete: the consumed jti is denied until its own
+        # expiry; mint a fresh pair (same family, new jti).
+        new_refresh = create_refresh_token({"sub": user.username}, family_id=family_id)
         access_token = create_access_token(data={"sub": user.username})
         logger.info("Access token refreshed successfully", username=username)
 
-        return TokenResponse(access_token=access_token, token_type="bearer")
+        return TokenResponse(
+            access_token=access_token,
+            token_type="bearer",
+            refresh_token=new_refresh,
+        )
 
     except JWTError as e:
         logger.warning("Refresh token validation failed", error=str(e))
@@ -231,6 +356,64 @@ async def refresh_access_token(refresh_token: str, db: AsyncSession) -> TokenRes
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+    except TokenStoreUnavailableError:
+        # Fail CLOSED: without the denylist, reuse cannot be detected.
+        logger.error("Token store unavailable - refusing refresh (fail closed)")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Token store unavailable",
+        )
+
+
+async def revoke_refresh_token(
+    refresh_token: str,
+    store: RefreshTokenStore | None = None,
+) -> bool:
+    """Explicitly revoke a refresh token (RFC 7009-style logout).
+
+    Revoking the presented token also tombstones its family, so every
+    descendant from earlier rotations dies with it. Invalid, expired or
+    legacy (pre-``jti``) tokens are not errors: the call is idempotent
+    and simply reports that nothing was revoked.
+    """
+    token_store = store if store is not None else get_refresh_token_store()
+    try:
+        try:
+            payload = jwt.decode(
+                refresh_token,
+                settings.secret_key,
+                algorithms=[settings.algorithm],
+            )
+        except JWTError:
+            logger.info("Revoke requested for invalid refresh token - ignored")
+            return False
+
+        if payload.get("type") != "refresh":
+            logger.info("Revoke requested for non-refresh token - ignored")
+            return False
+
+        jti = payload.get("jti")
+        family_id = payload.get("fam")
+
+        if not jti:
+            logger.warning(
+                "Legacy refresh token cannot be revoked server-side",
+                username=payload.get("sub"),
+            )
+            return False
+
+        remaining_seconds = max(1, int(payload.get("exp", time.time() + 1) - time.time()))
+        await token_store.deny_jti(jti, ttl_seconds=remaining_seconds)
+        if family_id:
+            await token_store.revoke_family(family_id, ttl_seconds=FAMILY_REVOCATION_TTL_SECONDS)
+        logger.info("Refresh token revoked", username=payload.get("sub"), jti=jti)
+        return True
+    except TokenStoreUnavailableError:
+        logger.error("Token store unavailable during revoke")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Token store unavailable",
         )
 
 

@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **Refresh token rotation + reuse detection (card 3ae2e5c1, finding F-2,
+  OWASP API2)**: new self-contained module
+  `src/infrastructure/refresh_tokens` (vendored verbatim into
+  `dashboard/backend/src/infrastructure/refresh_tokens` with a parity
+  guard test, same pattern as `qa_visual`). Refresh tokens now carry a
+  unique `jti` per emission plus a `fam` (family) identifier. Every
+  successful refresh rotates the pair (new access + new refresh) and
+  atomically consumes the old `jti` in Redis (SET NX EX, TTL = remaining
+  token lifetime). Replaying a consumed token answers 401, revokes the
+  whole token family (descendants included) and raises a SECURITY alarm
+  log; tokens from a revoked family are rejected outright. Explicit
+  logout via `POST /auth/revoke` (RFC 7009-style, idempotent). Redis
+  connection details come exclusively from environment settings — no
+  hardcoded credentials. If Redis is unavailable, refresh fails CLOSED
+  (503) so the denylist cannot be bypassed. Legacy pre-`jti` tokens are
+  upgraded once and keep working until their own expiry.
+
 - **Supply-chain R3 — deploy security gates (fail-closed)**: production and
   preview deploys are now GATED by a blocking `security-gate` job in
   `deploy-railway.yml` and `pr-deploy-coolify.yml` (card 650387a1):

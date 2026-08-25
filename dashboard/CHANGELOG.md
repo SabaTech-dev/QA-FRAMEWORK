@@ -8,6 +8,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Security
+#### Refresh Token Rotation (card 3ae2e5c1, F-2 / OWASP API2)
+- **Rotating refresh tokens with reuse detection**: `services/auth_service.py`
+  mints refresh tokens with a unique `jti` and a `fam` (family) claim via
+  the new vendored `src/infrastructure/refresh_tokens` store (Redis-backed
+  jti denylist + family tombstones; parity-guarded against the repo-level
+  module)
+  - `POST /auth/refresh` now ROTATES: returns a new access + refresh pair,
+    atomically consumes the old `jti` (SET NX EX, TTL = remaining lifetime)
+  - REUSE DETECTION: replaying a consumed token returns 401, revokes the
+    entire token family and logs a SECURITY alarm; members of a revoked
+    family are always rejected
+  - New `POST /auth/revoke`: explicit server-side logout (RFC 7009-style,
+    idempotent; invalid/expired tokens still return 200)
+  - Fail-closed: refresh answers 503 when Redis is unavailable (the
+    denylist can never be bypassed by an outage)
+  - Legacy tokens without `jti` are upgraded once and expire naturally
+  - `tests/conftest.py`: the global redis mock now keeps
+    `redis.exceptions` importable (also un-breaks 10 pre-existing
+    `test_test_cache.py` failures)
+  - Redis credentials come only from env (`REDIS_HOST`/`REDIS_PORT`/
+    `REDIS_PASSWORD`); tests use local `127.0.0.1:6379` DB 15 with a
+    dedicated prefix and skip when Redis is absent
+
 #### Secrets Remediation
 - **Removed hardcoded Railway Redis credentials from the repository**: the
   production credential was embedded in test fixtures and docs
