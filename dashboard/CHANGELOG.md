@@ -5,6 +5,37 @@ All notable changes to the QA-Framework Dashboard project will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+#### Secrets Remediation
+- **Removed hardcoded Railway Redis credentials from the repository**: the
+  production credential was embedded in test fixtures and docs
+  - `backend/tests/conftest.py`: REDIS_URL fallback now uses local Redis
+    (`redis://127.0.0.1:6379/0`); redis stays mocked in tests, so no real
+    connection is attempted
+  - `backend/tests/infrastructure/test_test_cache.py` and
+    `test_test_cache_backup.py`: fixture default switched to local Redis
+  - `backend/TEST_FIX_PROMPT.md`: example REDIS_URL switched to local Redis
+  - NOTE: the credential remains in git history prior to this change and must
+    be rotated on the Railway side
+
+### Fixed
+#### Dependencies
+- **Bumped FastAPI 0.115.4 -> 0.122.0 with Starlette >= 0.42**: FastAPI <= 0.121
+  returns 403 Forbidden (instead of 401 Unauthorized) when `HTTPBearer` finds
+  no credentials; 0.122.0 introduced `HTTPBase.make_not_authenticated_error()`
+  answering 401 with `WWW-Authenticate`
+  - Unblocked `test_accuracy_mounted_rejects_unauthenticated` and
+    `test_accuracy_mount_with_provider_env_assembles` (wiring suite back to 6/6)
+
+### Changed
+#### CI
+- **Dashboard wiring suites now run in PR checks**: the
+  `dashboard-middleware-tests` job (required check) additionally runs
+  `test_accuracy_wiring.py`, `test_qa_visual_wiring.py` and
+  `test_qa_visual_feature_flag.py` and uploads their JUnit report
+
 ## [0.3.0] - 2026-02-13
 
 ### Fixed
