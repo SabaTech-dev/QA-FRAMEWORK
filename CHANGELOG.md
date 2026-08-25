@@ -30,6 +30,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Accuracy response provider (card 2f9afe89)**: real
+  `IResponseProvider` implementation (`LLMGatewayResponseProvider`)
+  backed by an OpenAI-compatible LLM gateway, so `POST
+  /accuracy/sessions` returns 200 with a provider configured instead of
+  503. Deploy config via `ACCURACY_PROVIDER_API_KEY` (fallback
+  `OPENCODE_GO_API_KEY`) plus optional `ACCURACY_PROVIDER_BASE_URL`,
+  `ACCURACY_PROVIDER_MODEL`, `ACCURACY_PROVIDER_TIMEOUT_S`,
+  `ACCURACY_PROVIDER_MAX_TOKENS`; no key → provider stays off and the
+  explicit 503 remains (fail-closed by omission). Injectable HTTP client
+  keeps unit tests network-free; provider failures map to 502 with a
+  sanitized detail (CWE-209). Vendored copy synced (vendor-parity test)
+  and wired in `dashboard/backend/main.py`. Docs in
+  `docs/accuracy-testing.md`.
 - **Accuracy testing API wiring (card c9825844)**: the accuracy_testing
   module (merged from cards 72f97f1b/ca3090d5) is mounted in the dashboard
   backend behind JWT auth, opt-in via `ACCURACY_TESTING_ENABLED=1` with

@@ -69,12 +69,64 @@ question/ground-truth string or forbidden key appears in any response.
 backwards compatibility; the rule-based evaluator always threads the
 benchmark's own threshold).
 
+## Response provider (card 2f9afe89)
+
+`POST /accuracy/sessions` needs actual AI responses. The real provider —
+`LLMGatewayResponseProvider` — calls an OpenAI-compatible chat
+completions gateway (same gateway family as `qa_visual`, pattern not
+shared code):
+
+- **Sync by design**: `IResponseProvider.get_response` is a sync
+  protocol and the endpoints are sync handlers (FastAPI threadpool).
+- **Injectable HTTP client**: unit tests pass an `httpx.Client` with a
+  `MockTransport`; no test touches the network.
+- **No leakage**: the provider only ever receives `benchmark.question`
+  (never ground truth), forwarded as-is with a neutral legal-assistant
+  system prompt.
+- **Fail-closed by omission**: `create_response_provider_from_env()`
+  returns `None` when no API key is configured, so POST /sessions keeps
+  its explicit 503 "no provider configured" signal.
+- **Error semantics**: gateway failures raise `LLMGatewayProviderError`
+  with a sanitized message (status/category only — upstream bodies go
+  to server logs, CWE-209); the endpoint maps it to **502 Bad Gateway**
+  with a generic detail. An empty completion (`""`) is returned verbatim
+  as a measurable bad answer.
+
 ## Configuration
 
 | Variable | Default | Description |
 |---|---|---|
 | `ACCURACY_TESTING_ENABLED` | unset | Opt-in mount of the accuracy router (dashboard backend) |
 | `ACCURACY_SPLIT_SECRET` | — | Platform secret for per-tenant salt derivation (required when enabled) |
+| `ACCURACY_PROVIDER_API_KEY` | fallback `OPENCODE_GO_API_KEY` | LLM gateway key; absent key → provider stays off → 503 |
+| `ACCURACY_PROVIDER_BASE_URL` | `https://opencode.ai/zen/go/v1/chat/completions` | OpenAI-compatible chat completions endpoint |
+| `ACCURACY_PROVIDER_MODEL` | `deepseek-v4-flash-vision-exp` | Model id under test (overridable per session via `ai_model`) |
+| `ACCURACY_PROVIDER_TIMEOUT_S` | `60` | Per-request timeout in seconds (invalid values fall back) |
+| `ACCURACY_PROVIDER_MAX_TOKENS` | `1024` | Completion cap |
+
+## Trying it out
+
+Deploy env (dashboard backend):
+
+```bash
+export ACCURACY_TESTING_ENABLED=1
+export ACCURACY_SPLIT_SECRET="<platform-secret>"
+export ACCURACY_PROVIDER_API_KEY="<gateway-key>"   # or OPENCODE_GO_API_KEY
+# optional overrides:
+# ACCURACY_PROVIDER_MODEL, ACCURACY_PROVIDER_BASE_URL,
+# ACCURACY_PROVIDER_TIMEOUT_S, ACCURACY_PROVIDER_MAX_TOKENS
+```
+
+Run a session (auth is the dashboard JWT):
+
+```bash
+curl -X POST http://localhost:8000/accuracy/sessions \
+  -H "Authorization: Bearer $DASHBOARD_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"ai_model": ""}'
+# 200 -> {"id": "...", "evaluations": [...], "holdout_summary": {...}, "split": {...}}
+# 502 -> gateway failed (see server logs) | 503 -> no provider configured
+```
 
 ## REST API
 

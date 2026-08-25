@@ -255,6 +255,78 @@ class TestAC2CanaryAntiLeak:
         }
 
 
+# ------------------------------------------------------------------------
+# Response provider wiring (card 2f9afe89)
+# ------------------------------------------------------------------------
+
+
+class _FailingProvider:
+    """IResponseProvider whose gateway call fails (raises provider error)."""
+
+    def get_response(self, prompt: str, model: str = "") -> str:
+        from src.infrastructure.accuracy_testing.llm_gateway_provider import LLMGatewayProviderError
+
+        raise LLMGatewayProviderError("Gateway HTTP 500")
+
+
+class TestProviderFailureMapping:
+    def test_provider_failure_maps_to_502(self):
+        client = _make_client(TENANT_A, provider=_FailingProvider())
+        resp = client.post("/accuracy/sessions", json={"ai_model": "test-model"})
+        assert resp.status_code == 502, resp.text
+
+    def test_provider_failure_detail_is_generic(self):
+        """CWE-209: the 502 detail must not echo upstream provider internals."""
+        client = _make_client(TENANT_A, provider=_FailingProvider())
+        resp = client.post("/accuracy/sessions", json={"ai_model": "test-model"})
+        assert resp.status_code == 502
+        assert "Gateway HTTP 500" not in resp.text
+
+
+class TestProviderEndpointIntegration:
+    """AC1 proof: POST /sessions returns 200 with a REAL provider wired
+    through DI (the provider's HTTP client is a MockTransport — no network)."""
+
+    def test_session_200_with_gateway_provider(self):
+        import httpx
+
+        from src.infrastructure.accuracy_testing.llm_gateway_provider import (
+            LLMGatewayResponseProvider,
+        )
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200,
+                json={
+                    "choices": [
+                        {
+                            "message": {
+                                "content": "MOCK-LLM-ANSWER liability depends on the defect."
+                            },
+                            "finish_reason": "stop",
+                        }
+                    ]
+                },
+            )
+
+        provider = LLMGatewayResponseProvider(
+            api_key="integration-key",
+            http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+        )
+        client = _make_client(TENANT_A, provider=provider)
+
+        created = client.post("/accuracy/sessions", json={"ai_model": ""})
+        assert created.status_code == 200, created.text
+        body = created.json()
+
+        evaluations = body["evaluations"]
+        assert evaluations, "eval-set items must carry detailed evaluations"
+        for evaluation in evaluations:
+            assert "MOCK-LLM-ANSWER" in evaluation["ai_response"]
+
+        provider.close()
+
+
 def _deep_keys(obj) -> set:
     """Collect every dict key at any depth (canary: holdout_benchmarks)."""
     keys = set()

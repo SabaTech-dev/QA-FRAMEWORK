@@ -33,6 +33,7 @@ Example:
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Sequence
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -44,6 +45,7 @@ from src.domain.accuracy_testing.splitting import BenchmarkSplit
 from src.infrastructure.accuracy_testing.german_ai_liability_benchmarks import (
     create_german_ai_liability_benchmarks,
 )
+from src.infrastructure.accuracy_testing.llm_gateway_provider import LLMGatewayProviderError
 from src.infrastructure.accuracy_testing.rule_based_evaluator import RuleBasedAccuracyEvaluator
 from src.infrastructure.accuracy_testing.security import AccuracyPrincipal
 from src.infrastructure.accuracy_testing.session_store import (
@@ -51,6 +53,8 @@ from src.infrastructure.accuracy_testing.session_store import (
     run_accuracy_session,
     split_for_tenant,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class SessionCreateRequest(BaseModel):
@@ -175,14 +179,23 @@ def create_accuracy_router(
             else _restrict_split(split, set(request.benchmark_ids))
         )
 
-        session = run_accuracy_session(
-            benchmarks=selected,
-            split=session_split,
-            evaluator=evaluator,
-            response_provider=response_provider,
-            ai_model=request.ai_model,
-            tenant_id=principal.owner,
-        )
+        try:
+            session = run_accuracy_session(
+                benchmarks=selected,
+                split=session_split,
+                evaluator=evaluator,
+                response_provider=response_provider,
+                ai_model=request.ai_model,
+                tenant_id=principal.owner,
+            )
+        except LLMGatewayProviderError as exc:
+            # CWE-209: generic detail only; the provider error (and the
+            # upstream body it logged) never reaches the HTTP client.
+            logger.error("Accuracy response provider failed: %s", exc)
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Response provider unavailable; see server logs",
+            ) from exc
         store.save(principal.owner, session, session_split)
         return _session_view(session, session_split)
 
