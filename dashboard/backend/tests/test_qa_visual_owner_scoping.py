@@ -202,6 +202,13 @@ class TestRealAppOwnerScoping:
         response = client.get("/api/v1/qa-visual/reports/missing", headers=auth_headers["alice"])
         assert response.status_code == 404
 
+    def test_unknown_report_404_for_non_owner(self, client, auth_headers):
+        """PR #134 advisory item 4: nonexistent id → 404 for an authenticated
+        non-owner (valid tenant), never 403 — 403 only means "exists but
+        forbidden", so a missing report must never answer 403."""
+        response = client.get("/api/v1/qa-visual/reports/missing", headers=auth_headers["bob"])
+        assert response.status_code == 404
+
     def test_reports_listing_scoped_to_owner(self, client, auth_headers):
         body = client.get("/api/v1/qa-visual/reports", headers=auth_headers["alice"]).json()
         assert sorted(r["report_id"] for r in body) == ["rep-alice-1", "rep-alice-2"]

@@ -41,6 +41,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   username. Applied to both module copies (root `src/` and the vendored
   `dashboard/backend/src/`).
 
+- **PR #134 security-review advisories (card 52585523)**: four follow-ups
+  on the QA Visual auth path. (1) owner-blank storage guard:
+  `QAVisualReportStore.get_report` now fail-closes on ANY blank owner
+  (`None`, `""`, whitespace) — previously `owner=""` bypassed the guard
+  and matched reports stamped with a blank owner, so a blank-scope caller
+  could read blank-stamped reports; admins keep their escape hatch.
+  (2) fastapi>=0.122 HTTPBearer semantics: verified empirically that
+  unauthenticated requests answer 401 (403 before 0.122); all exact `== 403`
+  pins in the repo are authorization-level (authenticated non-owner /
+  suspended tenant) and proven version-stable (root suite green under both
+  0.115.4 and 0.136.3); the dashboard stack (pinned `fastapi==0.122.0`)
+  gains an exact 401 pin for missing credentials. (3) standalone
+  characterization test: `is_admin=True` alone authorizes cross-owner
+  reads, independent of fixtures or test order. (4) 403/404 enumeration
+  contract: a nonexistent report id answers 404 for every authenticated
+  principal (owner, non-owner, admin) — 403 remains reserved for reports
+  that exist (accepted adv-1 tradeoff) — now covered at module and
+  real-app level. Vendored copy synced (vendor-parity test).
+
 ### Added
 
 - **Accuracy response provider (card 2f9afe89)**: real

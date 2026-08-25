@@ -242,6 +242,18 @@ class TestEndpointOwnerEnforcement:
     def test_missing_report_404_for_owner(self, endpoint):
         assert endpoint.client(ALICE).get("/api/v1/qa-visual/reports/missing").status_code == 404
 
+    def test_missing_report_404_for_non_owner(self, endpoint):
+        """PR #134 advisory item 4: 403 is reserved for reports that exist.
+
+        A nonexistent id answers 404 even for an authenticated non-owner,
+        so the error code never signals the existence of a missing report
+        (403 = "exists but forbidden" is the accepted adv-1 tradeoff).
+        """
+        assert endpoint.client(BOB).get("/api/v1/qa-visual/reports/missing").status_code == 404
+
+    def test_missing_report_404_for_admin(self, endpoint):
+        assert endpoint.client(ADMIN).get("/api/v1/qa-visual/reports/missing").status_code == 404
+
     def test_legacy_report_403_for_regular_user(self, endpoint):
         assert endpoint.client(ALICE).get("/api/v1/qa-visual/reports/rep-legacy").status_code == 403
 
