@@ -11,7 +11,7 @@ services:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-qa_user}:${POSTGRES_PASSWORD:-qa_password}@db:5432/${POSTGRES_DB:-qa_framework_db}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required - set it via env or a local overrides file}
     depends_on:
       - db
       - redis

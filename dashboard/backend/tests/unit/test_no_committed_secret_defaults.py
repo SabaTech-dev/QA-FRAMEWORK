@@ -9,6 +9,9 @@ reintroduced silently:
   (``${SECRET_KEY:?...}``) with NO committed fallback.
 - No tracked file may carry the known dev-secret literals
   ("dev-secret-key" / "dev-jwt-secret") outside the tests of this change.
+- Ronda 2 (review step 3): ANY tracked compose file (unified, dashboard,
+  railway, or future ones) must never declare SECRET_KEY/JWT_SECRET_KEY with
+  a committed default (``${VAR:-...}``) — required or pass-through only.
 """
 
 import subprocess
@@ -30,6 +33,9 @@ REPO_ROOT = _repo_root()
 UNIFIED_COMPOSE = REPO_ROOT / "docker-compose.unified.yml"
 
 FORBIDDEN_LITERALS = ("dev-secret-key", "dev-jwt-secret")
+
+# Secret env vars that compose files must never default.
+COMPOSE_SECRET_VARS = ("SECRET_KEY", "JWT_SECRET_KEY")
 
 # File extensions whose tracked contents are scanned for secret literals.
 SCANNED_SUFFIXES = {
@@ -70,6 +76,26 @@ def test_unified_compose_secret_key_has_no_committed_default():
     # hard-requirement marker in compose interpolation syntax.
     assert "SECRET_KEY=${SECRET_KEY:?" in content
     assert "SECRET_KEY=${SECRET_KEY:-" not in content
+
+
+def test_compose_files_never_default_secret_env_vars():
+    """AC ronda 2: every tracked compose file (unified, dashboard, railway or
+    any future one) must declare secret env vars as required
+    (``${VAR:?...}``) or pass-through (``${VAR}``), never with a committed
+    default fallback (``${VAR:-...}``)."""
+    offenders: list[str] = []
+    for tracked in _tracked_files():
+        path = Path(tracked)
+        if not (path.name.startswith("docker-compose") and path.suffix in (".yml", ".yaml")):
+            continue
+        text = (REPO_ROOT / tracked).read_text(errors="ignore")
+        for var in COMPOSE_SECRET_VARS:
+            if f"{var}=${{{var}:-" in text:
+                offenders.append(
+                    f"{tracked}: {var} declared with committed default "
+                    f"(${{{var}:-...}}) — use ${{{var}:?required}} instead"
+                )
+    assert not offenders, "Compose files must not default secret env vars:\n" + "\n".join(offenders)
 
 
 def test_tracked_files_contain_no_dev_secret_literals():
