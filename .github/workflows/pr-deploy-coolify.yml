@@ -127,7 +127,7 @@ jobs:
     name: Deploy Backend Preview
     needs: security-gate
     runs-on: ubuntu-latest
-    if: github.event.action != 'closed' && secrets.COOLIFY_REGISTRY_URL != ''
+    if: github.event.action != 'closed' && vars.COOLIFY_CONFIGURED == 'true'
     continue-on-error: true  # non-blocking: COOLIFY_* secrets missing — see #107
     outputs:
       preview_url: ${{ steps.deploy.outputs.preview_url }}
@@ -239,7 +239,7 @@ jobs:
     name: Deploy Frontend Preview
     needs: security-gate
     runs-on: ubuntu-latest
-    if: github.event.action != 'closed' && secrets.COOLIFY_REGISTRY_URL != ''
+    if: github.event.action != 'closed' && vars.COOLIFY_CONFIGURED == 'true'
     continue-on-error: true  # non-blocking: COOLIFY_* secrets missing — see #107
     outputs:
       preview_url: ${{ steps.deploy.outputs.preview_url }}
@@ -375,7 +375,7 @@ jobs:
     name: Health Check Previews
     runs-on: ubuntu-latest
     needs: [deploy-backend-preview, deploy-frontend-preview]
-    if: github.event.action != 'closed' && secrets.COOLIFY_API_URL != ''
+    if: github.event.action != 'closed' && vars.COOLIFY_CONFIGURED == 'true'
     continue-on-error: true  # non-blocking: COOLIFY_* secrets missing — see #107
     steps:
       - name: Wait for deployments to be ready
@@ -470,7 +470,7 @@ jobs:
   cleanup-previews:
     name: Cleanup Preview Deployments
     runs-on: ubuntu-latest
-    if: github.event.action == 'closed' && secrets.COOLIFY_API_URL != ''
+    if: github.event.action == 'closed' && vars.COOLIFY_CONFIGURED == 'true'
     continue-on-error: true  # non-blocking: COOLIFY_* secrets missing — see #107
     steps:
       - name: Delete Backend Preview
