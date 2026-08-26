@@ -93,9 +93,9 @@ CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} >> /tmp/s
 2. Verificar que existan:
    - `DATABASE_URL` = `${{Postgres.DATABASE_URL}}`
    - `REDIS_URL` = `${{Redis.REDIS_URL}}`
-   - `JWT_SECRET_KEY` = `qa-framework-production-secret-key-change-in-production-2026`
+   - `JWT_SECRET_KEY` = `PLACEHOLDER-REDACTED-2026-08-26`
    - `STRIPE_API_KEY` = `sk_live_...`
-   - `STRIPE_WEBHOOK_SECRET` = `whsec_QcsmAtCAuUTtINlsrkDSjrynqgxpcrKJ`
+   - `STRIPE_WEBHOOK_SECRET` = `PLACEHOLDER-REDACTED-2026-08-26`
    - `ENABLE_BILLING` = `true`
    - `ENVIRONMENT` = `production`
 

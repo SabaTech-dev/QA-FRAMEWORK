@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **Erradicated committed secret defaults + conditional API docs
+  (card 2972521c, incident 112853a6, CWE-798 / F1-residual + F3)**:
+  - `docker-compose.unified.yml`: `SECRET_KEY` is now a required compose
+    variable (`${SECRET_KEY:?...}`) — no committed fallback; `docker compose`
+    fails fast when unset. Provide it via env or a local overrides file
+    (e.g. `docker-compose.staging-overrides.yml`, untracked).
+  - `dashboard/backend/config/environment_config.py`: `SECRET_KEY` and
+    `JWT_SECRET_KEY` are required fields (min 32 chars) — no defaults.
+  - `dashboard/backend/config.py`: the development-only JWT fallback is now
+    an ephemeral per-process random key (`secrets.token_urlsafe(48)`) instead
+    of a committed constant; production still crashes at boot without an
+    explicit secret (`_validate_production_config`, covered by tests).
+  - `dashboard/backend/main.py`: OpenAPI/Swagger/Redoc endpoints
+    (`/api/v1/docs`, `/api/v1/openapi.json`, `/api/v1/redoc`) are disabled
+    when `settings.is_production` (finding F3, previously 200 on staging).
+  - Guard tests in `dashboard/backend/tests/unit/` enforce the acceptance
+    criteria (no committed dev-secret literals in tracked files,
+    fail-closed production boot, docs mounted in dev / absent in
+    production).
+
 - **Refresh token rotation + reuse detection (card 3ae2e5c1, finding F-2,
   OWASP API2)**: new self-contained module
   `src/infrastructure/refresh_tokens` (vendored verbatim into

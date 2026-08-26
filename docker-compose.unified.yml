@@ -15,7 +15,10 @@ services:
       - DATABASE_URL=postgresql://qa_user:qa_pass@postgres:5432/qa_dashboard
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
+      # Required: no committed fallback. Provide via env or an overrides
+      # file (e.g. docker-compose.staging-overrides.yml, untracked, chmod 600).
+      # docker compose fails fast when the variable is unset.
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required - set it via env or a local overrides file}
       - ENVIRONMENT=production
       - LOG_LEVEL=INFO
     depends_on:

@@ -246,13 +246,17 @@ pip install -r requirements.txt
 ENVIRONMENT=development .venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000
 
 # Backend runs at: http://localhost:8000
-# API docs at: http://localhost:8000/api/v1/docs
+# API docs at: http://localhost:8000/api/v1/docs (disabled when ENVIRONMENT=production)
 ```
 
 **Environment variables (all optional in development):**
 - `DATABASE_URL` — PostgreSQL URL. If unset, falls back to SQLite (`./qafw.db`)
 - `REDIS_URL` — Redis URL. If unset, defaults to `redis://localhost:6379/0`
-- `JWT_SECRET_KEY` — JWT signing key. If unset, a dev fallback is used
+- `JWT_SECRET_KEY` — JWT signing key. If unset in development, an ephemeral
+  random per-process key is generated (sessions do not survive restarts).
+  **Required in production**: the backend refuses to boot without it
+- `SECRET_KEY` — application signing key, required by `docker-compose.unified.yml`
+  (no committed default; provide it via env or a local overrides file)
 - `ENVIRONMENT` — `development` or `production` (default: `development`)
 
 ### 🧪 Run Dashboard Backend Tests

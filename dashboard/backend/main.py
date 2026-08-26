@@ -25,13 +25,16 @@ environment = os.getenv("ENVIRONMENT", "development")
 configure_logging(log_level=log_level, environment=environment)
 logger = get_logger(__name__)
 
+# API docs (OpenAPI/Swagger/Redoc) must not be exposed in production
+# (finding F3 of incident 112853a6): FastAPI disables the endpoints when
+# the URLs are None.
 app = FastAPI(
     title="QA-Framework Dashboard API",
     description="API para la dashboard unificada de QA-FRAMEWORK",
     version="0.1.0",
-    openapi_url="/api/v1/openapi.json",
-    docs_url="/api/v1/docs",
-    redoc_url="/api/v1/redoc",
+    openapi_url=None if settings.is_production else "/api/v1/openapi.json",
+    docs_url=None if settings.is_production else "/api/v1/docs",
+    redoc_url=None if settings.is_production else "/api/v1/redoc",
 )
 
 # CORS middleware

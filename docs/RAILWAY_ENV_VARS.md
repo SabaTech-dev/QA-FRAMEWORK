@@ -28,14 +28,14 @@ Estas variables DEBEN estar configuradas en Railway Dashboard para que el backen
 
 | Variable | Valor | Descripción |
 |----------|-------|-------------|
-| `JWT_SECRET_KEY` | `qa-framework-production-secret-key-change-in-production-2026` | Clave secreta para JWT tokens |
+| `JWT_SECRET_KEY` | `PLACEHOLDER-REDACTED-2026-08-26` | Clave secreta para JWT tokens |
 
 ### Pagos (Stripe)
 
 | Variable | Valor | Descripción |
 |----------|-------|-------------|
 | `STRIPE_API_KEY` | `sk_live_...` | API key de Stripe (LIVE) |
-| `STRIPE_WEBHOOK_SECRET` | `whsec_QcsmAtCAuUTtINlsrkDSjrynqgxpcrKJ` | Secreto del webhook de Stripe |
+| `STRIPE_WEBHOOK_SECRET` | `PLACEHOLDER-REDACTED-2026-08-26` | Secreto del webhook de Stripe |
 | `ENABLE_BILLING` | `true` | Habilitar funcionalidades de billing |
 
 ### Configuración General
@@ -70,9 +70,9 @@ value = "${{Redis.REDIS_URL}}"
 Ir a Railway Dashboard → Proyecto → Servicio → Variables y añadir manualmente:
 
 ```
-JWT_SECRET_KEY=qa-framework-production-secret-key
+JWT_SECRET_KEY=PLACEHOLDER-REDACTED-2026-08-26
 STRIPE_API_KEY=sk_live_YOUR_KEY_HERE
-STRIPE_WEBHOOK_SECRET=whsec_YOUR_SECRET_HERE
+STRIPE_WEBHOOK_SECRET=PLACEHOLDER-REDACTED-2026-08-26
 ENABLE_BILLING=true
 ENVIRONMENT=production
 FRONTEND_URL=https://frontend-phi-three-52.vercel.app

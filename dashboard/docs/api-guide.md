@@ -23,7 +23,7 @@ The QA-Framework Dashboard API provides a comprehensive RESTful interface for ma
 - **JSON Format**: All requests and responses use JSON
 - **Async Support**: Full async/await support for optimal performance
 - **Type Safety**: Pydantic models for request/response validation
-- **Auto-generated Documentation**: Interactive Swagger UI at `/api/v1/docs`
+- **Auto-generated Documentation**: Interactive Swagger UI at `/api/v1/docs` (development only — disabled when `ENVIRONMENT=production`)
 - **Structured Logging**: Every request is logged with unique request IDs
 
 ### Key Features
