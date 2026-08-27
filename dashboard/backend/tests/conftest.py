@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
 from dotenv import load_dotenv
 
 # Mock Redis to avoid connection errors during import
@@ -56,3 +57,65 @@ print(f"Python path: {sys.path[:3]}")  # Show first 3 paths
 from core.logging_config import configure_logging
 
 configure_logging(log_level="WARNING", environment="test")
+
+
+async def _purge_shared_rate_limit_keys() -> None:
+    """Delete ``ratelimit:*`` keys left in the shared Redis by test traffic.
+
+    Best-effort: a no-op when ``redis.asyncio`` is still the conftest
+    MagicMock or when no local Redis is reachable.
+    """
+    try:
+        import redis.asyncio as aioredis
+
+        cleanup = aioredis.from_url(
+            os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0"),
+            decode_responses=True,
+        )
+        try:
+            async for key in cleanup.scan_iter("ratelimit:*"):
+                await cleanup.delete(key)
+        finally:
+            try:
+                await cleanup.aclose()
+            except AttributeError:  # older redis-py names it close()
+                await cleanup.close()
+    except Exception:
+        pass
+
+
+async def _aclose_client(client) -> None:
+    """Close an async Redis client regardless of redis-py version."""
+    close = getattr(client, "aclose", None) or getattr(client, "close", None)
+    if close is not None:
+        await close()
+
+
+@pytest.fixture(autouse=True)
+async def _isolated_rate_limit_redis():
+    """Keep the shared async Redis client loop-local and stateless per test.
+
+    ``services.cache_service.get_redis_client()`` caches an aioredis
+    singleton bound to the event loop of the first test that used it.
+    pytest-asyncio gives every test a fresh loop, so later tests reused
+    a pool tied to a closed loop -> ``Event loop is closed`` error logs
+    from RateLimitMiddleware, plus real-Redis ``ratelimit:*`` counters
+    leaking across tests/runs (100-entry hourly cap -> flaky 429s).
+
+    Purge shared counters before each test; after each test close the
+    stale client and reset the singleton so the next test lazily builds
+    a fresh, loop-local one. Both steps are best-effort (mocks and
+    closed-loop pools must never fail a test here).
+    """
+    await _purge_shared_rate_limit_keys()
+    yield
+    import services.cache_service as cache_service
+
+    client = cache_service._async_redis_client
+    cache_service._async_redis_client = None
+    if client is None:
+        return
+    try:
+        await _aclose_client(client)
+    except Exception:
+        pass
