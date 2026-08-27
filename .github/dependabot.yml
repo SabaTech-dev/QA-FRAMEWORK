@@ -4,6 +4,10 @@
 # 2026-08-27: added per-ecosystem update groups (playbook AMC #9) so weekly
 # updates arrive as ONE PR per ecosystem instead of one PR per package
 # (26+ individual PRs accumulated between 2026-06-05 and 2026-08-24).
+# 2026-08-27: group-split into majors vs minors-patch per ecosystem so major
+# bumps land in isolated PRs. stripe is GATED (Joker): excluded from every
+# group in ecosystems where it can appear (pip root, pip backend, npm);
+# it keeps receiving individual (ungrouped) PRs as before.
 
 version: 2
 updates:
@@ -16,9 +20,17 @@ updates:
       time: "07:00"
       timezone: "Europe/Madrid"
     groups:
-      pip-root-dependencies:
-        patterns:
-          - "*"
+      pip-root-majors:
+        update-types:
+          - "major"
+        exclude-patterns:
+          - "stripe"
+      pip-root-minors-patch:
+        update-types:
+          - "minor"
+          - "patch"
+        exclude-patterns:
+          - "stripe"
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
@@ -38,9 +50,17 @@ updates:
       time: "07:00"
       timezone: "Europe/Madrid"
     groups:
-      pip-backend-dependencies:
-        patterns:
-          - "*"
+      pip-backend-majors:
+        update-types:
+          - "major"
+        exclude-patterns:
+          - "stripe"
+      pip-backend-minors-patch:
+        update-types:
+          - "minor"
+          - "patch"
+        exclude-patterns:
+          - "stripe"
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
@@ -61,9 +81,17 @@ updates:
       time: "07:00"
       timezone: "Europe/Madrid"
     groups:
-      npm-frontend-dependencies:
-        patterns:
-          - "*"
+      npm-frontend-majors:
+        update-types:
+          - "major"
+        exclude-patterns:
+          - "@stripe/*"
+      npm-frontend-minors-patch:
+        update-types:
+          - "minor"
+          - "patch"
+        exclude-patterns:
+          - "@stripe/*"
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
@@ -84,9 +112,13 @@ updates:
       time: "07:00"
       timezone: "Europe/Madrid"
     groups:
-      docker-backend-images:
-        patterns:
-          - "*"
+      docker-backend-majors:
+        update-types:
+          - "major"
+      docker-backend-minors-patch:
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "dependencies"
       - "docker"
@@ -103,9 +135,13 @@ updates:
       time: "07:00"
       timezone: "Europe/Madrid"
     groups:
-      docker-frontend-images:
-        patterns:
-          - "*"
+      docker-frontend-majors:
+        update-types:
+          - "major"
+      docker-frontend-minors-patch:
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "dependencies"
       - "docker"
@@ -122,9 +158,13 @@ updates:
       time: "07:00"
       timezone: "Europe/Madrid"
     groups:
-      github-actions-dependencies:
-        patterns:
-          - "*"
+      github-actions-majors:
+        update-types:
+          - "major"
+      github-actions-minors-patch:
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "dependencies"
       - "ci"
