@@ -89,9 +89,9 @@ class TestSecretsAreMasked:
     def test_repr_does_not_leak_groq_api_key(self, monkeypatch):
         _scrub(monkeypatch)
         monkeypatch.setenv("ENVIRONMENT", "development")
-        monkeypatch.setenv("GROQ_API_KEY", "gsk-leak-canary-abcdef0123456789")
+        monkeypatch.setenv("GROQ_API_KEY", "gsk-leak-canary-abcdef0123456789")  # gitleaks:allow - fixture sintetico de test, no es un secret real
         leaked = repr(Settings())
-        assert "gsk-leak-canary-abcdef0123456789" not in leaked
+        assert "gsk-leak-canary-abcdef0123456789" not in leaked  # gitleaks:allow - fixture sintetico de test, no es un secret real
         assert "GROQ_API_KEY" in leaked  # field still visible, value masked
 
     def test_repr_does_not_leak_any_secret(self, monkeypatch):
@@ -114,13 +114,13 @@ class TestSecretsAreMasked:
     def test_get_secret_value_returns_plaintext(self, monkeypatch):
         _scrub(monkeypatch)
         monkeypatch.setenv("ENVIRONMENT", "development")
-        monkeypatch.setenv("GROQ_API_KEY", "gsk-plain-0123456789abcdef")
+        monkeypatch.setenv("GROQ_API_KEY", "gsk-plain-0123456789abcdef")  # gitleaks:allow - fixture sintetico de test, no es un secret real
         settings = Settings()
-        assert settings.GROQ_API_KEY.get_secret_value() == "gsk-plain-0123456789abcdef"
+        assert settings.GROQ_API_KEY.get_secret_value() == "gsk-plain-0123456789abcdef"  # gitleaks:allow - fixture sintetico de test, no es un secret real
 
 
-LONG_SECRET = "unit-test-signing-key-0123456789abcdef"
-SHORT_SECRET = "short-secret-0123456789"
+LONG_SECRET = "unit-test-signing-key-0123456789abcdef"  # gitleaks:allow - fixture sintetico de test, no es un secret real
+SHORT_SECRET = "short-secret-0123456789"  # gitleaks:allow - fixture sintetico de test, no es un secret real
 
 
 class TestMinimumSecretLength:
@@ -181,7 +181,7 @@ class TestMinimumSecretLength:
         self._prod_env(
             monkeypatch,
             SECRET_KEY=LONG_SECRET,
-            GROQ_API_KEY="gsk-long-0123456789abcdefghijklmnop",
+            GROQ_API_KEY="gsk-long-0123456789abcdefghijklmnop",  # gitleaks:allow - fixture sintetico de test, no es un secret real
             REDIS_PASSWORD="redis-long-0123456789abcdefghijkl",
         )
         settings = Settings()
@@ -247,7 +247,7 @@ class TestBrowserUseFieldsContract:
     def test_browser_use_defaults(self, monkeypatch):
         _scrub(monkeypatch)
         monkeypatch.setenv("ENVIRONMENT", "development")
-        monkeypatch.setenv("GROQ_API_KEY", "gsk-defaults-0123456789abcdef")
+        monkeypatch.setenv("GROQ_API_KEY", "gsk-defaults-0123456789abcdef")  # gitleaks:allow - fixture sintetico de test, no es un secret real
         settings = Settings()
         assert settings.BROWSER_USE_LLM_PROVIDER == "groq"
         assert settings.BROWSER_USE_MODEL == "llama-3.3-70b-versatile"
