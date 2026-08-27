@@ -18,7 +18,19 @@ PROD = {"ENVIRONMENT": "production", "DATABASE_URL": "postgresql://u:p@h:5432/d"
 
 
 def _scrub(monkeypatch):
-    for var in ("SECRET_KEY", "JWT_SECRET_KEY", "DATABASE_URL", "ENVIRONMENT"):
+    # Keep these tests hermetic: any secret from the developer's shell must
+    # not leak in (min-32 validation would reject short shell values).
+    for var in (
+        "SECRET_KEY",
+        "JWT_SECRET_KEY",
+        "DATABASE_URL",
+        "ENVIRONMENT",
+        "REDIS_PASSWORD",
+        "STRIPE_API_KEY",
+        "STRIPE_WEBHOOK_SECRET",
+        "GROQ_API_KEY",
+        "ENABLE_BILLING",
+    ):
         monkeypatch.delenv(var, raising=False)
 
 
@@ -45,7 +57,7 @@ class TestProductionFailsClosed:
         monkeypatch.setenv("SECRET_KEY", expected)
         settings = Settings()
         assert settings.is_production
-        assert settings.secret_key == expected
+        assert settings.secret_key.get_secret_value() == expected
 
 
 class TestDevFallbackIsEphemeral:
@@ -54,9 +66,9 @@ class TestDevFallbackIsEphemeral:
         monkeypatch.setenv("ENVIRONMENT", "development")
         settings = Settings()
         assert settings.secret_key
-        assert len(settings.secret_key) >= 32
-        assert "dev-secret-key" not in settings.secret_key
-        assert "dev-jwt-secret" not in settings.secret_key
+        assert len(settings.secret_key.get_secret_value()) >= 32
+        assert "dev-secret-key" not in settings.secret_key.get_secret_value()
+        assert "dev-jwt-secret" not in settings.secret_key.get_secret_value()
 
     def test_fallback_differs_between_processes(self, monkeypatch):
         _scrub(monkeypatch)
@@ -74,7 +86,7 @@ class TestDevFallbackIsEphemeral:
         monkeypatch.setenv("ENVIRONMENT", "development")
         monkeypatch.setenv("SECRET_KEY", "explicit-dev-key-0123456789abcdef012345")
         settings = Settings()
-        assert settings.secret_key == "explicit-dev-key-0123456789abcdef012345"
+        assert settings.secret_key.get_secret_value() == "explicit-dev-key-0123456789abcdef012345"
 
 
 class TestProductionNeverFallsBack:
@@ -86,4 +98,4 @@ class TestProductionNeverFallsBack:
             monkeypatch.setenv(k, v)
         monkeypatch.setenv("SECRET_KEY", expected)
         settings = Settings()
-        assert settings.secret_key == expected
+        assert settings.secret_key.get_secret_value() == expected

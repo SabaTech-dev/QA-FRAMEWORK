@@ -63,7 +63,7 @@ class TestAuthService:
         assert isinstance(token, str)
         
         # Decode and verify
-        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        payload = jwt.decode(token, settings.secret_key.get_secret_value(), algorithms=[settings.algorithm])
         assert payload["sub"] == "testuser"
         assert "exp" in payload
 
@@ -74,7 +74,7 @@ class TestAuthService:
         token = create_access_token(data, expires)
         
         # Decode and verify expiry
-        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        payload = jwt.decode(token, settings.secret_key.get_secret_value(), algorithms=[settings.algorithm])
         exp_time = datetime.fromtimestamp(payload["exp"])
         
         # Should be approximately 15 minutes from now

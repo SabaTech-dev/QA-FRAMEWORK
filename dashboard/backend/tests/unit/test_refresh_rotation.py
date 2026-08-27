@@ -106,7 +106,7 @@ def make_db(user: User | None) -> AsyncMock:
 
 
 def decode(token: str) -> dict:
-    return jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+    return jwt.decode(token, settings.secret_key.get_secret_value(), algorithms=[settings.algorithm])
 
 
 def make_broken_store() -> RefreshTokenStore:
@@ -258,7 +258,7 @@ class TestLegacyMigration:
                 "type": "refresh",
                 "exp": decode(create_refresh_token({"sub": "x"}))["exp"],
             },
-            settings.secret_key,
+            settings.secret_key.get_secret_value(),
             algorithm=settings.algorithm,
         )
         response = await refresh_access_token(legacy, make_db(make_user()), store=store)

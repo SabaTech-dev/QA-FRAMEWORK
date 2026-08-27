@@ -38,6 +38,16 @@ def dev_app(monkeypatch):
 
 @pytest.fixture()
 def production_app(monkeypatch):
+    # Scrub shell-provided secrets first: production validation would
+    # reject short developer-shell values (min-32) and break hermeticity.
+    for var in (
+        "REDIS_PASSWORD",
+        "STRIPE_API_KEY",
+        "STRIPE_WEBHOOK_SECRET",
+        "GROQ_API_KEY",
+        "ENABLE_BILLING",
+    ):
+        monkeypatch.delenv(var, raising=False)
     for var, value in PROD_ENV.items():
         monkeypatch.setenv(var, value)
     import config as dashboard_config

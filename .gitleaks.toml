@@ -7,6 +7,8 @@
     '''tests/security/test_owasp_top10_2025\.py$''',
     '''\.env\.example$''',
     '''\.env\.template$''',
+    # Fixtures sintéticos del test de config hardening (card f3231394) — valores gsk-/unit-test- fabricados, no secrets reales
+    '''dashboard/backend/tests/unit/test_config_hardening\.py$''',
   ]
 
 [[rules]]

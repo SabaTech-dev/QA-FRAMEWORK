@@ -59,9 +59,7 @@ db_connection_errors_total = Counter(
 
 cache_hits_total = Counter("cache_hits_total", "Total cache hits", registry=registry)
 
-cache_misses_total = Counter(
-    "cache_misses_total", "Total cache misses", registry=registry
-)
+cache_misses_total = Counter("cache_misses_total", "Total cache misses", registry=registry)
 
 active_executions = Gauge(
     "active_test_executions", "Number of active test executions", registry=registry
@@ -130,7 +128,9 @@ async def check_redis_health() -> Dict[str, Any]:
         r = redis.Redis(
             host=settings.redis_host,
             port=settings.redis_port,
-            password=settings.redis_password,
+            password=(
+                settings.redis_password.get_secret_value() if settings.redis_password else None
+            ),
             socket_connect_timeout=5,
             socket_timeout=5,
             decode_responses=True,
@@ -208,9 +208,7 @@ async def liveness_probe():
     return {
         "status": "alive",
         "timestamp": datetime.utcnow().isoformat(),
-        "uptime_seconds": (datetime.utcnow() - startup_time).total_seconds()
-        if startup_time
-        else 0,
+        "uptime_seconds": (datetime.utcnow() - startup_time).total_seconds() if startup_time else 0,
     }
 
 
@@ -247,8 +245,7 @@ async def readiness_probe():
     )
 
     all_healthy = all(
-        check.get("status") == "healthy"
-        for check in [db_status, redis_status, qa_status]
+        check.get("status") == "healthy" for check in [db_status, redis_status, qa_status]
     )
 
     response = {
@@ -262,9 +259,7 @@ async def readiness_probe():
     }
 
     if not all_healthy:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=response
-        )
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=response)
 
     return response
 
@@ -276,9 +271,7 @@ async def metrics():
 
     Returns all registered metrics in Prometheus exposition format.
     """
-    return PlainTextResponse(
-        content=generate_latest(registry), media_type=CONTENT_TYPE_LATEST
-    )
+    return PlainTextResponse(content=generate_latest(registry), media_type=CONTENT_TYPE_LATEST)
 
 
 @router.get("/startup", status_code=status.HTTP_200_OK)
@@ -331,15 +324,12 @@ async def detailed_health_status(db: AsyncSession = Depends(get_db)):
 
     # Get application metrics
     app_metrics = {
-        "uptime_seconds": (datetime.utcnow() - startup_time).total_seconds()
-        if startup_time
-        else 0,
+        "uptime_seconds": (datetime.utcnow() - startup_time).total_seconds() if startup_time else 0,
         "start_time": startup_time.isoformat() if startup_time else None,
     }
 
     all_healthy = all(
-        check.get("status") == "healthy"
-        for check in [db_health, redis_health, qa_health]
+        check.get("status") == "healthy" for check in [db_health, redis_health, qa_health]
     )
 
     return {

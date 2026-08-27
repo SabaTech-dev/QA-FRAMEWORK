@@ -66,6 +66,9 @@ playwright-report/
 
 # QA Visual runtime artifacts (reports + hook screenshots)
 reports/qa-visual/
+dashboard/backend/reports/qa-visual/
+# Card f3d6d2ef: runtime reports del backend (0 tracked files) — evitar coladeras en commits
+dashboard/backend/reports/
 dashboard/monitoring/alertmanager/.secrets/
 
 # Drift closure (card 290458d4): build-time env + mkdocs output — nunca commit

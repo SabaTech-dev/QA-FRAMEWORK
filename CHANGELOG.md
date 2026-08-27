@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **Config hardening follow-ups from review R2 (card f3231394, deriva of
+  card 2972521c / PR #147)**:
+  - `dashboard/backend/config.py`: `ENVIRONMENT` is normalized
+    (`.strip().lower()`) — case/whitespace variants (`" Production "`,
+    `"PRODUCTION"`) can no longer skip the production fail-closed
+    validation and boot with insecure development defaults.
+  - Secrets (`secret_key`, `redis_password`, `STRIPE_API_KEY`,
+    `STRIPE_WEBHOOK_SECRET`, `GROQ_API_KEY`) are now `SecretStr` — the
+    `repr()` of `Settings` no longer leaks values into pytest output
+    (the leak that exposed `GROQ_API_KEY` in CI logs). Consumers use
+    `get_secret_value()`.
+  - Production rejects weak secrets: any provided secret shorter than
+    32 characters crashes the boot (`MIN_SECRET_LENGTH`, fail closed).
+  - Secret defaults no longer capture `os.getenv()` at import time
+    (frozen defaults bypassed `SecretStr` validation and resurrected
+    scrubbed shell values under pytest); `secret_key` accepts both
+    `SECRET_KEY` and `JWT_SECRET_KEY` via `AliasChoices`.
+  - Stripe price IDs (`STRIPE_PRICE_FREE/PRO/ENTERPRISE`) moved to
+    environment-only (no committed defaults); required in production
+    when `ENABLE_BILLING=true`. Reference values live in
+    `dashboard/backend/.env.example`.
+  - Removed the duplicated `BROWSER_USE_*` block and the dead
+    `EnvironmentConfig` module (`dashboard/backend/config/environment_config.py`,
+    divergent duplicate of runtime `Settings`, zero live references).
+  - `.gitignore`: upstreamed the devops patch for backend runtime
+    reports (`dashboard/backend/reports/`, card f3d6d2ef) so it survives
+    the next clean checkout of `main`.
+
 - **Erradicated committed secret defaults + conditional API docs
   (card 2972521c, incident 112853a6, CWE-798 / F1-residual + F3)**:
   - `docker-compose.unified.yml`: `SECRET_KEY` is now a required compose
@@ -17,6 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     (e.g. `docker-compose.staging-overrides.yml`, untracked).
   - `dashboard/backend/config/environment_config.py`: `SECRET_KEY` and
     `JWT_SECRET_KEY` are required fields (min 32 chars) — no defaults.
+    (Superseded: the dead module was removed by the config hardening
+    follow-ups above; the runtime `config.py` enforces the same policy.)
   - `dashboard/backend/config.py`: the development-only JWT fallback is now
     an ephemeral per-process random key (`secrets.token_urlsafe(48)`) instead
     of a committed constant; production still crashes at boot without an
