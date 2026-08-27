@@ -43,12 +43,11 @@ class Settings(BaseSettings):
     STRIPE_API_KEY: Optional[SecretStr] = os.getenv("STRIPE_API_KEY")
     STRIPE_WEBHOOK_SECRET: Optional[SecretStr] = os.getenv("STRIPE_WEBHOOK_SECRET")
 
-    # Stripe Price IDs (LIVE)
-    STRIPE_PRICE_FREE: str = os.getenv("STRIPE_PRICE_FREE", "price_1TEvdOI1MtlKoNQt5aepkf0d")
-    STRIPE_PRICE_PRO: str = os.getenv("STRIPE_PRICE_PRO", "price_1TEvdOI1MtlKoNQtonZGU7S7")
-    STRIPE_PRICE_ENTERPRISE: str = os.getenv(
-        "STRIPE_PRICE_ENTERPRISE", "price_1TEvdPI1MtlKoNQtdRE8CP5m"
-    )
+    # Stripe Price IDs - from environment only (public by design, but no
+    # committed defaults: hygiene follow-up of review R2, card f3231394)
+    STRIPE_PRICE_FREE: Optional[str] = os.getenv("STRIPE_PRICE_FREE")
+    STRIPE_PRICE_PRO: Optional[str] = os.getenv("STRIPE_PRICE_PRO")
+    STRIPE_PRICE_ENTERPRISE: Optional[str] = os.getenv("STRIPE_PRICE_ENTERPRISE")
 
     # Stripe Product IDs (LIVE)
     STRIPE_PRODUCT_FREE: str = os.getenv("STRIPE_PRODUCT_FREE", "prod_UDMMUYX064DjtC")
@@ -61,11 +60,7 @@ class Settings(BaseSettings):
     # Browser-Use AI-Powered Test Automation
     BROWSER_USE_LLM_PROVIDER: str = os.getenv("BROWSER_USE_LLM_PROVIDER", "groq")
     BROWSER_USE_MODEL: str = os.getenv("BROWSER_USE_MODEL", "llama-3.3-70b-versatile")
-
-    # Browser-Use AI-Powered Test Automation
-    BROWSER_USE_LLM_PROVIDER: str = os.getenv("BROWSER_USE_LLM_PROVIDER", "groq")
     GROQ_API_KEY: Optional[SecretStr] = os.getenv("GROQ_API_KEY")
-    BROWSER_USE_MODEL: str = os.getenv("BROWSER_USE_MODEL", "llama-3.3-70b-versatile")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -96,6 +91,9 @@ class Settings(BaseSettings):
                     {
                         "STRIPE_API_KEY": self.STRIPE_API_KEY,
                         "STRIPE_WEBHOOK_SECRET": self.STRIPE_WEBHOOK_SECRET,
+                        "STRIPE_PRICE_FREE": self.STRIPE_PRICE_FREE,
+                        "STRIPE_PRICE_PRO": self.STRIPE_PRICE_PRO,
+                        "STRIPE_PRICE_ENTERPRISE": self.STRIPE_PRICE_ENTERPRISE,
                     }
                 )
 

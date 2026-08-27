@@ -189,3 +189,60 @@ class TestMinimumSecretLength:
         monkeypatch.setenv("SECRET_KEY", SHORT_SECRET)
         settings = Settings()
         assert settings.secret_key.get_secret_value() == SHORT_SECRET
+
+
+class TestStripePriceIdsFromEnv:
+    """Review R2 follow-up 5: Stripe price IDs move to env (hygiene —
+    no production price IDs committed as defaults)."""
+
+    def test_price_ids_have_no_committed_default(self, monkeypatch):
+        for var in ("STRIPE_PRICE_FREE", "STRIPE_PRICE_PRO", "STRIPE_PRICE_ENTERPRISE"):
+            monkeypatch.delenv(var, raising=False)
+        monkeypatch.setenv("ENVIRONMENT", "development")
+        monkeypatch.delenv("SECRET_KEY", raising=False)
+        monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
+        settings = Settings()
+        assert settings.STRIPE_PRICE_FREE is None
+        assert settings.STRIPE_PRICE_PRO is None
+        assert settings.STRIPE_PRICE_ENTERPRISE is None
+
+    def test_price_ids_come_from_environment(self, monkeypatch):
+        _scrub(monkeypatch)
+        monkeypatch.setenv("ENVIRONMENT", "development")
+        monkeypatch.setenv("STRIPE_PRICE_FREE", "price_env_free")
+        monkeypatch.setenv("STRIPE_PRICE_PRO", "price_env_pro")
+        monkeypatch.setenv("STRIPE_PRICE_ENTERPRISE", "price_env_ent")
+        settings = Settings()
+        assert settings.STRIPE_PRICE_FREE == "price_env_free"
+        assert settings.STRIPE_PRICE_PRO == "price_env_pro"
+        assert settings.STRIPE_PRICE_ENTERPRISE == "price_env_ent"
+
+    def test_production_billing_requires_price_ids(self, monkeypatch):
+        _scrub(monkeypatch)
+        for k, v in PROD.items():
+            monkeypatch.setenv(k, v)
+        monkeypatch.setenv("ENABLE_BILLING", "true")
+        monkeypatch.setenv("STRIPE_API_KEY", LONG_SECRET)
+        monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", LONG_SECRET)
+        for var in ("STRIPE_PRICE_FREE", "STRIPE_PRICE_PRO", "STRIPE_PRICE_ENTERPRISE"):
+            monkeypatch.delenv(var, raising=False)
+        with pytest.raises(ValueError, match="STRIPE_PRICE"):
+            Settings()
+
+
+class TestBrowserUseFieldsContract:
+    """Review R2 follow-up 4: the duplicated BROWSER_USE_* block was removed;
+    the surviving fields (incl. GROQ_API_KEY) must stay on the model."""
+
+    def test_browser_use_and_groq_fields_exist(self):
+        fields = Settings.model_fields
+        for name in ("BROWSER_USE_LLM_PROVIDER", "BROWSER_USE_MODEL", "GROQ_API_KEY"):
+            assert name in fields, f"missing field after dedupe: {name}"
+
+    def test_browser_use_defaults(self, monkeypatch):
+        _scrub(monkeypatch)
+        monkeypatch.setenv("ENVIRONMENT", "development")
+        monkeypatch.setenv("GROQ_API_KEY", "gsk-defaults-0123456789abcdef")
+        settings = Settings()
+        assert settings.BROWSER_USE_LLM_PROVIDER == "groq"
+        assert settings.BROWSER_USE_MODEL == "llama-3.3-70b-versatile"
