@@ -10,10 +10,10 @@ pytest-html==4.2.0
 
 # HTTP Clients
 httpx==0.26.0
-requests==2.31.0
+requests==2.34.2  # aligned with pyproject.toml; locust>=2.31 requires requests>=2.32.2
 
 # UI Testing
-playwright==1.41.0
+playwright>=1.62,<2.0
 selenium==4.16.0
 
 # Data Generation
@@ -31,7 +31,7 @@ pydantic-extra-types==2.6.0
 allure-python-commons==2.13.5
 
 # Performance Testing
-locust==2.22.0
+locust>=2.31,<3.0
 pytest-benchmark==5.2.3
 
 # Security Testing
