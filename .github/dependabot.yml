@@ -8,6 +8,10 @@
 # bumps land in isolated PRs. stripe is GATED (Joker): excluded from every
 # group in ecosystems where it can appear (pip root, pip backend, npm);
 # it keeps receiving individual (ungrouped) PRs as before.
+# 2026-08-27: majors groups also exclude high-blast-radius frameworks (card
+# f28cecdb) — pip: sqlalchemy, fastapi, starlette, pydantic; npm: next,
+# react, vite. Only innocuous majors get bundled; the excluded ones fall
+# back to individual PRs for isolated review, same as stripe.
 
 version: 2
 updates:
@@ -25,6 +29,10 @@ updates:
           - "major"
         exclude-patterns:
           - "stripe"
+          - "sqlalchemy"
+          - "fastapi"
+          - "starlette"
+          - "pydantic"
       pip-root-minors-patch:
         update-types:
           - "minor"
@@ -55,6 +63,10 @@ updates:
           - "major"
         exclude-patterns:
           - "stripe"
+          - "sqlalchemy"
+          - "fastapi"
+          - "starlette"
+          - "pydantic"
       pip-backend-minors-patch:
         update-types:
           - "minor"
@@ -86,6 +98,9 @@ updates:
           - "major"
         exclude-patterns:
           - "@stripe/*"
+          - "next"
+          - "react"
+          - "vite"
       npm-frontend-minors-patch:
         update-types:
           - "minor"
