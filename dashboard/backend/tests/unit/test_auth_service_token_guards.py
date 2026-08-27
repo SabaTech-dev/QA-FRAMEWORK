@@ -65,7 +65,7 @@ def make_credentials(token: str) -> Mock:
 
 
 def decode(token: str) -> dict:
-    return jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+    return jwt.decode(token, settings.secret_key.get_secret_value(), algorithms=[settings.algorithm])
 
 
 class TestTokenTypeGuard:
@@ -90,7 +90,7 @@ class TestTokenTypeGuard:
         """Tokens minted before the type tag stay valid until they expire."""
         legacy = jwt.encode(
             {"sub": "testuser", "exp": decode(create_access_token({"sub": "x"}))["exp"]},
-            settings.secret_key,
+            settings.secret_key.get_secret_value(),
             algorithm=settings.algorithm,
         )
         user = await get_current_user(make_credentials(legacy), make_db(make_user()))
@@ -100,7 +100,7 @@ class TestTokenTypeGuard:
         token = create_access_token({"sub": "testuser"})
         payload = decode(token)
         payload["type"] = "password-reset"
-        forged = jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
+        forged = jwt.encode(payload, settings.secret_key.get_secret_value(), algorithm=settings.algorithm)
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(make_credentials(forged), make_db(make_user()))
         assert exc_info.value.status_code == 401

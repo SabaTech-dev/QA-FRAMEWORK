@@ -7,6 +7,7 @@ Contracts under test:
 """
 
 import pytest
+from pydantic import SecretStr
 
 from config import Settings
 
@@ -66,3 +67,48 @@ class TestEnvironmentNormalization:
         _scrub(monkeypatch)
         monkeypatch.setenv("ENVIRONMENT", "Staging")
         assert Settings().ENVIRONMENT == "staging"
+
+
+SECRET_FIELDS = (
+    ("SECRET_KEY", "SECRET_KEY", "secret_key"),
+    ("REDIS_PASSWORD", "REDIS_PASSWORD", "redis_password"),
+    ("STRIPE_API_KEY", "STRIPE_API_KEY", "STRIPE_API_KEY"),
+    ("STRIPE_WEBHOOK_SECRET", "STRIPE_WEBHOOK_SECRET", "STRIPE_WEBHOOK_SECRET"),
+    ("GROQ_API_KEY", "GROQ_API_KEY", "GROQ_API_KEY"),
+)
+
+
+class TestSecretsAreMasked:
+    """Review R2 follow-up 3: pytest repr of Settings leaked GROQ_API_KEY."""
+
+    def test_repr_does_not_leak_groq_api_key(self, monkeypatch):
+        _scrub(monkeypatch)
+        monkeypatch.setenv("ENVIRONMENT", "development")
+        monkeypatch.setenv("GROQ_API_KEY", "gsk-leak-canary-abcdef0123456789")
+        leaked = repr(Settings())
+        assert "gsk-leak-canary-abcdef0123456789" not in leaked
+        assert "GROQ_API_KEY" in leaked  # field still visible, value masked
+
+    def test_repr_does_not_leak_any_secret(self, monkeypatch):
+        _scrub(monkeypatch)
+        monkeypatch.setenv("ENVIRONMENT", "development")
+        canary = "canary-secret-value-0123456789abcdef"
+        for env_var, _, _ in SECRET_FIELDS:
+            monkeypatch.setenv(env_var, canary)
+        leaked = repr(Settings())
+        assert leaked.count(canary) == 0
+
+    @pytest.mark.parametrize("env_var,attr", [(e, a) for _, e, a in SECRET_FIELDS])
+    def test_secret_fields_are_secret_str(self, monkeypatch, env_var, attr):
+        _scrub(monkeypatch)
+        monkeypatch.setenv("ENVIRONMENT", "development")
+        monkeypatch.setenv(env_var, "canary-secret-value-0123456789abcdef")
+        settings = Settings()
+        assert isinstance(getattr(settings, attr), SecretStr)
+
+    def test_get_secret_value_returns_plaintext(self, monkeypatch):
+        _scrub(monkeypatch)
+        monkeypatch.setenv("ENVIRONMENT", "development")
+        monkeypatch.setenv("GROQ_API_KEY", "gsk-plain-0123456789abcdef")
+        settings = Settings()
+        assert settings.GROQ_API_KEY.get_secret_value() == "gsk-plain-0123456789abcdef"

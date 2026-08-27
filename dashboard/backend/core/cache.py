@@ -1,4 +1,5 @@
 import asyncio
+
 """
 Redis Cache Module
 
@@ -64,7 +65,9 @@ class CacheManager:
             self.initialized = True
             self._host = settings.redis_host
             self._port = settings.redis_port
-            self._password = settings.redis_password
+            self._password = (
+                settings.redis_password.get_secret_value() if settings.redis_password else None
+            )
 
     async def get_async_client(self) -> aioredis.Redis:
         """Get or create async Redis client"""
@@ -250,15 +253,11 @@ class CacheManager:
             keys = list(client.scan_iter(match=pattern))
             if keys:
                 client.delete(*keys)
-                logger.debug(
-                    "Cache delete pattern (sync)", pattern=pattern, count=len(keys)
-                )
+                logger.debug("Cache delete pattern (sync)", pattern=pattern, count=len(keys))
                 return len(keys)
             return 0
         except Exception as e:
-            logger.error(
-                "Cache delete pattern error (sync)", pattern=pattern, error=str(e)
-            )
+            logger.error("Cache delete pattern error (sync)", pattern=pattern, error=str(e))
             return 0
 
     def sync_exists(self, key: str) -> bool:
@@ -286,9 +285,7 @@ class CacheManager:
     async def invalidate_suite_cache(self, suite_id: Optional[int] = None):
         """Invalidate suite-related cache"""
         if suite_id:
-            await self.async_delete(
-                self._build_key(self.KEY_PREFIXES["suite"], suite_id)
-            )
+            await self.async_delete(self._build_key(self.KEY_PREFIXES["suite"], suite_id))
         await self.async_delete_pattern(f"{self.KEY_PREFIXES['suite_list']}:*")
         logger.info("Suite cache invalidated", suite_id=suite_id)
 
@@ -299,18 +296,14 @@ class CacheManager:
         if case_id:
             await self.async_delete(self._build_key(self.KEY_PREFIXES["case"], case_id))
         if suite_id:
-            await self.async_delete_pattern(
-                f"{self.KEY_PREFIXES['case_list']}:suite:{suite_id}:*"
-            )
+            await self.async_delete_pattern(f"{self.KEY_PREFIXES['case_list']}:suite:{suite_id}:*")
         await self.async_delete_pattern(f"{self.KEY_PREFIXES['case_list']}:*")
         logger.info("Case cache invalidated", case_id=case_id, suite_id=suite_id)
 
     async def invalidate_execution_cache(self, execution_id: Optional[int] = None):
         """Invalidate execution-related cache"""
         if execution_id:
-            await self.async_delete(
-                self._build_key(self.KEY_PREFIXES["execution"], execution_id)
-            )
+            await self.async_delete(self._build_key(self.KEY_PREFIXES["execution"], execution_id))
         await self.async_delete_pattern(f"{self.KEY_PREFIXES['execution_list']}:*")
         logger.info("Execution cache invalidated", execution_id=execution_id)
 

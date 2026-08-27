@@ -45,7 +45,7 @@ class TestProductionFailsClosed:
         monkeypatch.setenv("SECRET_KEY", expected)
         settings = Settings()
         assert settings.is_production
-        assert settings.secret_key == expected
+        assert settings.secret_key.get_secret_value() == expected
 
 
 class TestDevFallbackIsEphemeral:
@@ -54,9 +54,9 @@ class TestDevFallbackIsEphemeral:
         monkeypatch.setenv("ENVIRONMENT", "development")
         settings = Settings()
         assert settings.secret_key
-        assert len(settings.secret_key) >= 32
-        assert "dev-secret-key" not in settings.secret_key
-        assert "dev-jwt-secret" not in settings.secret_key
+        assert len(settings.secret_key.get_secret_value()) >= 32
+        assert "dev-secret-key" not in settings.secret_key.get_secret_value()
+        assert "dev-jwt-secret" not in settings.secret_key.get_secret_value()
 
     def test_fallback_differs_between_processes(self, monkeypatch):
         _scrub(monkeypatch)
@@ -74,7 +74,7 @@ class TestDevFallbackIsEphemeral:
         monkeypatch.setenv("ENVIRONMENT", "development")
         monkeypatch.setenv("SECRET_KEY", "explicit-dev-key-0123456789abcdef012345")
         settings = Settings()
-        assert settings.secret_key == "explicit-dev-key-0123456789abcdef012345"
+        assert settings.secret_key.get_secret_value() == "explicit-dev-key-0123456789abcdef012345"
 
 
 class TestProductionNeverFallsBack:
@@ -86,4 +86,4 @@ class TestProductionNeverFallsBack:
             monkeypatch.setenv(k, v)
         monkeypatch.setenv("SECRET_KEY", expected)
         settings = Settings()
-        assert settings.secret_key == expected
+        assert settings.secret_key.get_secret_value() == expected

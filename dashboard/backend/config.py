@@ -23,10 +23,10 @@ class Settings(BaseSettings):
     # Redis
     redis_host: str = os.getenv("REDIS_HOST", "localhost")
     redis_port: int = int(os.getenv("REDIS_PORT", "6379"))
-    redis_password: Optional[str] = os.getenv("REDIS_PASSWORD")
+    redis_password: Optional[SecretStr] = os.getenv("REDIS_PASSWORD")
 
     # JWT - REQUIRED in production
-    secret_key: Optional[str] = os.getenv("JWT_SECRET_KEY")
+    secret_key: Optional[SecretStr] = os.getenv("JWT_SECRET_KEY")
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
 
@@ -37,8 +37,8 @@ class Settings(BaseSettings):
     frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
     # Stripe - REQUIRED for billing
-    STRIPE_API_KEY: Optional[str] = os.getenv("STRIPE_API_KEY")
-    STRIPE_WEBHOOK_SECRET: Optional[str] = os.getenv("STRIPE_WEBHOOK_SECRET")
+    STRIPE_API_KEY: Optional[SecretStr] = os.getenv("STRIPE_API_KEY")
+    STRIPE_WEBHOOK_SECRET: Optional[SecretStr] = os.getenv("STRIPE_WEBHOOK_SECRET")
 
     # Stripe Price IDs (LIVE)
     STRIPE_PRICE_FREE: str = os.getenv("STRIPE_PRICE_FREE", "price_1TEvdOI1MtlKoNQt5aepkf0d")
@@ -61,7 +61,7 @@ class Settings(BaseSettings):
 
     # Browser-Use AI-Powered Test Automation
     BROWSER_USE_LLM_PROVIDER: str = os.getenv("BROWSER_USE_LLM_PROVIDER", "groq")
-    GROQ_API_KEY: Optional[str] = os.getenv("GROQ_API_KEY")
+    GROQ_API_KEY: Optional[SecretStr] = os.getenv("GROQ_API_KEY")
     BROWSER_USE_MODEL: str = os.getenv("BROWSER_USE_MODEL", "llama-3.3-70b-versatile")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -96,7 +96,15 @@ class Settings(BaseSettings):
                     }
                 )
 
-            missing = [k for k, v in required_vars.items() if not v]
+            def _plain(v):
+                return v.get_secret_value() if isinstance(v, SecretStr) else v
+
+            missing = [
+                k
+                for k, v in required_vars.items()
+                # SecretStr is always truthy; inspect the underlying value.
+                if _plain(v) is None or not _plain(v)
+            ]
             if missing:
                 raise ValueError(
                     f"Missing required environment variables in production: {', '.join(missing)}. "
@@ -118,7 +126,7 @@ class Settings(BaseSettings):
                 # committed, so tokens signed in dev are unguessable but do
                 # not survive a restart. Production never reaches this path
                 # (_validate_production_config crashes first).
-                object.__setattr__(self, "secret_key", secrets.token_urlsafe(48))
+                object.__setattr__(self, "secret_key", SecretStr(secrets.token_urlsafe(48)))
                 warning_messages.append(
                     "JWT_SECRET_KEY not set - using ephemeral dev fallback (sessions will not persist across restarts)"
                 )

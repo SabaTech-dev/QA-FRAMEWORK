@@ -53,7 +53,8 @@ def _redis_url_from_settings() -> str:
     Credentials are never hardcoded: REDIS_PASSWORD comes exclusively from
     the environment (unset for local/CI deployments on 127.0.0.1).
     """
-    password_part = f":{settings.redis_password}@" if settings.redis_password else ""
+    redis_password = settings.redis_password.get_secret_value() if settings.redis_password else None
+    password_part = f":{redis_password}@" if redis_password else ""
     return f"redis://{password_part}{settings.redis_host}:{settings.redis_port}/0"
 
 
@@ -96,7 +97,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         expire = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
 
     to_encode.update({"exp": expire, "type": "access"})
-    encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+    encoded_jwt = jwt.encode(
+        to_encode, settings.secret_key.get_secret_value(), algorithm=settings.algorithm
+    )
     return encoded_jwt
 
 
@@ -139,7 +142,7 @@ async def get_current_user(
     try:
         payload = jwt.decode(
             credentials.credentials,
-            settings.secret_key,
+            settings.secret_key.get_secret_value(),
             algorithms=[settings.algorithm],
         )
         username: str = payload.get("sub")
@@ -226,7 +229,9 @@ def create_refresh_token(
             "fam": family_id or str(uuid4()),
         }
     )
-    encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+    encoded_jwt = jwt.encode(
+        to_encode, settings.secret_key.get_secret_value(), algorithm=settings.algorithm
+    )
     logger.debug("Refresh token created", expiry=expire.isoformat())
     return encoded_jwt
 
@@ -254,7 +259,7 @@ async def refresh_access_token(
     try:
         payload = jwt.decode(
             refresh_token,
-            settings.secret_key,
+            settings.secret_key.get_secret_value(),
             algorithms=[settings.algorithm],
         )
 
@@ -382,7 +387,7 @@ async def revoke_refresh_token(
         try:
             payload = jwt.decode(
                 refresh_token,
-                settings.secret_key,
+                settings.secret_key.get_secret_value(),
                 algorithms=[settings.algorithm],
             )
         except JWTError:
@@ -455,7 +460,7 @@ async def get_current_user_optional(
     try:
         payload = jwt.decode(
             credentials.credentials,
-            settings.secret_key,
+            settings.secret_key.get_secret_value(),
             algorithms=[settings.algorithm],
         )
         username: str = payload.get("sub")
