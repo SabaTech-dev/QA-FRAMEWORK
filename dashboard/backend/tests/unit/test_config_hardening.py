@@ -112,3 +112,80 @@ class TestSecretsAreMasked:
         monkeypatch.setenv("GROQ_API_KEY", "gsk-plain-0123456789abcdef")
         settings = Settings()
         assert settings.GROQ_API_KEY.get_secret_value() == "gsk-plain-0123456789abcdef"
+
+
+LONG_SECRET = "unit-test-signing-key-0123456789abcdef"
+SHORT_SECRET = "short-secret-0123456789"
+
+
+class TestMinimumSecretLength:
+    """Review R2 follow-up 1: secrets shorter than 32 chars must fail closed
+    in production (weak-key rejection), only when present."""
+
+    def _prod_env(self, monkeypatch, **extra):
+        _scrub(monkeypatch)
+        for k, v in PROD.items():
+            monkeypatch.setenv(k, v)
+        for k, v in extra.items():
+            monkeypatch.setenv(k, v)
+
+    def test_short_jwt_secret_rejected_in_production(self, monkeypatch):
+        self._prod_env(monkeypatch, SECRET_KEY=SHORT_SECRET)
+        with pytest.raises(ValueError, match="JWT_SECRET_KEY"):
+            Settings()
+
+    def test_short_stripe_api_key_rejected_in_production(self, monkeypatch):
+        self._prod_env(
+            monkeypatch,
+            SECRET_KEY=LONG_SECRET,
+            ENABLE_BILLING="true",
+            STRIPE_API_KEY=SHORT_SECRET,
+            STRIPE_WEBHOOK_SECRET=LONG_SECRET,
+            STRIPE_PRICE_FREE="price_unit_test",
+            STRIPE_PRICE_PRO="price_unit_test",
+            STRIPE_PRICE_ENTERPRISE="price_unit_test",
+        )
+        with pytest.raises(ValueError, match="STRIPE_API_KEY"):
+            Settings()
+
+    def test_short_webhook_secret_rejected_in_production(self, monkeypatch):
+        self._prod_env(
+            monkeypatch,
+            SECRET_KEY=LONG_SECRET,
+            ENABLE_BILLING="true",
+            STRIPE_API_KEY=LONG_SECRET,
+            STRIPE_WEBHOOK_SECRET=SHORT_SECRET,
+            STRIPE_PRICE_FREE="price_unit_test",
+            STRIPE_PRICE_PRO="price_unit_test",
+            STRIPE_PRICE_ENTERPRISE="price_unit_test",
+        )
+        with pytest.raises(ValueError, match="STRIPE_WEBHOOK_SECRET"):
+            Settings()
+
+    def test_short_groq_api_key_rejected_in_production(self, monkeypatch):
+        self._prod_env(monkeypatch, SECRET_KEY=LONG_SECRET, GROQ_API_KEY=SHORT_SECRET)
+        with pytest.raises(ValueError, match="GROQ_API_KEY"):
+            Settings()
+
+    def test_short_redis_password_rejected_in_production(self, monkeypatch):
+        self._prod_env(monkeypatch, SECRET_KEY=LONG_SECRET, REDIS_PASSWORD=SHORT_SECRET)
+        with pytest.raises(ValueError, match="REDIS_PASSWORD"):
+            Settings()
+
+    def test_long_secrets_boot_in_production(self, monkeypatch):
+        self._prod_env(
+            monkeypatch,
+            SECRET_KEY=LONG_SECRET,
+            GROQ_API_KEY="gsk-long-0123456789abcdefghijklmnop",
+            REDIS_PASSWORD="redis-long-0123456789abcdefghijkl",
+        )
+        settings = Settings()
+        assert settings.is_production
+
+    def test_short_secret_allowed_in_development(self, monkeypatch):
+        """The 32-char floor is a production gate; dev keeps working."""
+        _scrub(monkeypatch)
+        monkeypatch.setenv("ENVIRONMENT", "development")
+        monkeypatch.setenv("SECRET_KEY", SHORT_SECRET)
+        settings = Settings()
+        assert settings.secret_key.get_secret_value() == SHORT_SECRET
