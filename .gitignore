@@ -74,3 +74,6 @@ dashboard/monitoring/alertmanager/.secrets/
 # Drift closure (card 290458d4): build-time env + mkdocs output — nunca commit
 dashboard/frontend/.env.production
 site/
+
+# Vestigial npm lockfile (dashboard/ has no npm deps — real one lives in dashboard/frontend/)
+/dashboard/package-lock.json
