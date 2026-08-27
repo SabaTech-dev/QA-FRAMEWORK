@@ -15,8 +15,12 @@ from urllib.parse import urlparse
 logger = logging.getLogger(__name__)
 
 
-# Default allowlist of trusted domains for production use.
-# Override via environment variable SSRF_ALLOWED_DOMAINS (comma-separated).
+# Default allowlist of trusted domains for production use — FAIL-CLOSED.
+# Loopback/local hosts (localhost, 127.0.0.1, 0.0.0.0, [::1], *.local) are
+# intentionally NOT allowed by default (SSRF, OWASP A01). For local
+# development, pass an explicit ``allowed_domains`` set or override via the
+# environment variable SSRF_ALLOWED_DOMAINS (comma-separated), resolved in
+# src/adapters/http/httpx_client.py::_load_allowed_domains.
 DEFAULT_ALLOWED_DOMAINS: set[str] = {
     # Standard OAuth providers
     "accounts.google.com",
@@ -37,10 +41,6 @@ DEFAULT_ALLOWED_DOMAINS: set[str] = {
     "api.resend.com",
     "api.openai.com",
     "api.groq.com",
-    # Local development / testing
-    "localhost",
-    "127.0.0.1",
-    "0.0.0.0",
 }
 
 
@@ -51,6 +51,12 @@ class URLValidationError(Exception):
 def is_allowed_url(url: str, allowed_domains: set[str] | None = None) -> bool:
     """
     Check whether the given URL is in the allowed domains set.
+
+    Fail-closed: when ``allowed_domains`` is None, the fallback is
+    DEFAULT_ALLOWED_DOMAINS, which contains public domains only — local and
+    loopback hosts (localhost, 127.0.0.1, [::1], *.local, ...) are rejected
+    unless they are explicitly added via ``allowed_domains`` or the
+    SSRF_ALLOWED_DOMAINS environment override.
 
     Args:
         url: The URL to validate.
