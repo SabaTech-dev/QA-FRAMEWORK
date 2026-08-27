@@ -1,6 +1,7 @@
 import os
 import secrets
 import warnings
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 from functools import lru_cache
@@ -64,6 +65,15 @@ class Settings(BaseSettings):
     BROWSER_USE_MODEL: str = os.getenv("BROWSER_USE_MODEL", "llama-3.3-70b-versatile")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    @field_validator("ENVIRONMENT", mode="before")
+    @classmethod
+    def _normalize_environment(cls, value):
+        """Normalize case/whitespace variants so " Production " cannot skip
+        the production fail-closed validation."""
+        if isinstance(value, str):
+            return value.strip().lower()
+        return value
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
