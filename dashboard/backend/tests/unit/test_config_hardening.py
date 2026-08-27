@@ -6,6 +6,10 @@ Contracts under test:
   (" Production ", "PRODUCTION") cannot bypass production validation.
 """
 
+import os
+import subprocess
+import sys
+
 import pytest
 from pydantic import SecretStr
 
@@ -28,6 +32,7 @@ def _scrub(monkeypatch):
         "STRIPE_API_KEY",
         "STRIPE_WEBHOOK_SECRET",
         "GROQ_API_KEY",
+        "ENABLE_BILLING",
     ):
         monkeypatch.delenv(var, raising=False)
 
@@ -246,3 +251,36 @@ class TestBrowserUseFieldsContract:
         settings = Settings()
         assert settings.BROWSER_USE_LLM_PROVIDER == "groq"
         assert settings.BROWSER_USE_MODEL == "llama-3.3-70b-versatile"
+
+
+class TestDefaultsNotFrozenAtImport:
+    """Secret defaults must be None, never os.getenv() captured at import time.
+
+    Under pytest, `config` is imported while the developer's shell exports
+    real secrets; a frozen default resurrects the import-time value even
+    after the test scrubs the variable (unvalidated str, bypassing SecretStr).
+    """
+
+    _PROBE = (
+        "from pydantic import SecretStr\n"
+        "import os, sys; sys.path.insert(0, '.'); "
+        "from config import Settings  # imported while REDIS_PASSWORD is set\n"
+        "os.environ.pop('REDIS_PASSWORD', None); "
+        "os.environ['ENVIRONMENT'] = 'development'; "
+        "s = Settings(); "
+        "print('REDIS=' + (s.redis_password.get_secret_value() "
+        "if s.redis_password is not None and isinstance(s.redis_password, SecretStr) "
+        "else str(s.redis_password)))"
+    )
+
+    def test_secret_default_not_captured_from_import_time_env(self):
+        result = subprocess.run(
+            [sys.executable, "-c", self._PROBE],
+            env={**os.environ, "REDIS_PASSWORD": "frozen-canary-0123456789abcdef"},
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        assert result.returncode == 0, result.stderr
+        assert "frozen-canary" not in result.stdout
+        assert "REDIS=None" in result.stdout

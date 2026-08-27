@@ -1,7 +1,7 @@
 import os
 import secrets
 import warnings
-from pydantic import SecretStr, field_validator
+from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 from functools import lru_cache
@@ -26,10 +26,17 @@ class Settings(BaseSettings):
     # Redis
     redis_host: str = os.getenv("REDIS_HOST", "localhost")
     redis_port: int = int(os.getenv("REDIS_PORT", "6379"))
-    redis_password: Optional[SecretStr] = os.getenv("REDIS_PASSWORD")
+    # No os.getenv() in secret defaults: values would be frozen at import
+    # time and bypass SecretStr validation (pytest/unicorn re-import hazard).
+    # pydantic-settings reads the live environment on every instantiation.
+    redis_password: Optional[SecretStr] = None
 
-    # JWT - REQUIRED in production
-    secret_key: Optional[SecretStr] = os.getenv("JWT_SECRET_KEY")
+    # JWT - REQUIRED in production. Accepts both SECRET_KEY and
+    # JWT_SECRET_KEY from the environment (historic double naming).
+    secret_key: Optional[SecretStr] = Field(
+        default=None,
+        validation_alias=AliasChoices("SECRET_KEY", "JWT_SECRET_KEY"),
+    )
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
 
@@ -40,14 +47,14 @@ class Settings(BaseSettings):
     frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
     # Stripe - REQUIRED for billing
-    STRIPE_API_KEY: Optional[SecretStr] = os.getenv("STRIPE_API_KEY")
-    STRIPE_WEBHOOK_SECRET: Optional[SecretStr] = os.getenv("STRIPE_WEBHOOK_SECRET")
+    STRIPE_API_KEY: Optional[SecretStr] = None
+    STRIPE_WEBHOOK_SECRET: Optional[SecretStr] = None
 
     # Stripe Price IDs - from environment only (public by design, but no
     # committed defaults: hygiene follow-up of review R2, card f3231394)
-    STRIPE_PRICE_FREE: Optional[str] = os.getenv("STRIPE_PRICE_FREE")
-    STRIPE_PRICE_PRO: Optional[str] = os.getenv("STRIPE_PRICE_PRO")
-    STRIPE_PRICE_ENTERPRISE: Optional[str] = os.getenv("STRIPE_PRICE_ENTERPRISE")
+    STRIPE_PRICE_FREE: Optional[str] = None
+    STRIPE_PRICE_PRO: Optional[str] = None
+    STRIPE_PRICE_ENTERPRISE: Optional[str] = None
 
     # Stripe Product IDs (LIVE)
     STRIPE_PRODUCT_FREE: str = os.getenv("STRIPE_PRODUCT_FREE", "prod_UDMMUYX064DjtC")
@@ -60,7 +67,7 @@ class Settings(BaseSettings):
     # Browser-Use AI-Powered Test Automation
     BROWSER_USE_LLM_PROVIDER: str = os.getenv("BROWSER_USE_LLM_PROVIDER", "groq")
     BROWSER_USE_MODEL: str = os.getenv("BROWSER_USE_MODEL", "llama-3.3-70b-versatile")
-    GROQ_API_KEY: Optional[SecretStr] = os.getenv("GROQ_API_KEY")
+    GROQ_API_KEY: Optional[SecretStr] = None
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

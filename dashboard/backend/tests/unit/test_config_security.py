@@ -18,7 +18,19 @@ PROD = {"ENVIRONMENT": "production", "DATABASE_URL": "postgresql://u:p@h:5432/d"
 
 
 def _scrub(monkeypatch):
-    for var in ("SECRET_KEY", "JWT_SECRET_KEY", "DATABASE_URL", "ENVIRONMENT"):
+    # Keep these tests hermetic: any secret from the developer's shell must
+    # not leak in (min-32 validation would reject short shell values).
+    for var in (
+        "SECRET_KEY",
+        "JWT_SECRET_KEY",
+        "DATABASE_URL",
+        "ENVIRONMENT",
+        "REDIS_PASSWORD",
+        "STRIPE_API_KEY",
+        "STRIPE_WEBHOOK_SECRET",
+        "GROQ_API_KEY",
+        "ENABLE_BILLING",
+    ):
         monkeypatch.delenv(var, raising=False)
 
 
