@@ -214,19 +214,25 @@ jobs:
           fi
           echo "Iniciando deploy (POST /start)..."
           api -X POST "${COOLIFY_URL}/api/v1/applications/${APP_UUID}/start" | jq -r '.message // "start enviado"' || true
-          STATUS=""
-          for i in $(seq 1 72); do
-            STATUS=$(api "${COOLIFY_URL}/api/v1/applications/${APP_UUID}" | jq -r '.status')
-            echo "[poll ${i}/72] status=${STATUS}"
-            case "${STATUS}" in
-              running*) break ;;
-              exited*) echo "ERROR: contenedor exited"; exit 1 ;;
+          DSTAT=""
+          for i in $(seq 1 90); do
+            DSTAT=$(api "${COOLIFY_URL}/api/v1/deployments/applications/${APP_UUID}" | jq -r '(.deployments // .) | sort_by(.created_at // "") | last | .status // empty')
+            ASTAT=$(api "${COOLIFY_URL}/api/v1/applications/${APP_UUID}" | jq -r '.status')
+            echo "[poll ${i}/90] deployment=${DSTAT} app=${ASTAT}"
+            case "${DSTAT}" in
+              finished*) break ;;
+              failed|cancelled) echo "ERROR: deployment ${DSTAT}"; exit 1 ;;
             esac
             sleep 5
           done
-          case "${STATUS}" in
-            running*) echo "preview RUNNING" ;;
-            *) echo "ERROR: timeout esperando running (ultimo=${STATUS})"; exit 1 ;;
+          case "${DSTAT}" in
+            finished*) echo "deployment finished" ;;
+            *) echo "ERROR: timeout esperando deployment (ultimo=${DSTAT})"; exit 1 ;;
+          esac
+          ASTAT=$(api "${COOLIFY_URL}/api/v1/applications/${APP_UUID}" | jq -r '.status')
+          case "${ASTAT}" in
+            running*) echo "preview RUNNING (${ASTAT})" ;;
+            *) echo "ERROR: app no running tras deployment finished (${ASTAT})"; exit 1 ;;
           esac
           CID=$(docker ps -q --filter "ancestor=${IMG}:${IMG_TAG}" | head -1)
           if [ -z "${CID}" ]; then echo "ERROR: contenedor no encontrado (${IMG}:${IMG_TAG})"; exit 1; fi
@@ -329,19 +335,25 @@ jobs:
           fi
           echo "Iniciando deploy (POST /start)..."
           api -X POST "${COOLIFY_URL}/api/v1/applications/${APP_UUID}/start" | jq -r '.message // "start enviado"' || true
-          STATUS=""
-          for i in $(seq 1 72); do
-            STATUS=$(api "${COOLIFY_URL}/api/v1/applications/${APP_UUID}" | jq -r '.status')
-            echo "[poll ${i}/72] status=${STATUS}"
-            case "${STATUS}" in
-              running*) break ;;
-              exited*) echo "ERROR: contenedor exited"; exit 1 ;;
+          DSTAT=""
+          for i in $(seq 1 90); do
+            DSTAT=$(api "${COOLIFY_URL}/api/v1/deployments/applications/${APP_UUID}" | jq -r '(.deployments // .) | sort_by(.created_at // "") | last | .status // empty')
+            ASTAT=$(api "${COOLIFY_URL}/api/v1/applications/${APP_UUID}" | jq -r '.status')
+            echo "[poll ${i}/90] deployment=${DSTAT} app=${ASTAT}"
+            case "${DSTAT}" in
+              finished*) break ;;
+              failed|cancelled) echo "ERROR: deployment ${DSTAT}"; exit 1 ;;
             esac
             sleep 5
           done
-          case "${STATUS}" in
-            running*) echo "preview RUNNING" ;;
-            *) echo "ERROR: timeout esperando running (ultimo=${STATUS})"; exit 1 ;;
+          case "${DSTAT}" in
+            finished*) echo "deployment finished" ;;
+            *) echo "ERROR: timeout esperando deployment (ultimo=${DSTAT})"; exit 1 ;;
+          esac
+          ASTAT=$(api "${COOLIFY_URL}/api/v1/applications/${APP_UUID}" | jq -r '.status')
+          case "${ASTAT}" in
+            running*) echo "preview RUNNING (${ASTAT})" ;;
+            *) echo "ERROR: app no running tras deployment finished (${ASTAT})"; exit 1 ;;
           esac
           CID=$(docker ps -q --filter "ancestor=${IMG}:${IMG_TAG}" | head -1)
           if [ -z "${CID}" ]; then echo "ERROR: contenedor no encontrado (${IMG}:${IMG_TAG})"; exit 1; fi
