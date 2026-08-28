@@ -10,7 +10,7 @@ env:
   PYTHON_VERSION: "3.11"
   NODE_VERSION: "26"
 
-# NOTE: preview deploys are NON-BLOCKING while COOLIFY_* secrets are absent (#107).
+# NOTE: preview deploys corren en runner self-hosted (label coolify-deploy) — card 52a85645.
 # NOTE: the SECURITY GATE (security-gate job) IS blocking/fail-closed (card 650387a1, R3):
 # deploys are skipped when Trivy/SBOM/provenance gates fail — regardless of #107.
 
@@ -107,6 +107,36 @@ jobs:
             [ "$ok" = true ] || { echo "::error::provenance verification FAILED for $f — preview deploy blocked"; exit 1; }
           done
 
+      - name: Package backend image for local deploy (strategy b)
+        if: vars.COOLIFY_CONFIGURED == 'true'
+        run: |
+          docker save qa-framework-backend:gate | gzip -1 > /tmp/qa-backend-image.tar.gz
+          ls -lh /tmp/qa-backend-image.tar.gz
+
+      - name: Upload backend image artifact
+        if: vars.COOLIFY_CONFIGURED == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: backend-image
+          path: /tmp/qa-backend-image.tar.gz
+          retention-days: 1
+          compression-level: 0
+
+      - name: Package frontend image for local deploy (strategy b)
+        if: vars.COOLIFY_CONFIGURED == 'true'
+        run: |
+          docker save qa-framework-frontend:gate | gzip -1 > /tmp/qa-frontend-image.tar.gz
+          ls -lh /tmp/qa-frontend-image.tar.gz
+
+      - name: Upload frontend image artifact
+        if: vars.COOLIFY_CONFIGURED == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: frontend-image
+          path: /tmp/qa-frontend-image.tar.gz
+          retention-days: 1
+          compression-level: 0
+
       - name: Gate summary
         if: always()
         run: |
@@ -122,102 +152,114 @@ jobs:
             echo "Fail-closed: preview deploy jobs only run when this gate passes."
           } >> "$GITHUB_STEP_SUMMARY"
 
-  # Deploy Backend PR Preview
+  # ========================================
+  # Estrategia de build (b) — card 52a85645: las imagenes se construyen UNA vez
+  # en security-gate (GitHub-hosted) y viajan como artifacts. Los jobs de deploy
+  # (self-hosted, label coolify-deploy) solo hacen: load -> push a registry local
+  # -> API Coolify (create-or-update app + start + poll estado). Sin continue-on-
+  # error: fallos ruidosos.
+  # NOTA: previews internas (sin proxy/FQDN publico hasta decision de Joker).
+  # ========================================
+
   deploy-backend-preview:
     name: Deploy Backend Preview
     needs: security-gate
-    runs-on: ubuntu-latest
-    if: github.event.action != 'closed' && vars.COOLIFY_CONFIGURED == 'true'
-    continue-on-error: true  # non-blocking: COOLIFY_* secrets missing — see #107
+    runs-on: [self-hosted, coolify-deploy]
+    if: github.event_name == 'pull_request' && github.event.action != 'closed' && vars.COOLIFY_CONFIGURED == 'true'
     outputs:
-      preview_url: ${{ steps.deploy.outputs.preview_url }}
+      app_uuid: ${{ steps.deploy.outputs.app_uuid }}
+      status: ${{ steps.deploy.outputs.status }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Download backend image (built by security-gate)
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          fetch-depth: 0
+          name: backend-image
+          path: ./image
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
-
-      - name: Log in to Coolify Registry
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
-        with:
-          registry: ${{ secrets.COOLIFY_REGISTRY_URL }}
-          username: ${{ secrets.COOLIFY_REGISTRY_USERNAME }}
-          password: ${{ secrets.COOLIFY_REGISTRY_PASSWORD }}
-
-      - name: Build and push Backend Docker image
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
-        with:
-          context: .
-          file: ./dashboard/backend/Dockerfile
-          push: true
-          tags: |
-            ${{ secrets.COOLIFY_REGISTRY_URL }}/qa-framework-backend-pr-${{ github.event.pull_request.number }}:latest
-            ${{ secrets.COOLIFY_REGISTRY_URL }}/qa-framework-backend-pr-${{ github.event.pull_request.number }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Deploy to Coolify Backend
-        id: deploy
+      - name: Load image and push to local registry
         run: |
-          # Deploy using Coolify API
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          PREVIEW_NAME="qa-framework-backend-pr-$PR_NUMBER"
-          
-          # Create/update preview deployment
-          RESPONSE=$(curl -s -X POST "${{ secrets.COOLIFY_API_URL }}/api/v1/applications/${{ secrets.COOLIFY_BACKEND_APP_ID }}/preview" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"pull_request_id\": $PR_NUMBER,
-              \"pull_request_html_url\": \"${{ github.event.pull_request.html_url }}\",
-              \"docker_registry_image_tag\": \"qa-framework-backend-pr-$PR_NUMBER:latest\"
-            }")
-          
-          echo "Deployment response: $RESPONSE"
-          
-          # Extract preview URL
-          PREVIEW_URL=$(echo $RESPONSE | jq -r '.preview_url // .fqdn // empty')
-          echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
-          
-          if [ -n "$PREVIEW_URL" ]; then
-            echo "✅ Backend preview deployed: https://$PREVIEW_URL"
-          else
-            echo "⚠️ Backend preview deployment initiated, URL pending"
-          fi
+          set -euo pipefail
+          gunzip -c image/qa-backend-image.tar.gz | docker load
+          docker tag qa-framework-backend:gate "${REGISTRY}/qa-framework-backend-pr-${{ github.event.pull_request.number }}:latest"
+          docker tag qa-framework-backend:gate "${REGISTRY}/qa-framework-backend-pr-${{ github.event.pull_request.number }}:${{ github.sha }}"
+          docker push "${REGISTRY}/qa-framework-backend-pr-${{ github.event.pull_request.number }}:latest"
+          docker push "${REGISTRY}/qa-framework-backend-pr-${{ github.event.pull_request.number }}:${{ github.sha }}"
 
-      - name: Comment PR with Backend Preview URL
+      - name: Deploy preview via Coolify API
+        id: deploy
+        env:
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          TOK: ${{ secrets.COOLIFY_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          IMG_TAG: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          APP="qa-framework-backend-pr-${PR_NUMBER}"
+          IMG="${REGISTRY}/${APP}"
+          HDR="${PWD}/.coolify_hdr"
+          umask 077
+          printf 'Authorization: Bearer %s\n' "${TOK}" > "${HDR}"
+          api() { curl -sS -H "@${HDR}" -H 'Content-Type: application/json' "$@"; }
+          SERVER_UUID=$(api "${COOLIFY_URL}/api/v1/servers" | jq -r '.[0].uuid')
+          PROJECT_UUID=$(api "${COOLIFY_URL}/api/v1/projects" | jq -r '.[0].uuid')
+          APP_UUID=$(api "${COOLIFY_URL}/api/v1/applications" | jq -r --arg n "${APP}" '.[] | select(.name==$n) | .uuid' | head -1)
+          if [ -z "${APP_UUID}" ]; then
+            echo "Creando app ${APP} en Coolify..."
+            RESP=$(api -X POST "${COOLIFY_URL}/api/v1/applications/dockerimage" -d "{\"project_uuid\":\"${PROJECT_UUID}\",\"server_uuid\":\"${SERVER_UUID}\",\"environment_name\":\"production\",\"name\":\"${APP}\",\"docker_registry_image_name\":\"${IMG}\",\"docker_registry_image_tag\":\"${IMG_TAG}\",\"ports_exposes\":\"8000\"}")
+            APP_UUID=$(echo "${RESP}" | jq -r '.uuid // empty')
+            if [ -z "${APP_UUID}" ]; then echo "ERROR creando app: ${RESP}"; exit 1; fi
+          else
+            echo "App ${APP} ya existe (${APP_UUID}); actualizando tag a ${IMG_TAG}..."
+            api -X PATCH "${COOLIFY_URL}/api/v1/applications/${APP_UUID}" -d "{\"docker_registry_image_tag\":\"${IMG_TAG}\"}" >/dev/null
+          fi
+          echo "Iniciando deploy (POST /start)..."
+          api -X POST "${COOLIFY_URL}/api/v1/applications/${APP_UUID}/start" | jq -r '.message // "start enviado"' || true
+          STATUS=""
+          for i in $(seq 1 72); do
+            STATUS=$(api "${COOLIFY_URL}/api/v1/applications/${APP_UUID}" | jq -r '.status')
+            echo "[poll ${i}/72] status=${STATUS}"
+            case "${STATUS}" in
+              running*) break ;;
+              exited*) echo "ERROR: contenedor exited"; exit 1 ;;
+            esac
+            sleep 5
+          done
+          case "${STATUS}" in
+            running*) echo "preview RUNNING" ;;
+            *) echo "ERROR: timeout esperando running (ultimo=${STATUS})"; exit 1 ;;
+          esac
+          CID=$(docker ps -q --filter "ancestor=${IMG}:${IMG_TAG}" | head -1)
+          if [ -z "${CID}" ]; then echo "ERROR: contenedor no encontrado (${IMG}:${IMG_TAG})"; exit 1; fi
+          docker exec "${CID}" python3 -c "import urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5); print('probe /health ->', r.status)" >/dev/null
+          echo "probe /health OK"
+          echo "status=${STATUS}" >> "${GITHUB_OUTPUT}"
+          echo "app_uuid=${APP_UUID}" >> "${GITHUB_OUTPUT}"
+          rm -f "${HDR}"
+
+      - name: Comment PR with Backend Preview status
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
-            const previewUrl = '${{ steps.deploy.outputs.preview_url }}';
+            const status = '${{ steps.deploy.outputs.status }}';
+            const appUuid = '${{ steps.deploy.outputs.app_uuid }}';
             const message = `## 🔧 Backend Preview Deployment
-            
-            **PR #${{ github.event.pull_request.number }}**
-            
-            ${previewUrl ? `🚀 **Preview URL**: https://${previewUrl}` : '⏳ Deployment in progress... URL will be available shortly'}
-            
+
+            **App Coolify**: qa-framework-backend-pr-${{ github.event.pull_request.number }} (\`${appUuid}\`)
+            **Estado**: ${status === 'running' ? '✅ running + probe /health OK' : '⚠️ ' + status}
             **Commit**: \`${{ github.sha }}\`
             **Branch**: \`${{ github.head_ref }}\`
-            
-            ---
-            *This preview will be automatically updated when new commits are pushed to this PR.*
-            `;
-            
-            // Find existing comment
+
+            _Preview interna (sin FQDN público hasta decisión de proxy — card 52a85645)._`;
+
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
             });
-            
-            const botComment = comments.find(comment => 
-              comment.user.type === 'Bot' && 
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
               comment.body.includes('Backend Preview Deployment')
             );
-            
             if (botComment) {
               await github.rest.issues.updateComment({
                 owner: context.repo.owner,
@@ -234,126 +276,104 @@ jobs:
               });
             }
 
-  # Deploy Frontend PR Preview
   deploy-frontend-preview:
     name: Deploy Frontend Preview
     needs: security-gate
-    runs-on: ubuntu-latest
-    if: github.event.action != 'closed' && vars.COOLIFY_CONFIGURED == 'true'
-    continue-on-error: true  # non-blocking: COOLIFY_* secrets missing — see #107
+    runs-on: [self-hosted, coolify-deploy]
+    if: github.event_name == 'pull_request' && github.event.action != 'closed' && vars.COOLIFY_CONFIGURED == 'true'
     outputs:
-      preview_url: ${{ steps.deploy.outputs.preview_url }}
+      app_uuid: ${{ steps.deploy.outputs.app_uuid }}
+      status: ${{ steps.deploy.outputs.status }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Download frontend image (built by security-gate)
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          fetch-depth: 0
+          name: frontend-image
+          path: ./image
 
-      - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: dashboard/frontend/package-lock.json
-
-      - name: Install Frontend Dependencies
+      - name: Load image and push to local registry
         run: |
-          cd dashboard/frontend
-          npm ci --strict-allow-scripts
+          set -euo pipefail
+          gunzip -c image/qa-frontend-image.tar.gz | docker load
+          docker tag qa-framework-frontend:gate "${REGISTRY}/qa-framework-frontend-pr-${{ github.event.pull_request.number }}:latest"
+          docker tag qa-framework-frontend:gate "${REGISTRY}/qa-framework-frontend-pr-${{ github.event.pull_request.number }}:${{ github.sha }}"
+          docker push "${REGISTRY}/qa-framework-frontend-pr-${{ github.event.pull_request.number }}:latest"
+          docker push "${REGISTRY}/qa-framework-frontend-pr-${{ github.event.pull_request.number }}:${{ github.sha }}"
 
-      - name: Smoke test post-install (npm v12 install-scripts)
-        run: |
-          cd dashboard/frontend
-          node scripts/smoke-install.mjs
-
-      - name: Build Frontend
-        run: |
-          cd dashboard/frontend
-          npm run build
-        env:
-          VITE_API_URL: ${{ secrets.COOLIFY_FRONTEND_PREVIEW_API_URL }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
-
-      - name: Log in to Coolify Registry
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
-        with:
-          registry: ${{ secrets.COOLIFY_REGISTRY_URL }}
-          username: ${{ secrets.COOLIFY_REGISTRY_USERNAME }}
-          password: ${{ secrets.COOLIFY_REGISTRY_PASSWORD }}
-
-      - name: Build and push Frontend Docker image
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
-        with:
-          context: ./dashboard/frontend
-          file: ./dashboard/frontend/Dockerfile
-          push: true
-          tags: |
-            ${{ secrets.COOLIFY_REGISTRY_URL }}/qa-framework-frontend-pr-${{ github.event.pull_request.number }}:latest
-            ${{ secrets.COOLIFY_REGISTRY_URL }}/qa-framework-frontend-pr-${{ github.event.pull_request.number }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Deploy to Coolify Frontend
+      - name: Deploy preview via Coolify API
         id: deploy
+        env:
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          TOK: ${{ secrets.COOLIFY_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          IMG_TAG: ${{ github.sha }}
         run: |
-          # Deploy using Coolify API
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          PREVIEW_NAME="qa-framework-frontend-pr-$PR_NUMBER"
-          
-          # Create/update preview deployment
-          RESPONSE=$(curl -s -X POST "${{ secrets.COOLIFY_API_URL }}/api/v1/applications/${{ secrets.COOLIFY_FRONTEND_APP_ID }}/preview" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"pull_request_id\": $PR_NUMBER,
-              \"pull_request_html_url\": \"${{ github.event.pull_request.html_url }}\",
-              \"docker_registry_image_tag\": \"qa-framework-frontend-pr-$PR_NUMBER:latest\"
-            }")
-          
-          echo "Deployment response: $RESPONSE"
-          
-          # Extract preview URL
-          PREVIEW_URL=$(echo $RESPONSE | jq -r '.preview_url // .fqdn // empty')
-          echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
-          
-          if [ -n "$PREVIEW_URL" ]; then
-            echo "✅ Frontend preview deployed: https://$PREVIEW_URL"
+          set -euo pipefail
+          APP="qa-framework-frontend-pr-${PR_NUMBER}"
+          IMG="${REGISTRY}/${APP}"
+          HDR="${PWD}/.coolify_hdr"
+          umask 077
+          printf 'Authorization: Bearer %s\n' "${TOK}" > "${HDR}"
+          api() { curl -sS -H "@${HDR}" -H 'Content-Type: application/json' "$@"; }
+          SERVER_UUID=$(api "${COOLIFY_URL}/api/v1/servers" | jq -r '.[0].uuid')
+          PROJECT_UUID=$(api "${COOLIFY_URL}/api/v1/projects" | jq -r '.[0].uuid')
+          APP_UUID=$(api "${COOLIFY_URL}/api/v1/applications" | jq -r --arg n "${APP}" '.[] | select(.name==$n) | .uuid' | head -1)
+          if [ -z "${APP_UUID}" ]; then
+            echo "Creando app ${APP} en Coolify..."
+            RESP=$(api -X POST "${COOLIFY_URL}/api/v1/applications/dockerimage" -d "{\"project_uuid\":\"${PROJECT_UUID}\",\"server_uuid\":\"${SERVER_UUID}\",\"environment_name\":\"production\",\"name\":\"${APP}\",\"docker_registry_image_name\":\"${IMG}\",\"docker_registry_image_tag\":\"${IMG_TAG}\",\"ports_exposes\":\"5173\"}")
+            APP_UUID=$(echo "${RESP}" | jq -r '.uuid // empty')
+            if [ -z "${APP_UUID}" ]; then echo "ERROR creando app: ${RESP}"; exit 1; fi
           else
-            echo "⚠️ Frontend preview deployment initiated, URL pending"
+            echo "App ${APP} ya existe (${APP_UUID}); actualizando tag a ${IMG_TAG}..."
+            api -X PATCH "${COOLIFY_URL}/api/v1/applications/${APP_UUID}" -d "{\"docker_registry_image_tag\":\"${IMG_TAG}\"}" >/dev/null
           fi
+          echo "Iniciando deploy (POST /start)..."
+          api -X POST "${COOLIFY_URL}/api/v1/applications/${APP_UUID}/start" | jq -r '.message // "start enviado"' || true
+          STATUS=""
+          for i in $(seq 1 72); do
+            STATUS=$(api "${COOLIFY_URL}/api/v1/applications/${APP_UUID}" | jq -r '.status')
+            echo "[poll ${i}/72] status=${STATUS}"
+            case "${STATUS}" in
+              running*) break ;;
+              exited*) echo "ERROR: contenedor exited"; exit 1 ;;
+            esac
+            sleep 5
+          done
+          case "${STATUS}" in
+            running*) echo "preview RUNNING" ;;
+            *) echo "ERROR: timeout esperando running (ultimo=${STATUS})"; exit 1 ;;
+          esac
+          CID=$(docker ps -q --filter "ancestor=${IMG}:${IMG_TAG}" | head -1)
+          if [ -z "${CID}" ]; then echo "ERROR: contenedor no encontrado (${IMG}:${IMG_TAG})"; exit 1; fi
+          docker exec "${CID}" wget -q -O /dev/null http://127.0.0.1:5173/ && echo "probe / (vite dev 5173) OK"
+          echo "status=${STATUS}" >> "${GITHUB_OUTPUT}"
+          echo "app_uuid=${APP_UUID}" >> "${GITHUB_OUTPUT}"
+          rm -f "${HDR}"
 
-      - name: Comment PR with Frontend Preview URL
+      - name: Comment PR with Frontend Preview status
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
-            const previewUrl = '${{ steps.deploy.outputs.preview_url }}';
+            const status = '${{ steps.deploy.outputs.status }}';
+            const appUuid = '${{ steps.deploy.outputs.app_uuid }}';
             const message = `## 🎨 Frontend Preview Deployment
-            
-            **PR #${{ github.event.pull_request.number }}**
-            
-            ${previewUrl ? `🚀 **Preview URL**: https://${previewUrl}` : '⏳ Deployment in progress... URL will be available shortly'}
-            
+
+            **App Coolify**: qa-framework-frontend-pr-${{ github.event.pull_request.number }} (\`${appUuid}\`)
+            **Estado**: ${status === 'running' ? '✅ running + probe :5173 OK' : '⚠️ ' + status}
             **Commit**: \`${{ github.sha }}\`
             **Branch**: \`${{ github.head_ref }}\`
-            
-            ---
-            *This preview will be automatically updated when new commits are pushed to this PR.*
-            `;
-            
-            // Find existing comment
+
+            _Preview interna (sin FQDN público hasta decisión de proxy — card 52a85645)._`;
+
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
             });
-            
-            const botComment = comments.find(comment => 
-              comment.user.type === 'Bot' && 
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
               comment.body.includes('Frontend Preview Deployment')
             );
-            
             if (botComment) {
               await github.rest.issues.updateComment({
                 owner: context.repo.owner,
@@ -370,178 +390,61 @@ jobs:
               });
             }
 
-  # Health Check Preview Deployments
-  health-check:
-    name: Health Check Previews
-    runs-on: ubuntu-latest
-    needs: [deploy-backend-preview, deploy-frontend-preview]
-    if: github.event.action != 'closed' && vars.COOLIFY_CONFIGURED == 'true'
-    continue-on-error: true  # non-blocking: COOLIFY_* secrets missing — see #107
-    steps:
-      - name: Wait for deployments to be ready
-        run: sleep 60
-
-      - name: Check Backend Health
-        id: backend-health
-        run: |
-          BACKEND_URL="${{ needs.deploy-backend-preview.outputs.preview_url }}"
-          if [ -n "$BACKEND_URL" ]; then
-            echo "Checking backend health at https://$BACKEND_URL/health"
-            
-            for i in {1..10}; do
-              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://$BACKEND_URL/health" || echo "000")
-              
-              if [ "$HTTP_CODE" = "200" ]; then
-                echo "✅ Backend health check passed"
-                echo "status=healthy" >> $GITHUB_OUTPUT
-                exit 0
-              fi
-              
-              echo "Attempt $i/10: Backend not ready (HTTP $HTTP_CODE)"
-              sleep 10
-            done
-            
-            echo "❌ Backend health check failed after 10 attempts"
-            echo "status=unhealthy" >> $GITHUB_OUTPUT
-            exit 1
-          else
-            echo "⚠️ No backend preview URL available, skipping health check"
-            echo "status=skipped" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Check Frontend Health
-        id: frontend-health
-        run: |
-          FRONTEND_URL="${{ needs.deploy-frontend-preview.outputs.preview_url }}"
-          if [ -n "$FRONTEND_URL" ]; then
-            echo "Checking frontend health at https://$FRONTEND_URL"
-            
-            for i in {1..10}; do
-              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://$FRONTEND_URL" || echo "000")
-              
-              if [ "$HTTP_CODE" = "200" ]; then
-                echo "✅ Frontend health check passed"
-                echo "status=healthy" >> $GITHUB_OUTPUT
-                exit 0
-              fi
-              
-              echo "Attempt $i/10: Frontend not ready (HTTP $HTTP_CODE)"
-              sleep 10
-            done
-            
-            echo "❌ Frontend health check failed after 10 attempts"
-            echo "status=unhealthy" >> $GITHUB_OUTPUT
-            exit 1
-          else
-            echo "⚠️ No frontend preview URL available, skipping health check"
-            echo "status=skipped" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Comment PR with Health Check Results
-        if: always()
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        with:
-          script: |
-            const backendStatus = '${{ steps.backend-health.outputs.status }}';
-            const frontendStatus = '${{ steps.frontend-health.outputs.status }}';
-            
-            const message = `## 🏥 Health Check Results
-            
-            **PR #${{ github.event.pull_request.number }}**
-            
-            ### Backend
-            ${backendStatus === 'healthy' ? '✅ Healthy' : backendStatus === 'unhealthy' ? '❌ Unhealthy' : '⏭️ Skipped'}
-            
-            ### Frontend
-            ${frontendStatus === 'healthy' ? '✅ Healthy' : frontendStatus === 'unhealthy' ? '❌ Unhealthy' : '⏭️ Skipped'}
-            
-            ---
-            *Health checks completed at ${new Date().toISOString()}*
-            `;
-            
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: message
-            });
-
-  # Cleanup Preview Deployments on PR Close
+  # Cleanup Preview Deployments on PR Close — fail loud (sin continue-on-error).
   cleanup-previews:
     name: Cleanup Preview Deployments
-    runs-on: ubuntu-latest
-    if: github.event.action == 'closed' && vars.COOLIFY_CONFIGURED == 'true'
-    continue-on-error: true  # non-blocking: COOLIFY_* secrets missing — see #107
+    runs-on: [self-hosted, coolify-deploy]
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && vars.COOLIFY_CONFIGURED == 'true'
     steps:
-      - name: Delete Backend Preview
+      - name: Delete preview apps via Coolify API
+        env:
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          TOK: ${{ secrets.COOLIFY_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          
-          RESPONSE=$(curl -s -X DELETE "${{ secrets.COOLIFY_API_URL }}/api/v1/applications/${{ secrets.COOLIFY_BACKEND_APP_ID }}/preview/$PR_NUMBER" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}")
-          
-          echo "Backend preview cleanup response: $RESPONSE"
+          set -euo pipefail
+          HDR="${PWD}/.coolify_hdr"
+          umask 077
+          printf 'Authorization: Bearer %s\n' "${TOK}" > "${HDR}"
+          api() { curl -sS -H "@${HDR}" -H 'Content-Type: application/json' "$@"; }
+          for KIND in backend frontend; do
+            APP="qa-framework-${KIND}-pr-${PR_NUMBER}"
+            APP_UUID=$(api "${COOLIFY_URL}/api/v1/applications" | jq -r --arg n "${APP}" '.[] | select(.name==$n) | .uuid' | head -1)
+            if [ -z "${APP_UUID}" ]; then
+              echo "${APP}: no existe (ya limpio)"
+              continue
+            fi
+            echo "Borrando ${APP} (${APP_UUID})..."
+            CODE=$(curl -sS -o /dev/null -w '%{http_code}' -H "@${HDR}" -X DELETE "${COOLIFY_URL}/api/v1/applications/${APP_UUID}?delete_volumes=false&delete_connected_networks=false&delete_configurations=true&docker_cleanup=false")
+            if [ "${CODE}" != "200" ]; then echo "ERROR delete ${APP}: HTTP ${CODE}"; exit 1; fi
+            STILL="1"
+            for i in $(seq 1 24); do
+              STILL=$(api "${COOLIFY_URL}/api/v1/applications" | jq -r --arg n "${APP}" '[.[] | select(.name==$n)] | length')
+              if [ "${STILL}" = "0" ]; then echo "${APP}: eliminado (verificado via API)"; break; fi
+              sleep 5
+            done
+            if [ "${STILL}" != "0" ]; then echo "ERROR: ${APP} sigue presente tras 120s"; exit 1; fi
+          done
+          docker rmi "${REGISTRY}/qa-framework-backend-pr-${PR_NUMBER}:latest" "${REGISTRY}/qa-framework-backend-pr-${PR_NUMBER}:${GITHUB_SHA}" "${REGISTRY}/qa-framework-frontend-pr-${PR_NUMBER}:latest" "${REGISTRY}/qa-framework-frontend-pr-${PR_NUMBER}:${GITHUB_SHA}" >/dev/null 2>&1 || true
+          rm -f "${HDR}"
+          echo "Cleanup completo"
 
-      - name: Delete Frontend Preview
-        run: |
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          
-          RESPONSE=$(curl -s -X DELETE "${{ secrets.COOLIFY_API_URL }}/api/v1/applications/${{ secrets.COOLIFY_FRONTEND_APP_ID }}/preview/$PR_NUMBER" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}")
-          
-          echo "Frontend preview cleanup response: $RESPONSE"
-
-      - name: Comment PR with Cleanup Confirmation
+      - name: Comment PR with cleanup confirmation
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const message = `## 🧹 Preview Cleanup
-            
+
             **PR #${{ github.event.pull_request.number }}** - **${{ github.event.pull_request.merged && 'Merged' || 'Closed' }}**
-            
-            ✅ Preview deployments have been cleaned up
-            
-            **Backend Preview**: Deleted
-            **Frontend Preview**: Deleted
-            
+
+            ✅ Preview apps eliminadas de Coolify (verificado via API): backend + frontend.
+
             ---
-            *Resources freed at ${new Date().toISOString()}*
-            `;
-            
+            *Resources freed at ${new Date().toISOString()}*`;
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
               body: message
             });
-
-  # Notify on Failure
-  notify-failure:
-    name: Notify on Failure
-    runs-on: ubuntu-latest
-    needs: [security-gate, deploy-backend-preview, deploy-frontend-preview, health-check]
-    if: always() && failure()
-    steps:
-      - name: Send Telegram Notification
-        run: |
-          TELEGRAM_BOT_TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN }}"
-          TELEGRAM_CHAT_ID="${{ secrets.TELEGRAM_CHAT_ID }}"
-          
-          MESSAGE="❌ **PR Deployment Failed**
-          
-          **Repository**: ${{ github.repository }}
-          **PR**: #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}
-          **Author**: @${{ github.actor }}
-          **Branch**: ${{ github.head_ref }}
-          **Commit**: ${{ github.sha }}
-          
-          [View PR](${{ github.event.pull_request.html_url }})
-          [View Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
-          
-          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"chat_id\": \"$TELEGRAM_CHAT_ID\",
-              \"text\": \"$MESSAGE\",
-              \"parse_mode\": \"Markdown\"
-            }"
