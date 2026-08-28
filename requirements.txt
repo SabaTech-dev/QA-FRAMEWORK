@@ -17,7 +17,7 @@ playwright==1.62.0
 selenium==4.16.0
 
 # Data Generation
-faker==23.2.0
+faker==40.37.0
 factory-boy==3.3.0
 
 # Validation & Configuration
@@ -41,9 +41,9 @@ safety>=3.0.0
 # Code Quality
 black>=26.5.1
 ruff==0.16.4
-mypy==1.8.0
-pre-commit==3.6.0
-isort==5.13.2
+mypy==2.3.1
+pre-commit==4.6.2
+isort==8.0.1
 
 # Type Checking
 types-PyYAML==6.0.12.20260815
@@ -54,8 +54,8 @@ types-urllib3==1.26.25.14
 asyncpg==0.29.0  # PostgreSQL async driver
 aiomysql>=0.3.0  # MySQL async driver
 aiosqlite==0.19.0  # SQLite async driver
-redis==5.0.1  # Redis client
-psutil==5.9.8  # System monitoring
+redis==8.1.0  # Redis client
+psutil==7.2.2  # System monitoring
 
 # Database ORM & Migration
 sqlalchemy==2.0.25  # ORM for database operations
