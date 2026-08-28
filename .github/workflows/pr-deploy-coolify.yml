@@ -9,6 +9,7 @@ on:
 env:
   PYTHON_VERSION: "3.11"
   NODE_VERSION: "26"
+  REGISTRY: localhost:5000
 
 # NOTE: preview deploys corren en runner self-hosted (label coolify-deploy) — card 52a85645.
 # NOTE: the SECURITY GATE (security-gate job) IS blocking/fail-closed (card 650387a1, R3):
@@ -54,7 +55,7 @@ jobs:
 
       # Same build contexts the deploy jobs use, so we gate the artifact actually deployed
       - name: Build backend image (scan target — deploy context)
-        run: docker build -t qa-framework-backend:gate -f dashboard/backend/Dockerfile .
+        run: docker build -t qa-framework-backend:gate -f dashboard/backend/Dockerfile dashboard/backend
 
       - name: Build frontend image (scan target — deploy context)
         run: docker build -t qa-framework-frontend:gate -f dashboard/frontend/Dockerfile dashboard/frontend
@@ -165,6 +166,9 @@ jobs:
     name: Deploy Backend Preview
     needs: security-gate
     runs-on: [self-hosted, coolify-deploy]
+    permissions:
+      contents: read
+      pull-requests: write
     if: github.event_name == 'pull_request' && github.event.action != 'closed' && vars.COOLIFY_CONFIGURED == 'true'
     outputs:
       app_uuid: ${{ steps.deploy.outputs.app_uuid }}
@@ -214,29 +218,41 @@ jobs:
           fi
           echo "Iniciando deploy (POST /start)..."
           api -X POST "${COOLIFY_URL}/api/v1/applications/${APP_UUID}/start" | jq -r '.message // "start enviado"' || true
-          STATUS=""
-          for i in $(seq 1 72); do
-            STATUS=$(api "${COOLIFY_URL}/api/v1/applications/${APP_UUID}" | jq -r '.status')
-            echo "[poll ${i}/72] status=${STATUS}"
-            case "${STATUS}" in
-              running*) break ;;
-              exited*) echo "ERROR: contenedor exited"; exit 1 ;;
+          DSTAT=""
+          for i in $(seq 1 90); do
+            DSTAT=$(api "${COOLIFY_URL}/api/v1/deployments/applications/${APP_UUID}" | jq -r '(.deployments // .) | sort_by(.created_at // "") | last | .status // empty')
+            ASTAT=$(api "${COOLIFY_URL}/api/v1/applications/${APP_UUID}" | jq -r '.status')
+            echo "[poll ${i}/90] deployment=${DSTAT} app=${ASTAT}"
+            case "${DSTAT}" in
+              finished*) break ;;
+              failed|cancelled) echo "ERROR: deployment ${DSTAT}"; exit 1 ;;
             esac
             sleep 5
           done
-          case "${STATUS}" in
-            running*) echo "preview RUNNING" ;;
-            *) echo "ERROR: timeout esperando running (ultimo=${STATUS})"; exit 1 ;;
+          case "${DSTAT}" in
+            finished*) echo "deployment finished" ;;
+            *) echo "ERROR: timeout esperando deployment (ultimo=${DSTAT})"; exit 1 ;;
+          esac
+          ASTAT=""
+          for i in $(seq 1 12); do
+            ASTAT=$(api "${COOLIFY_URL}/api/v1/applications/${APP_UUID}" | jq -r '.status')
+            case "${ASTAT}" in running*) break ;; esac
+            sleep 5
+          done
+          case "${ASTAT}" in
+            running*) echo "preview RUNNING (${ASTAT})" ;;
+            *) echo "WARN: app-status=${ASTAT} (posible lag); el probe in-container decide" ;;
           esac
           CID=$(docker ps -q --filter "ancestor=${IMG}:${IMG_TAG}" | head -1)
           if [ -z "${CID}" ]; then echo "ERROR: contenedor no encontrado (${IMG}:${IMG_TAG})"; exit 1; fi
           docker exec "${CID}" python3 -c "import urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5); print('probe /health ->', r.status)" >/dev/null
           echo "probe /health OK"
-          echo "status=${STATUS}" >> "${GITHUB_OUTPUT}"
+          echo "status=${ASTAT}" >> "${GITHUB_OUTPUT}"
           echo "app_uuid=${APP_UUID}" >> "${GITHUB_OUTPUT}"
           rm -f "${HDR}"
 
       - name: Comment PR with Backend Preview status
+        continue-on-error: true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
@@ -280,6 +296,9 @@ jobs:
     name: Deploy Frontend Preview
     needs: security-gate
     runs-on: [self-hosted, coolify-deploy]
+    permissions:
+      contents: read
+      pull-requests: write
     if: github.event_name == 'pull_request' && github.event.action != 'closed' && vars.COOLIFY_CONFIGURED == 'true'
     outputs:
       app_uuid: ${{ steps.deploy.outputs.app_uuid }}
@@ -320,7 +339,7 @@ jobs:
           APP_UUID=$(api "${COOLIFY_URL}/api/v1/applications" | jq -r --arg n "${APP}" '.[] | select(.name==$n) | .uuid' | head -1)
           if [ -z "${APP_UUID}" ]; then
             echo "Creando app ${APP} en Coolify..."
-            RESP=$(api -X POST "${COOLIFY_URL}/api/v1/applications/dockerimage" -d "{\"project_uuid\":\"${PROJECT_UUID}\",\"server_uuid\":\"${SERVER_UUID}\",\"environment_name\":\"production\",\"name\":\"${APP}\",\"docker_registry_image_name\":\"${IMG}\",\"docker_registry_image_tag\":\"${IMG_TAG}\",\"ports_exposes\":\"5173\"}")
+            RESP=$(api -X POST "${COOLIFY_URL}/api/v1/applications/dockerimage" -d "{\"project_uuid\":\"${PROJECT_UUID}\",\"server_uuid\":\"${SERVER_UUID}\",\"environment_name\":\"production\",\"name\":\"${APP}\",\"docker_registry_image_name\":\"${IMG}\",\"docker_registry_image_tag\":\"${IMG_TAG}\",\"ports_exposes\":\"3000\"}")
             APP_UUID=$(echo "${RESP}" | jq -r '.uuid // empty')
             if [ -z "${APP_UUID}" ]; then echo "ERROR creando app: ${RESP}"; exit 1; fi
           else
@@ -329,28 +348,40 @@ jobs:
           fi
           echo "Iniciando deploy (POST /start)..."
           api -X POST "${COOLIFY_URL}/api/v1/applications/${APP_UUID}/start" | jq -r '.message // "start enviado"' || true
-          STATUS=""
-          for i in $(seq 1 72); do
-            STATUS=$(api "${COOLIFY_URL}/api/v1/applications/${APP_UUID}" | jq -r '.status')
-            echo "[poll ${i}/72] status=${STATUS}"
-            case "${STATUS}" in
-              running*) break ;;
-              exited*) echo "ERROR: contenedor exited"; exit 1 ;;
+          DSTAT=""
+          for i in $(seq 1 90); do
+            DSTAT=$(api "${COOLIFY_URL}/api/v1/deployments/applications/${APP_UUID}" | jq -r '(.deployments // .) | sort_by(.created_at // "") | last | .status // empty')
+            ASTAT=$(api "${COOLIFY_URL}/api/v1/applications/${APP_UUID}" | jq -r '.status')
+            echo "[poll ${i}/90] deployment=${DSTAT} app=${ASTAT}"
+            case "${DSTAT}" in
+              finished*) break ;;
+              failed|cancelled) echo "ERROR: deployment ${DSTAT}"; exit 1 ;;
             esac
             sleep 5
           done
-          case "${STATUS}" in
-            running*) echo "preview RUNNING" ;;
-            *) echo "ERROR: timeout esperando running (ultimo=${STATUS})"; exit 1 ;;
+          case "${DSTAT}" in
+            finished*) echo "deployment finished" ;;
+            *) echo "ERROR: timeout esperando deployment (ultimo=${DSTAT})"; exit 1 ;;
+          esac
+          ASTAT=""
+          for i in $(seq 1 12); do
+            ASTAT=$(api "${COOLIFY_URL}/api/v1/applications/${APP_UUID}" | jq -r '.status')
+            case "${ASTAT}" in running*) break ;; esac
+            sleep 5
+          done
+          case "${ASTAT}" in
+            running*) echo "preview RUNNING (${ASTAT})" ;;
+            *) echo "WARN: app-status=${ASTAT} (posible lag); el probe in-container decide" ;;
           esac
           CID=$(docker ps -q --filter "ancestor=${IMG}:${IMG_TAG}" | head -1)
           if [ -z "${CID}" ]; then echo "ERROR: contenedor no encontrado (${IMG}:${IMG_TAG})"; exit 1; fi
-          docker exec "${CID}" wget -q -O /dev/null http://127.0.0.1:5173/ && echo "probe / (vite dev 5173) OK"
-          echo "status=${STATUS}" >> "${GITHUB_OUTPUT}"
+          docker exec "${CID}" wget -q -O /dev/null http://127.0.0.1:3000/ && echo "probe / (vite dev 3000) OK"
+          echo "status=${ASTAT}" >> "${GITHUB_OUTPUT}"
           echo "app_uuid=${APP_UUID}" >> "${GITHUB_OUTPUT}"
           rm -f "${HDR}"
 
       - name: Comment PR with Frontend Preview status
+        continue-on-error: true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
@@ -394,6 +425,9 @@ jobs:
   cleanup-previews:
     name: Cleanup Preview Deployments
     runs-on: [self-hosted, coolify-deploy]
+    permissions:
+      contents: read
+      pull-requests: write
     if: github.event_name == 'pull_request' && github.event.action == 'closed' && vars.COOLIFY_CONFIGURED == 'true'
     steps:
       - name: Delete preview apps via Coolify API
@@ -430,6 +464,7 @@ jobs:
           echo "Cleanup completo"
 
       - name: Comment PR with cleanup confirmation
+        continue-on-error: true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
