@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **browser-use 0.13 adaptation for the dashboard backend (card fbe1e86d,
+  closes the runtime gap that blocked Dependabot PR #159)**:
+  - `dashboard/backend/services/ai/browser_use_service.py` migrates the
+    lazy-imported agent construction to the 0.13 API: `Agent(browser_config=)`
+    is gone — the headless flag now lives on `BrowserProfile` passed as
+    `browser_profile=`; `run(url)` is gone — the start URL is embedded in the
+    task text and picked up by the default `directly_open_url` behavior.
+  - The LLM is now browser-use's native `ChatGroq` (BaseChatModel protocol);
+    langchain models are no longer accepted by the 0.13 `Agent`.
+  - `run()` is capped at `max_steps=100` (the 0.1.x default) to bound task
+    cost; 0.13 would otherwise default to 500.
+  - New `tests/unit/test_browser_use_agent_013_runtime.py` forces the REAL
+    import of `browser_use` (never mocked) and constructs the `Agent` with
+    the exact production path — the previous suite stayed green even with a
+    broken runtime integration because the import was lazy.
+  - `dashboard/backend/requirements.txt`: `browser-use==0.13.*`;
+    `langchain-groq` removed (no remaining importers, and it pins
+    `groq<1.0.0` which is incompatible with browser-use 0.13's `groq==1.0.0`);
+    `pydantic` 2.12.5, `websockets` 15.0.1, `pyotp` 2.9.0 and
+    `python-dotenv` 1.2.2 realigned to browser-use 0.13's exact pins so
+    `pip install -r requirements.txt` resolves cleanly in CI.
+
 - **bcrypt 5 adaptation for the dashboard backend auth (card fbe1e86d,
   closes the gap that blocked PR #156)**:
   - `dashboard/backend/services/auth_service.py` drops the unmaintained
