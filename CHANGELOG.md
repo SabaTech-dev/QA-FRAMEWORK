@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **bcrypt 5 adaptation for the dashboard backend auth (card fbe1e86d,
+  closes the gap that blocked PR #156)**:
+  - `dashboard/backend/services/auth_service.py` drops the unmaintained
+    passlib 1.7.4 wrapper (its backend-initialization probe relies on the
+    silent >72-byte truncation that bcrypt 5 removed, breaking every
+    hash/verify call) and hashes directly with the `bcrypt` package.
+  - Passwords whose UTF-8 encoding exceeds 72 bytes are now rejected
+    explicitly with a domain error (`PasswordTooLongError`) — no silent
+    truncation, no raw `ValueError` escaping as HTTP 500.
+  - `create_user_service` maps the rejection to a controlled
+    `400 Bad Request` ("Password too long: bcrypt accepts a maximum of
+    72 bytes"); login with an oversized password is a plain
+    authentication failure.
+  - Hash output stays `$2b$`/12 rounds, so existing stored hashes remain
+    verifiable (covered by a legacy-hash regression test).
+  - `dashboard/backend/requirements.txt`: `bcrypt==5.*`, `passlib`
+    removed (no remaining importers).
+
 - **Config hardening follow-ups from review R2 (card f3231394, deriva of
   card 2972521c / PR #147)**:
   - `dashboard/backend/config.py`: `ENVIRONMENT` is normalized
