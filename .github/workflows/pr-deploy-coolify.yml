@@ -244,7 +244,7 @@ jobs:
           if [ -z "${CID}" ]; then echo "ERROR: contenedor no encontrado (${IMG}:${IMG_TAG})"; exit 1; fi
           docker exec "${CID}" python3 -c "import urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5); print('probe /health ->', r.status)" >/dev/null
           echo "probe /health OK"
-          echo "status=${STATUS}" >> "${GITHUB_OUTPUT}"
+          echo "status=${ASTAT}" >> "${GITHUB_OUTPUT}"
           echo "app_uuid=${APP_UUID}" >> "${GITHUB_OUTPUT}"
           rm -f "${HDR}"
 
@@ -369,7 +369,7 @@ jobs:
           CID=$(docker ps -q --filter "ancestor=${IMG}:${IMG_TAG}" | head -1)
           if [ -z "${CID}" ]; then echo "ERROR: contenedor no encontrado (${IMG}:${IMG_TAG})"; exit 1; fi
           docker exec "${CID}" wget -q -O /dev/null http://127.0.0.1:3000/ && echo "probe / (vite dev 3000) OK"
-          echo "status=${STATUS}" >> "${GITHUB_OUTPUT}"
+          echo "status=${ASTAT}" >> "${GITHUB_OUTPUT}"
           echo "app_uuid=${APP_UUID}" >> "${GITHUB_OUTPUT}"
           rm -f "${HDR}"
 
