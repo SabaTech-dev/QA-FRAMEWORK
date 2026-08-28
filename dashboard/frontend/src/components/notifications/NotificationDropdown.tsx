@@ -157,7 +157,7 @@ export default function NotificationDropdown() {
     event.stopPropagation()
     try {
       await markAsRead(id)
-    } catch (error) {
+    } catch {
       // For mock mode, just update local state
       if (isUsingMock) {
         useNotificationsStore.setState((state) => ({
@@ -173,7 +173,7 @@ export default function NotificationDropdown() {
   const handleMarkAllAsRead = async () => {
     try {
       await markAllAsRead()
-    } catch (error) {
+    } catch {
       // For mock mode, just update local state
       if (isUsingMock) {
         useNotificationsStore.setState((state) => ({
@@ -188,7 +188,7 @@ export default function NotificationDropdown() {
     event.stopPropagation()
     try {
       await deleteNotification(id)
-    } catch (error) {
+    } catch {
       // For mock mode, just update local state
       if (isUsingMock) {
         useNotificationsStore.setState((state) => {

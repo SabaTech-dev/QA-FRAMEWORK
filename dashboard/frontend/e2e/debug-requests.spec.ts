@@ -56,7 +56,7 @@ test('Debug: Verificar peticiones HTTP', async ({ page, request }) => {
         console.log(`\n📥 Response from ${res.url()}:`);
         console.log(`   Status: ${res.status()}`);
         console.log(`   Body: ${text.substring(0, 300)}...`);
-      } catch (e) {}
+      } catch {}
     }
   });
   

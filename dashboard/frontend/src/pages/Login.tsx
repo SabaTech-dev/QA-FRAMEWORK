@@ -43,7 +43,7 @@ export default function Login() {
           } else {
             navigate('/dashboard', { replace: true })
           }
-        } catch (error) {
+        } catch {
           toast.error('Failed to get user info')
           useAuthStore.getState().logout()
         }
