@@ -1,0 +1,22 @@
+name: Runner Smoke (coolify-deploy)
+
+# Smoke del runner self-hosted dedicado (card 52a85645): solo workflow_dispatch,
+# no entra en el pipeline de PRs. Valida: runner online, acceso docker, registry
+# local y API Coolify desde el contexto del runner.
+on:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    name: Smoke self-hosted runner
+    runs-on: [self-hosted, coolify-deploy]
+    steps:
+      - name: OK + entorno del runner
+        run: |
+          echo "ok from $(hostname) as $(whoami)"
+          docker version --format 'docker server: {{.Server.Version}}'
+          printf 'registry /v2/ -> '
+          curl -s -o /dev/null -w '%{http_code}\n' http://localhost:5000/v2/
+          printf 'coolify /api/v1/version sin token (esperado 401) -> '
+          curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8000/api/v1/version
+          jq --version
