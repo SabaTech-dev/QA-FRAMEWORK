@@ -201,6 +201,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   decision via the evaluator (legacy 0.6 kept as backwards-compatible
   default when no threshold is threaded).
 
+### Changed
+
+- **ESLint 9 flat-config migration for dashboard/frontend (card fbe1e86d,
+  item 4/5, parity mode)**:
+  - `.eslintrc.json` (legacy) replaced by `eslint.config.mjs` (flat):
+    `js.configs.recommended` + `tseslint.configs.recommended` +
+    `react.configs.flat.recommended`/`jsx-runtime`; same custom rules
+    (`no-explicit-any: warn`, `no-unused-vars` via
+    `@typescript-eslint` with `^_` ignore patterns,
+    `react/react-in-jsx-scope: off`, `react.version: detect`).
+  - Deps: `eslint ^8.53 → ^9.39.5`, `typescript-eslint ^8.68.0`
+    (replaces the `@typescript-eslint/eslint-plugin` + `parser` pair),
+    `eslint-plugin-react-hooks ^4.6 → ^7.1.1`,
+    `eslint-plugin-react-refresh ^0.4.4 → ^0.5.5`; new
+    `@eslint/js@^9.39.5` and `globals@^16`. Peer conflicts that forced
+    the dependabot deny-list are gone (installs clean now).
+  - `lint` script simplified to `eslint . --max-warnings 0`
+    (extensions via `files`, `report-unused-disable-directives` via
+    `linterOptions`).
+  - Node globals block for `scripts/**` (the legacy `--ext ts,tsx`
+    script never linted `scripts/smoke-install.mjs`; flat config
+    covers it with `globals.node`).
+  - Fixed the 7 new `caughtErrors` findings from v9's default
+    `no-unused-vars` behaviour (optional catch binding `catch {}`):
+    `e2e/debug-requests.spec.ts`, `IntegrationCard.tsx` (x2),
+    `NotificationDropdown.tsx` (x3), `Login.tsx`.
+  - Parity verified: 186 findings (94 errors / 92 warnings) — the same
+    pre-existing debt measured on ESLint 8.57.1 (no new findings, no
+    cleanup; debt cleanup is a separate PR). `vitest` (20 tests) and
+    `tsc --noEmit` pass.
+
 ### Security
 
 - **L-1 (card c9825844)**: `SplitPolicy.salt` is now required and non-empty

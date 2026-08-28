@@ -111,7 +111,7 @@ export default function IntegrationCard({ provider, onConfigure, onTest }: Integ
         success: true,
         message: 'Connection successful!',
       })
-    } catch (error) {
+    } catch {
       setTestResult({
         success: false,
         message: 'Connection failed. Please check your credentials.',
@@ -126,7 +126,7 @@ export default function IntegrationCard({ provider, onConfigure, onTest }: Integ
       // This would call the sync API endpoint
       await new Promise((resolve) => setTimeout(resolve, 1000))
       alert('Sync completed successfully!')
-    } catch (error) {
+    } catch {
       alert('Sync failed. Please try again.')
     }
   }
