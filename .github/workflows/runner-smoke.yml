@@ -1,10 +1,14 @@
 name: Runner Smoke (coolify-deploy)
 
-# Smoke del runner self-hosted dedicado (card 52a85645): solo workflow_dispatch,
-# no entra en el pipeline de PRs. Valida: runner online, acceso docker, registry
-# local y API Coolify desde el contexto del runner.
+# Smoke del runner self-hosted dedicado (card 52a85645): corre en workflow_dispatch
+# y en PRs que tocan este mismo fichero (auto-validacion del PR que lo introduce;
+# cero ruido en PRs futuros). Valida: runner online, acceso docker, registry local
+# y API Coolify desde el contexto del runner.
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/runner-smoke.yml'
 
 jobs:
   smoke:
