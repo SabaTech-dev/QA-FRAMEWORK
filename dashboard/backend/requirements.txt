@@ -34,6 +34,6 @@ bleach==6.4.0
 prometheus-client==0.26.0
 pyotp==2.9.0
 qrcode[pil]==7.4.2
-aiohttp>=3.13.3
+aiohttp>=3.14.3
 browser-use>=0.1.0
 langchain-groq>=0.1.0
