@@ -166,6 +166,9 @@ jobs:
     name: Deploy Backend Preview
     needs: security-gate
     runs-on: [self-hosted, coolify-deploy]
+    permissions:
+      contents: read
+      pull-requests: write
     if: github.event_name == 'pull_request' && github.event.action != 'closed' && vars.COOLIFY_CONFIGURED == 'true'
     outputs:
       app_uuid: ${{ steps.deploy.outputs.app_uuid }}
@@ -249,6 +252,7 @@ jobs:
           rm -f "${HDR}"
 
       - name: Comment PR with Backend Preview status
+        continue-on-error: true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
@@ -292,6 +296,9 @@ jobs:
     name: Deploy Frontend Preview
     needs: security-gate
     runs-on: [self-hosted, coolify-deploy]
+    permissions:
+      contents: read
+      pull-requests: write
     if: github.event_name == 'pull_request' && github.event.action != 'closed' && vars.COOLIFY_CONFIGURED == 'true'
     outputs:
       app_uuid: ${{ steps.deploy.outputs.app_uuid }}
@@ -374,6 +381,7 @@ jobs:
           rm -f "${HDR}"
 
       - name: Comment PR with Frontend Preview status
+        continue-on-error: true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
@@ -417,6 +425,9 @@ jobs:
   cleanup-previews:
     name: Cleanup Preview Deployments
     runs-on: [self-hosted, coolify-deploy]
+    permissions:
+      contents: read
+      pull-requests: write
     if: github.event_name == 'pull_request' && github.event.action == 'closed' && vars.COOLIFY_CONFIGURED == 'true'
     steps:
       - name: Delete preview apps via Coolify API
@@ -453,6 +464,7 @@ jobs:
           echo "Cleanup completo"
 
       - name: Comment PR with cleanup confirmation
+        continue-on-error: true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
