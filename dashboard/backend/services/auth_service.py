@@ -14,12 +14,12 @@ from datetime import datetime, timedelta
 from typing import Optional
 from uuid import uuid4
 
+import bcrypt
 from database import get_db_session
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from models import User
-from passlib.context import CryptContext
 from schemas import LoginRequest, TokenResponse, UserCreate, UserResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,8 +35,32 @@ from src.infrastructure.refresh_tokens.store import (
 # Initialize logger
 logger = get_logger(__name__)
 
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Password hashing (bcrypt 5 adaptation).
+#
+# passlib 1.7.4 is incompatible with bcrypt 5: its backend-initialization
+# probe relies on the silent truncation of passwords longer than 72 bytes,
+# which bcrypt 5 removed, so every hash/verify call fails at backend load.
+# We call the bcrypt package directly and enforce the 72-byte limit as an
+# explicit, controlled domain policy (no silent truncation, no raw
+# ValueError). Output stays $2b$-format, so existing stored hashes remain
+# verifiable.
+PASSWORD_MAX_BYTES = 72
+
+
+class PasswordTooLongError(ValueError):
+    """Password exceeds the 72-byte input limit of the bcrypt algorithm."""
+
+
+def _validate_password_bytes(password: str) -> bytes:
+    """Encode a password as UTF-8 and enforce the bcrypt size limit."""
+    password_bytes = password.encode("utf-8")
+    if len(password_bytes) > PASSWORD_MAX_BYTES:
+        raise PasswordTooLongError(
+            f"password cannot be longer than {PASSWORD_MAX_BYTES} bytes "
+            f"(got {len(password_bytes)} bytes); choose a shorter password"
+        )
+    return password_bytes
+
 
 # Refresh token rotation constants (card 3ae2e5c1, F-2 / OWASP API2)
 REFRESH_TOKEN_LIFETIME = timedelta(days=7)
@@ -76,16 +100,31 @@ security = HTTPBearer()
 
 
 def hash_password(password: str) -> str:
-    """Hash a password"""
+    """Hash a password.
+
+    Raises PasswordTooLongError when the UTF-8 encoding of the password
+    exceeds PASSWORD_MAX_BYTES (72): bcrypt 5 removed the silent
+    truncation of longer inputs, so oversized passwords are rejected
+    explicitly instead.
+    """
     logger.debug("Hashing password")
-    hashed = pwd_context.hash(password)
+    hashed = bcrypt.hashpw(_validate_password_bytes(password), bcrypt.gensalt())
     logger.debug("Password hashed successfully")
-    return hashed
+    return hashed.decode("ascii")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against a hash"""
-    return pwd_context.verify(plain_password, hashed_password)
+    """Verify a password against a bcrypt hash ($2b$ format).
+
+    Oversized candidates (>72 bytes) can never match a storable hash —
+    hash_password rejects them at registration — so they are a plain
+    authentication failure instead of an error.
+    """
+    try:
+        plain_bytes = _validate_password_bytes(plain_password)
+    except PasswordTooLongError:
+        return False
+    return bcrypt.checkpw(plain_bytes, hashed_password.encode("ascii"))
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:

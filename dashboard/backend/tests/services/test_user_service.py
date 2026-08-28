@@ -3,13 +3,15 @@ Unit tests for user_service.py
 
 Tests all user management functions with mocked database sessions.
 """
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi import HTTPException
 
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 
 class TestCreateUserService:
@@ -106,6 +108,29 @@ class TestCreateUserService:
             await create_user_service(mock_user_data, mock_db)
 
         mock_db.add.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_create_user_rejects_password_over_72_bytes(self):
+        """bcrypt 5 adaptation: >72-byte passwords get a controlled 400."""
+        from services.user_service import create_user_service
+
+        mock_db = AsyncMock()
+        mock_user_data = MagicMock()
+        mock_user_data.username = "longpwduser"
+        mock_user_data.email = "long@example.com"
+        mock_user_data.password = "x" * 73
+        mock_user_data.is_active = True
+
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        mock_db.execute.return_value = mock_result
+
+        with pytest.raises(HTTPException) as exc_info:
+            await create_user_service(mock_user_data, mock_db)
+
+        assert exc_info.value.status_code == 400
+        assert "72" in str(exc_info.value.detail)
+        mock_db.add.assert_not_called()
 
 
 class TestListUsersService:

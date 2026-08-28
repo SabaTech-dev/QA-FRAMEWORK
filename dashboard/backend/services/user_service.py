@@ -11,7 +11,7 @@ from sqlalchemy import select, func
 
 from models import User
 from schemas import UserCreate, UserUpdate, UserResponse
-from services.auth_service import hash_password
+from services.auth_service import PasswordTooLongError, hash_password
 from core.logging_config import get_logger
 
 # Initialize logger
@@ -37,15 +37,23 @@ async def create_user_service(user_data: UserCreate, db: AsyncSession) -> User:
     # Check if email exists
     result = await db.execute(select(User).where(User.email == user_data.email))
     if result.scalar_one_or_none():
-        logger.warning(
-            "User creation failed - email already exists", email=user_data.email
-        )
+        logger.warning("User creation failed - email already exists", email=user_data.email)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
         )
 
-    # Create user
-    hashed_password = hash_password(user_data.password)
+    # Create user (bcrypt 5: reject >72-byte passwords explicitly, PR #156)
+    try:
+        hashed_password = hash_password(user_data.password)
+    except PasswordTooLongError as exc:
+        logger.warning(
+            "User creation failed - password exceeds 72-byte bcrypt limit",
+            username=user_data.username,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password too long: bcrypt accepts a maximum of 72 bytes",
+        ) from exc
     db_user = User(
         username=user_data.username,
         email=user_data.email,
@@ -57,9 +65,7 @@ async def create_user_service(user_data: UserCreate, db: AsyncSession) -> User:
     await db.commit()
     await db.refresh(db_user)
 
-    logger.info(
-        "User created successfully", user_id=db_user.id, username=db_user.username
-    )
+    logger.info("User created successfully", user_id=db_user.id, username=db_user.username)
 
     return db_user
 
@@ -89,18 +95,14 @@ async def get_user_by_id(user_id: int, db: AsyncSession) -> User:
 
     if not user:
         logger.error("User not found", user_id=user_id)
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     logger.debug("User retrieved successfully", user_id=user_id, username=user.username)
 
     return user
 
 
-async def update_user_service(
-    user_id: int, user_update: UserUpdate, db: AsyncSession
-) -> User:
+async def update_user_service(user_id: int, user_update: UserUpdate, db: AsyncSession) -> User:
     """Update a user"""
     logger.info("Updating user", user_id=user_id)
 
@@ -139,9 +141,7 @@ async def update_user_service(
     await db.commit()
     await db.refresh(user)
 
-    logger.info(
-        "User updated successfully", user_id=user_id, updated_fields=updated_fields
-    )
+    logger.info("User updated successfully", user_id=user_id, updated_fields=updated_fields)
 
     return user
 
@@ -162,6 +162,4 @@ async def delete_user_service(user_id: int, db: AsyncSession) -> None:
     user.is_active = False
     await db.commit()
 
-    logger.info(
-        "User soft deleted successfully", user_id=user_id, username=user.username
-    )
+    logger.info("User soft deleted successfully", user_id=user_id, username=user.username)
