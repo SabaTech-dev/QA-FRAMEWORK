@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install Trivy
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
@@ -62,14 +62,14 @@ jobs:
           TRIVY_JAVA_DB_REPOSITORY: ""
 
       - name: Upload FS scan SARIF to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@51f77329afa6477de8c49fc9c7046c15b9a4e79d # v3.29.5
+        uses: github/codeql-action/upload-sarif@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
         if: always()
         with:
           sarif_file: 'trivy-fs-results.sarif'
           category: 'trivy-fs'
 
       - name: Upload FS scan results artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: trivy-fs-results
@@ -103,7 +103,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Build backend Docker image
         run: docker build -t qa-framework-backend:scan -f dashboard/backend/Dockerfile dashboard/backend
@@ -121,14 +121,14 @@ jobs:
           TRIVY_SKIP_DB_UPDATE: "false"
 
       - name: Upload backend image SARIF
-        uses: github/codeql-action/upload-sarif@51f77329afa6477de8c49fc9c7046c15b9a4e79d # v3.29.5
+        uses: github/codeql-action/upload-sarif@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
         if: always()
         with:
           sarif_file: 'trivy-backend-image.sarif'
           category: 'trivy-backend-image'
 
       - name: Upload backend scan artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: trivy-backend-image-results
@@ -143,7 +143,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Build frontend Docker image
         run: docker build -t qa-framework-frontend:scan -f dashboard/frontend/Dockerfile dashboard/frontend
@@ -161,14 +161,14 @@ jobs:
           TRIVY_SKIP_DB_UPDATE: "false"
 
       - name: Upload frontend image SARIF
-        uses: github/codeql-action/upload-sarif@51f77329afa6477de8c49fc9c7046c15b9a4e79d # v3.29.5
+        uses: github/codeql-action/upload-sarif@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
         if: always()
         with:
           sarif_file: 'trivy-frontend-image.sarif'
           category: 'trivy-frontend-image'
 
       - name: Upload frontend scan artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: trivy-frontend-image-results
@@ -183,7 +183,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install Trivy
         run: |
@@ -204,7 +204,7 @@ jobs:
           TRIVY_SKIP_DB_UPDATE: "true"
 
       - name: Upload SBOM artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sbom-reports
           path: |
@@ -229,7 +229,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Scan IaC files with Trivy
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
@@ -244,14 +244,14 @@ jobs:
           TRIVY_SKIP_DB_UPDATE: "true"
 
       - name: Upload IaC SARIF
-        uses: github/codeql-action/upload-sarif@51f77329afa6477de8c49fc9c7046c15b9a4e79d # v3.29.5
+        uses: github/codeql-action/upload-sarif@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
         if: always()
         with:
           sarif_file: 'trivy-iac-results.sarif'
           category: 'trivy-iac'
 
       - name: Upload IaC scan artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: trivy-iac-results
@@ -268,7 +268,7 @@ jobs:
     if: github.event_name == 'pull_request' && always()
     steps:
       - name: Download all Trivy artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: 'trivy-*-results'
           merge-multiple: true
@@ -303,7 +303,7 @@ jobs:
           fi
 
       - name: Comment PR with Trivy results
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const total = '${{ steps.summary.outputs.total }}';
@@ -378,7 +378,7 @@ jobs:
     if: always()
     steps:
       - name: Download all Trivy artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: 'trivy-*-results'
           merge-multiple: true
