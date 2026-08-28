@@ -71,9 +71,6 @@ updates:
           - "fastapi"
           - "starlette"
           - "pydantic"
-          # bcrypt 5.x breaks passlib hashing for >72-byte secrets; PR #156
-          # closed until the auth adaptation lands (card fbe1e86d).
-          - "bcrypt"
       pip-backend-minors-patch:
         update-types:
           - "minor"
