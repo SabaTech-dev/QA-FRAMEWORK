@@ -245,8 +245,17 @@ jobs:
           esac
           CID=$(docker ps -q --filter "ancestor=${IMG}:${IMG_TAG}" | head -1)
           if [ -z "${CID}" ]; then echo "ERROR: contenedor no encontrado (${IMG}:${IMG_TAG})"; exit 1; fi
-          docker exec "${CID}" python3 -c "import urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5); print('probe /health ->', r.status)" >/dev/null
-          echo "probe /health OK"
+          PROBE_OK=""
+          for i in $(seq 1 12); do
+            if docker exec "${CID}" python3 -c "import urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5); print('probe /health ->', r.status)" >/dev/null 2>&1; then
+              PROBE_OK=yes
+              echo "probe /health OK (intento ${i})"
+              break
+            fi
+            echo "[probe ${i}/12] app aun arrancando..."
+            sleep 5
+          done
+          [ "${PROBE_OK}" = "yes" ] || { echo "ERROR: probe /health fallo tras 60s"; exit 1; }
           echo "status=${ASTAT}" >> "${GITHUB_OUTPUT}"
           echo "app_uuid=${APP_UUID}" >> "${GITHUB_OUTPUT}"
           rm -f "${HDR}"
@@ -375,7 +384,17 @@ jobs:
           esac
           CID=$(docker ps -q --filter "ancestor=${IMG}:${IMG_TAG}" | head -1)
           if [ -z "${CID}" ]; then echo "ERROR: contenedor no encontrado (${IMG}:${IMG_TAG})"; exit 1; fi
-          docker exec "${CID}" wget -q -O /dev/null http://127.0.0.1:3000/ && echo "probe / (vite dev 3000) OK"
+          PROBE_OK=""
+          for i in $(seq 1 12); do
+            if docker exec "${CID}" wget -q -O /dev/null http://127.0.0.1:3000/ 2>/dev/null; then
+              PROBE_OK=yes
+              echo "probe / (vite dev 3000) OK (intento ${i})"
+              break
+            fi
+            echo "[probe ${i}/12] app aun arrancando..."
+            sleep 5
+          done
+          [ "${PROBE_OK}" = "yes" ] || { echo "ERROR: probe / fallo tras 60s"; exit 1; }
           echo "status=${ASTAT}" >> "${GITHUB_OUTPUT}"
           echo "app_uuid=${APP_UUID}" >> "${GITHUB_OUTPUT}"
           rm -f "${HDR}"
