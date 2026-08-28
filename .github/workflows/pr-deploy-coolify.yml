@@ -9,6 +9,7 @@ on:
 env:
   PYTHON_VERSION: "3.11"
   NODE_VERSION: "26"
+  REGISTRY: localhost:5000
 
 # NOTE: preview deploys corren en runner self-hosted (label coolify-deploy) — card 52a85645.
 # NOTE: the SECURITY GATE (security-gate job) IS blocking/fail-closed (card 650387a1, R3):
