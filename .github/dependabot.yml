@@ -12,10 +12,6 @@
 # f28cecdb) — pip: sqlalchemy, fastapi, starlette, pydantic; npm: next,
 # react, vite. Only innocuous majors get bundled; the excluded ones fall
 # back to individual PRs for isolated review, same as stripe.
-# 2026-08-28: deny-list bcrypt (pip-backend-majors) and
-# eslint-plugin-react-refresh (npm-frontend-minors-patch): their grouped
-# PRs (#156, #167) were reviewed and closed, and dependabot re-opens them
-# weekly. Excluded until the blocking migrations land (card fbe1e86d).
 
 version: 2
 updates:
@@ -112,9 +108,6 @@ updates:
           - "patch"
         exclude-patterns:
           - "@stripe/*"
-          # eslint-plugin-react-refresh >=0.4.20 requires eslint 9; PR #167
-          # closed until the eslint 9 migration lands (card fbe1e86d).
-          - "eslint-plugin-react-refresh"
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
