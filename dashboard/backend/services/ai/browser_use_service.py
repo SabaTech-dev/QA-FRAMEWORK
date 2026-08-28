@@ -26,7 +26,9 @@ class BrowserUseService:
         """Get LLM instance based on configuration."""
         if self._llm is None:
             if settings.BROWSER_USE_LLM_PROVIDER == "groq":
-                from langchain_groq import ChatGroq
+                # browser-use 0.13 ships its own LLM wrappers (BaseChatModel protocol);
+                # langchain models are no longer accepted by Agent.
+                from browser_use import ChatGroq
 
                 self._llm = ChatGroq(
                     model=settings.BROWSER_USE_MODEL,
@@ -37,6 +39,30 @@ class BrowserUseService:
             else:
                 raise ValueError(f"Unsupported LLM provider: {settings.BROWSER_USE_LLM_PROVIDER}")
         return self._llm
+
+    @staticmethod
+    def _compose_task(prompt: str, url: str) -> str:
+        """Embed the start URL in the task text.
+
+        browser-use 0.13 removed ``run(url)``: with ``directly_open_url=True``
+        (the default) the agent extracts a single URL from the task and opens
+        it as its initial action.
+        """
+        return f"{prompt}\n\nStart by navigating to: {url}"
+
+    def _build_agent(self, prompt: str, url: str, options: Optional[Dict[str, Any]] = None):
+        """Construct a browser-use 0.13 Agent (no network, no browser launch).
+
+        ``browser_config=`` was removed in 0.13; the headless flag now lives on
+        a ``BrowserProfile`` passed as ``browser_profile=``.
+        """
+        from browser_use import Agent, BrowserProfile
+
+        return Agent(
+            task=self._compose_task(prompt, url),
+            llm=self._get_llm(),
+            browser_profile=BrowserProfile(headless=(options or {}).get("headless", True)),
+        )
 
     async def execute_task(
         self,
@@ -96,24 +122,15 @@ class BrowserUseService:
             # Update status to running
             await self._update_task_status(db, task_id, TaskStatus.RUNNING)
 
-            # Import browser-use here to avoid import errors if not installed
-            from browser_use import Agent
-
-            llm = self._get_llm()
             options = options or {}
-
-            agent = Agent(
-                task=prompt,
-                llm=llm,
-                browser_config={
-                    "headless": options.get("headless", True),
-                },
-            )
+            # browser-use 0.13: Agent construction uses browser_profile= (browser_config
+            # was removed) and the start URL travels inside the task text.
+            agent = self._build_agent(prompt, url, options)
 
             start_time = datetime.utcnow()
 
-            # Run the agent
-            result = await agent.run(url)
+            # Cap at 100 steps (the 0.1.x default) to bound task cost; 0.13 defaults to 500.
+            result = await agent.run(max_steps=options.get("max_steps", 100))
 
             duration = (datetime.utcnow() - start_time).total_seconds()
 
