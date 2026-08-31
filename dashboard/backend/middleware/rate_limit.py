@@ -8,17 +8,27 @@ Implements granular rate limiting:
 - Redis-backed for distributed rate limiting
 """
 
+import os
 import time
 from typing import Optional, Callable
 from fastapi import Request, Response, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 import structlog
+from prometheus_client import Counter
 
 from core.rate_limit_config import get_rate_limit, get_burst_limit, get_endpoint_limit
 from services.cache_service import get_redis_client
 
 logger = structlog.get_logger()
+
+# Backing-store (redis) failures inside the rate limiter are never silent:
+# every failure increments this counter (exposed via /metrics, alertable).
+RATE_LIMIT_BACKEND_FAILURES = Counter(
+    "rate_limit_backend_failures",
+    "Rate limit checks that failed on the backing store (e.g. redis errors)",
+    ["fail_mode"],
+)
 
 
 class RateLimiter:
@@ -32,15 +42,25 @@ class RateLimiter:
     - Sliding window for accurate rate limiting
     """
     
-    def __init__(self, redis_client=None):
+    def __init__(self, redis_client=None, fail_mode: Optional[str] = None):
         """
         Initialize rate limiter
         
         Args:
             redis_client: Redis client (optional, will use default if not provided)
+            fail_mode: Behavior on backing-store failure ("open"|"closed").
+                Defaults to env RATE_LIMIT_FAIL_MODE, else "open".
+        Valid fail modes (env RATE_LIMIT_FAIL_MODE):
+        - "open" (default): allow requests if the backing store fails, but
+          mark the response as degraded (header + metric + log event).
+        - "closed": deny requests with 503 while the backing store is down.
         """
         self.redis = redis_client or get_redis_client()
         self.prefix = "ratelimit:"
+        self.fail_mode = (fail_mode or os.getenv("RATE_LIMIT_FAIL_MODE", "open")).strip().lower()
+        if self.fail_mode not in ("open", "closed"):
+            logger.warning("Invalid RATE_LIMIT_FAIL_MODE, falling back to open", value=self.fail_mode)
+            self.fail_mode = "open"
     
     async def is_allowed(
         self,
@@ -74,6 +94,10 @@ class RateLimiter:
                 endpoint_limit,
                 window=60  # 1 minute
             )
+            if info.get("degraded"):
+                # Backing store down: short-circuit so each request produces
+                # exactly one failure event, not one per limit bucket.
+                return is_allowed, info
             if not is_allowed:
                 return False, info
         
@@ -84,6 +108,8 @@ class RateLimiter:
             burst_limit,
             window=60  # 1 minute
         )
+        if burst_info.get("degraded"):
+            return is_allowed, burst_info
         if not is_allowed:
             return False, burst_info
         
@@ -94,6 +120,8 @@ class RateLimiter:
             hourly_limit,
             window=3600  # 1 hour
         )
+        if hourly_info.get("degraded"):
+            return is_allowed, hourly_info
         if not is_allowed:
             return False, hourly_info
         
@@ -150,9 +178,30 @@ class RateLimiter:
             return is_allowed, info
             
         except Exception as e:
-            logger.error("Rate limit check failed", error=str(e), key=key)
-            # Fail open - allow request if Redis fails
-            return True, {"limit": limit, "remaining": limit, "error": str(e)}
+            # Backing-store failure — never silent: distinct log event + metric.
+            # Details stay server-side (no error strings in responses).
+            try:
+                RATE_LIMIT_BACKEND_FAILURES.labels(fail_mode=self.fail_mode).inc()
+            except Exception:
+                pass
+            logger.error(
+                "rate_limit_backend_failure",
+                fail_mode=self.fail_mode,
+                error_type=type(e).__name__,
+                error=str(e),
+                key=key,
+            )
+            info = {
+                "limit": limit,
+                "remaining": limit,
+                "reset": int(current_time + window),
+                "window": window,
+                "degraded": True,
+            }
+            if self.fail_mode == "closed":
+                return False, info
+            # Fail open (default): allow request but flag degradation
+            return True, info
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -202,14 +251,28 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             endpoint=request.url.path
         )
         
+        degraded = bool(rate_info.get("degraded"))
+        
         # Add rate limit headers
         headers = {
             "X-RateLimit-Limit": str(rate_info.get("limit", 0)),
             "X-RateLimit-Remaining": str(rate_info.get("remaining", 0)),
             "X-RateLimit-Reset": str(rate_info.get("reset", 0))
         }
+        if degraded:
+            # Externally visible signal that rate limiting is currently
+            # unavailable (backing store failure).
+            headers["X-RateLimit-Mode"] = "degraded"
         
         if not is_allowed:
+            if degraded:
+                # RATE_LIMIT_FAIL_MODE=closed: backing store down. This is a
+                # service degradation, NOT a client abuse signal — 503, not 429.
+                return JSONResponse(
+                    status_code=503,
+                    content={"detail": "Service temporarily degraded, please retry later"},
+                    headers={**headers, "Retry-After": "30"}
+                )
             # Rate limit exceeded
             logger.warning(
                 "Rate limit exceeded",
@@ -281,6 +344,11 @@ async def check_rate_limit(request: Request, plan: str = "free"):
     )
     
     if not is_allowed:
+        if rate_info.get("degraded"):
+            raise HTTPException(
+                status_code=503,
+                detail="Service temporarily degraded, please retry later"
+            )
         raise HTTPException(
             status_code=429,
             detail={
