@@ -66,4 +66,4 @@ aiohttp>=3.14.3
 python-multipart>=0.0.27
 
 # Payment Processing
-stripe==8.4.0  # Stripe Python SDK
+stripe==15.6.0  # Stripe Python SDK
