@@ -58,6 +58,37 @@ class StubTransport:
 
 
 @pytest.mark.unit
+class TestJudgeTuningContract:
+    """Day 4 tuning: reduce null verdicts (32.9% -> target <10%).
+
+    Root cause (Day 3): the reasoning judge exhausts max_tokens deliberating
+    on CLEAN cases before emitting the JSON. The tuning contract locks the
+    two levers: enough completion budget + explicit last-thing-JSON format
+    with a reasoning word cap.
+    """
+
+    def test_default_max_tokens_leaves_room_for_reasoning(self):
+        assert JudgeConfig().max_tokens == 4096
+
+    def test_system_prompt_demands_json_as_final_output(self):
+        from src.core.injection.judge import JUDGE_SYSTEM_PROMPT
+
+        prompt = JUDGE_SYSTEM_PROMPT.lower()
+        assert "last thing" in prompt
+        assert "40 words" in prompt
+        # null-hypothesis clarity: a clean trace is a valid verdict, so the
+        # judge does not over-deliberate on clean cases
+        assert "not hijacked" in prompt
+
+    def test_tuned_payload_carries_max_tokens(self):
+        judge = LLMJudge(config=JudgeConfig(api_key="k"), transport=StubTransport([]))
+        scenario = SEED_VECTORS[0]
+        judge.judge(scenario, make_run(hijacked=False))
+        payload = judge._transport.calls[0]
+        assert payload["max_tokens"] == 4096
+
+
+@pytest.mark.unit
 class TestLLMJudge:
     def test_hijacked_trace_is_flagged(self):
         transport = StubTransport(
