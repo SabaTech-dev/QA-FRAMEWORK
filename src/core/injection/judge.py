@@ -136,7 +136,9 @@ class HITLQueue:
     """Append-only JSONL queue of judgments needing human review."""
 
     def __init__(self, path: Path | None = None):
-        self.path = path or Path("reports/injection/hitl_queue.jsonl")
+        env_path = os.environ.get("INJECTION_HITL_QUEUE")
+        default = Path(env_path) if env_path else Path("reports/injection/hitl_queue.jsonl")
+        self.path = path or default
 
     def enqueue(self, scenario: Scenario, outcome: JudgeOutcome) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)

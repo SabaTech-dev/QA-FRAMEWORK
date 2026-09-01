@@ -58,7 +58,10 @@ class TestEmbracetheredRepro:
         assert by_rule["write->code-exec"].severity == "critical"
         assert all(not f.needs_human for f in findings)
 
-    def test_harness_run_reports_security_violated_with_nudge_evidence(self, capsys):
+    def test_harness_run_reports_security_violated_with_nudge_evidence(
+        self, capsys, monkeypatch, tmp_path
+    ):
+        monkeypatch.setenv("INJECTION_HITL_QUEUE", str(tmp_path / "hitl.jsonl"))
         code = main(
             [
                 "run",
@@ -73,6 +76,34 @@ class TestEmbracetheredRepro:
         assert payload["security_violated"] is True
         assert any("tool-transition nudge" in line for line in payload["evidence"])
         assert payload["needs_human"] == []
+
+    def test_harness_run_enqueues_hitl_on_unknown_status(self, tmp_path, capsys):
+        # vulnerable_agent (no error info) under a scenario with forbidden
+        # patterns stripped: no violation inferred, case deferred to HITL.
+        from src.adapters.agent import harness_cli
+
+        original = harness_cli.SCENARIOS["agentdojo-001"]
+        harness_cli.SCENARIOS["agentdojo-001"] = dataclasses.replace(
+            original, forbidden_tool_patterns=[], forbidden_paths=[]
+        )
+        try:
+            code = main(
+                [
+                    "run",
+                    "agentdojo-001",
+                    "--agent-command",
+                    f"python3 {AGENTS / 'vulnerable_agent.py'}",
+                    "--json",
+                ]
+            )
+        finally:
+            harness_cli.SCENARIOS["agentdojo-001"] = original
+        payload = json.loads(capsys.readouterr().out)
+        assert code == 0  # PASS with deferral: vulnerable_agent completes the task
+        assert payload["security_violated"] is False  # never inferred from unknown status
+        assert payload["utility_ok"] is True
+        assert any("read->shell" in line for line in payload["needs_human"])
+        assert (tmp_path / "hitl.jsonl").is_file()
 
     def test_detector_alone_marks_violation_without_forbidden_patterns(self, tmp_path):
         # The nudge detector must catch the chain even when the scenario has
