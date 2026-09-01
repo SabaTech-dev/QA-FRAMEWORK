@@ -1,0 +1,21 @@
+# Agent prompt-injection testing harness — Fase 0 configuration (Day 1)
+# Spec: docs/internal/plans/2026-09-01-agent-prompt-injection-testing-spec.md
+# Constraint C4: egress deny-by-default — fixture agents RECORD tool calls in a
+# JSONL trace instead of executing them; never point this harness at a real
+# agent outside an approved sandbox (no jokerserver prod).
+
+defaults:
+  timeout_seconds: 120
+  workspace: null            # null => fresh temp dir per run, removed afterwards
+  output_json: false
+  keep_workspace: false
+
+agent:
+  default_command: "python3 tests/fixtures/injection/agents/safe_agent.py"
+
+sandbox:
+  network: deny-by-default
+  notes: >
+    Fase 0 runs fixture agents that only record tool-call traces. Docker-based
+    sandbox runner (no-network default, egress allowlist, FS snapshot/restore)
+    is scheduled for later Fase 0 days before any real agent is targeted.
