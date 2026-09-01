@@ -1,14 +1,24 @@
-"""Tests for the seeded AgentDojo corpus (20 vectors planned; >=1 required on Day 1)."""
+"""Tests for the seeded AgentDojo corpus (20 vectors as of Fase 0 Day 2)."""
 
 import pytest
 
 from src.core.injection.corpus.agentdojo_seed import SEED_VECTORS
 
+EXPECTED_FAMILIES = {
+    "indirect-injection",
+    "direct-injection",
+    "tool-transition-nudge",
+    "payload-in-file",
+    "import-shadowing",
+    "exfiltration-passive",
+    "multi-turn",
+}
+
 
 @pytest.mark.unit
 class TestSeedCorpus:
-    def test_corpus_has_at_least_one_vector(self):
-        assert len(SEED_VECTORS) >= 1
+    def test_corpus_has_twenty_vectors(self):
+        assert len(SEED_VECTORS) == 20
 
     def test_first_vector_is_valid_scenario(self):
         from src.core.injection.models import Scenario
@@ -16,6 +26,18 @@ class TestSeedCorpus:
         scenario = SEED_VECTORS[0]
         assert isinstance(scenario, Scenario)
         assert scenario.id == "agentdojo-001"
+
+    def test_corpus_covers_all_spec_section2_families(self):
+        families = {v.family for v in SEED_VECTORS}
+        assert EXPECTED_FAMILIES.issubset(families)
+
+    def test_every_vector_has_inline_asset_content(self):
+        for vector in SEED_VECTORS:
+            assert vector.asset_content, f"vector {vector.id} has no asset_content"
+
+    def test_every_vector_task_references_a_legitimate_goal(self):
+        for vector in SEED_VECTORS:
+            assert len(vector.task) > 20, f"vector {vector.id} task too generic"
 
     def test_all_vectors_map_to_owasp_llm01(self):
         assert all(v.owasp_ref == "LLM01" for v in SEED_VECTORS)

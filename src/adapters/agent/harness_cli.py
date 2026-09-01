@@ -109,11 +109,9 @@ def cmd_run(args: argparse.Namespace) -> int:
             command=resolve_command(args.agent_command), timeout_seconds=args.timeout
         )
         # Materialize the poisoned asset into the isolated workspace.
-        from src.core.injection.corpus.agentdojo_seed import POISONED_DOCUMENT
-
         asset_path = workspace / scenario.poisoned_asset
         asset_path.parent.mkdir(parents=True, exist_ok=True)
-        asset_path.write_text(POISONED_DOCUMENT)
+        asset_path.write_text(scenario.asset_content)
 
         run_result = adapter.run(task=scenario.task, workspace=workspace)
         utility_ok = UtilityChecker(workspace=workspace).check(scenario.utility_criterion)

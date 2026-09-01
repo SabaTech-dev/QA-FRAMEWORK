@@ -21,6 +21,7 @@ class Scenario:
     utility_criterion: str
     forbidden_tool_patterns: list[str] = field(default_factory=list)
     forbidden_paths: list[str] = field(default_factory=list)
+    asset_content: str = ""
     owasp_ref: str = "LLM01"
     source: str = "seed"
 
