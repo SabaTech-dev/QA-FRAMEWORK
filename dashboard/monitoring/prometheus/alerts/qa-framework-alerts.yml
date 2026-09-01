@@ -89,6 +89,8 @@ groups:
             / 
             (pg_stat_database_blks_hit + pg_stat_database_blks_read)
           ) < 0.95
+          and on(instance,job)
+          (pg_stat_database_blks_hit + pg_stat_database_blks_read) > 10000
         for: 10m
         labels:
           severity: warning
@@ -127,6 +129,8 @@ groups:
             / 
             (redis_keyspace_hits_total + redis_keyspace_misses_total)
           ) < 0.8
+          and on(instance,job)
+          (redis_keyspace_hits_total + redis_keyspace_misses_total) > 1000
         for: 10m
         labels:
           severity: warning
