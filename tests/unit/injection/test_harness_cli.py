@@ -14,6 +14,9 @@ FIXTURE_VULNERABLE = str(
 FIXTURE_SAFE = str(
     Path(__file__).resolve().parents[3] / "tests/fixtures/injection/agents/safe_agent.py"
 )
+FIXTURE_NUDGE = str(
+    Path(__file__).resolve().parents[3] / "tests/fixtures/injection/agents/nudge_agent.py"
+)
 
 
 @pytest.mark.unit
@@ -82,6 +85,77 @@ class TestHarnessCli:
         args = parser.parse_args(["run", "agentdojo-001"])
         assert args.command == "run"
         assert args.scenario == "agentdojo-001"
+
+
+@pytest.mark.unit
+class TestRunCorpus:
+    """run-corpus: full-corpus sweep against one agent command (ASR per family)."""
+
+    @pytest.fixture(autouse=True)
+    def _isolate_hitl(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("INJECTION_HITL_QUEUE", str(tmp_path / "hitl.jsonl"))
+
+    def test_run_corpus_safe_fixture_zero_asr_all_families(self, capsys):
+        rc = main(["run-corpus", "--agent-command", f"python3 {FIXTURE_SAFE}", "--json"])
+        assert rc == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["total"] == 21
+        assert payload["overall"]["security_violated"] == 0
+        assert payload["overall"]["asr"] == 0.0
+        families = payload["families"]
+        assert len(families) == 7
+        assert all(f["asr"] == 0.0 for f in families)
+
+    def test_run_corpus_nudge_fixture_reports_family_asr(self, capsys):
+        rc = main(["run-corpus", "--agent-command", f"python3 {FIXTURE_NUDGE}", "--json"])
+        assert rc == 0
+        payload = json.loads(capsys.readouterr().out)
+        nudge_family = next(
+            f for f in payload["families"] if f["family"] == "tool-transition-nudge"
+        )
+        assert nudge_family["security_violated"] > 0
+        assert payload["overall"]["asr"] > 0.0
+
+    def test_run_corpus_writes_per_scenario_report_file(self, tmp_path, capsys):
+        report = tmp_path / "corpus_safe.json"
+        rc = main(
+            [
+                "run-corpus",
+                "--agent-command",
+                f"python3 {FIXTURE_SAFE}",
+                "--json",
+                "--report",
+                str(report),
+            ]
+        )
+        assert rc == 0
+        saved = json.loads(report.read_text())
+        assert len(saved["scenarios"]) == 21
+        assert {s["outcome"] for s in saved["scenarios"]} <= {
+            "PASS",
+            "UTILITY_FAIL",
+        }
+        first = saved["scenarios"][0]
+        assert {"scenario_id", "family", "outcome", "evidence"} <= set(first)
+
+    def test_run_corpus_buckets_sum_to_total(self, capsys):
+        main(["run-corpus", "--agent-command", f"python3 {FIXTURE_NUDGE}", "--json"])
+        payload = json.loads(capsys.readouterr().out)
+        overall = payload["overall"]
+        counted = (
+            overall["security_violated"]
+            + overall["needs_human"]
+            + overall["pass"]
+            + overall["utility_fail"]
+        )
+        assert counted == payload["total"]
+
+    def test_run_corpus_needs_human_does_not_count_as_asr(self, capsys):
+        """ASR numerator is security_violated only; needs_human is a separate bucket."""
+        main(["run-corpus", "--agent-command", f"python3 {FIXTURE_NUDGE}", "--json"])
+        payload = json.loads(capsys.readouterr().out)
+        overall = payload["overall"]
+        assert overall["asr"] == overall["security_violated"] / payload["total"]
 
 
 @pytest.mark.unit
