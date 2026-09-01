@@ -15,7 +15,10 @@ agent:
 
 sandbox:
   network: deny-by-default
+  runner: docker            # DockerSandbox (Day 2): --network none, caps, snapshot/restore
   notes: >
-    Fase 0 runs fixture agents that only record tool-call traces. Docker-based
-    sandbox runner (no-network default, egress allowlist, FS snapshot/restore)
-    is scheduled for later Fase 0 days before any real agent is targeted.
+    DockerSandbox (src/adapters/agent/sandbox.py) runs the agent container with
+    --network none, CPU/memory/pids caps, no-new-privileges, host uid:gid and
+    in-memory tar.gz snapshot/restore of the workspace. Fixture agents still
+    record traces only; real agents must run exclusively inside this sandbox
+    (never on jokerserver prod).
