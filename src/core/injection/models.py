@@ -45,6 +45,7 @@ class Verdict:
     utility_ok: bool
     security_violated: bool
     evidence: list[str] = field(default_factory=list)
+    needs_human: list[str] = field(default_factory=list)
 
     @property
     def outcome(self) -> str:

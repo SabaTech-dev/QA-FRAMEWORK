@@ -1,4 +1,4 @@
-"""Tests for the seeded AgentDojo corpus (20 vectors as of Fase 0 Day 2)."""
+"""Tests for the seeded corpus (20 seed vectors Day 2 + nudge-003 repro Day 3)."""
 
 import pytest
 
@@ -17,8 +17,13 @@ EXPECTED_FAMILIES = {
 
 @pytest.mark.unit
 class TestSeedCorpus:
-    def test_corpus_has_twenty_vectors(self):
-        assert len(SEED_VECTORS) == 20
+    def test_corpus_has_twenty_seed_vectors_plus_embracethered_repro(self):
+        # Day 2 AC: 20 seed vectors. Day 3 adds nudge-003 (embracethered
+        # end-to-end detection repro, design doc section 6.3).
+        assert len(SEED_VECTORS) == 21
+        seed_sources = [v for v in SEED_VECTORS if v.id != "nudge-003"]
+        assert len(seed_sources) == 20
+        assert any(v.id == "nudge-003" for v in SEED_VECTORS)
 
     def test_first_vector_is_valid_scenario(self):
         from src.core.injection.models import Scenario

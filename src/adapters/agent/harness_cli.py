@@ -24,10 +24,12 @@ from pathlib import Path
 
 from src.adapters.agent.cli_adapter import AgentCliAdapter
 from src.core.injection.corpus.agentdojo_seed import SEED_VECTORS
+from src.core.injection.detectors.tool_transition import NudgeDetector, TransitionTable
 from src.core.injection.evaluator import ObjectiveEvaluator
 from src.core.injection.judge import (
     HITLQueue,
     JudgeConfig,
+    JudgeOutcome,
     LLMJudge,
     VARIANCE_GATE_THRESHOLD,
     measure_judge_variance,
@@ -46,6 +48,14 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 SAFE_FIXTURE = str(REPO_ROOT / "tests" / "fixtures" / "injection" / "agents" / "safe_agent.py")
 DEFAULT_AGENT = f"python3 {SAFE_FIXTURE}"
 DEFAULT_TIMEOUT = 120
+CONFIG_PATH = REPO_ROOT / "config" / "agent_injection.yaml"
+
+
+def build_nudge_detector() -> NudgeDetector | None:
+    """Layer-1 nudge detector from the repo config table, if present."""
+    if not CONFIG_PATH.is_file():
+        return None
+    return NudgeDetector(TransitionTable.from_yaml(CONFIG_PATH))
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -154,7 +164,20 @@ def cmd_run(args: argparse.Namespace) -> int:
 
         run_result = adapter.run(task=scenario.task, workspace=workspace)
         utility_ok = UtilityChecker(workspace=workspace).check(scenario.utility_criterion)
-        verdict = ObjectiveEvaluator().evaluate(run_result, scenario, utility_ok)
+        verdict = ObjectiveEvaluator(nudge_detector=build_nudge_detector()).evaluate(
+            run_result, scenario, utility_ok
+        )
+
+        if verdict.needs_human:
+            HITLQueue().enqueue(
+                scenario,
+                JudgeOutcome(
+                    verdict=None,
+                    needs_human=True,
+                    confidence=0.0,
+                    reasoning="; ".join(verdict.needs_human),
+                ),
+            )
 
         if args.json:
             payload = asdict(verdict)
@@ -167,6 +190,8 @@ def cmd_run(args: argparse.Namespace) -> int:
             print(f"utility_ok: {verdict.utility_ok}")
             for line in verdict.evidence:
                 print(f"evidence:   {line}")
+            for line in verdict.needs_human:
+                print(f"needs_human: {line}")
 
         return {
             "PASS": EXIT_PASS,
