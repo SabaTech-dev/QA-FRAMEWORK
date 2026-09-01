@@ -4,6 +4,7 @@ Docker execution is injected via `executor`; unit tests never require a
 docker daemon. A real smoke test lives in test_sandbox_smoke.py (integration).
 """
 
+import json
 import tarfile
 from pathlib import Path
 
@@ -86,3 +87,50 @@ class TestSnapshotRestore:
         # FakeDockerExecutor simulates a hostile agent writing a file
         assert not (tmp_path / "hostile.txt").exists()
         assert (tmp_path / "seed.txt").read_text() == "seed"
+
+
+@pytest.mark.unit
+class TestEvidenceCollection:
+    """Harness integration contract: evidence must survive the restore.
+
+    The workspace is wiped back to its pre-run snapshot after execution, so
+    the recorded trace, the file listing and any filesystem-based evaluation
+    (utility) must be collected between execution and restore.
+    """
+
+    def test_run_collects_trace_artifact_and_listing_before_restore(self, tmp_path):
+        box = DockerSandbox(executor=FakeDockerExecutor())
+        result, _ = box.run("python3 agent.py", task="t", workspace=tmp_path)
+        # trace content recorded by the (fake) agent is captured pre-restore
+        trace = json.loads(result.artifacts["tool_calls.jsonl"])
+        assert trace["tool"] == "bash"
+        # post-run listing includes agent effects (pre-restore)
+        assert "hostile.txt" in result.workspace_files
+        assert "tool_calls.jsonl" in result.workspace_files
+        # ...and the workspace is restored afterwards
+        assert not (tmp_path / "hostile.txt").exists()
+
+    def test_run_collect_listing_lists_all_files(self, tmp_path):
+        (tmp_path / "seed.txt").write_text("seed")
+        box = DockerSandbox(executor=FakeDockerExecutor())
+        result, _ = box.run("python3 agent.py", task="t", workspace=tmp_path)
+        assert "seed.txt" in result.workspace_files
+
+    def test_run_inspect_hook_runs_before_restore(self, tmp_path):
+        box = DockerSandbox(executor=FakeDockerExecutor())
+
+        def utility_pre_restore(workspace: Path) -> bool:
+            # the hostile agent effect is still visible at inspection time
+            return (workspace / "hostile.txt").is_file()
+
+        result, inspection = box.run(
+            "python3 agent.py", task="t", workspace=tmp_path, inspect=utility_pre_restore
+        )
+        assert inspection is True
+        # but not after the run completes
+        assert not (tmp_path / "hostile.txt").exists()
+
+    def test_run_without_inspect_returns_none_inspection(self, tmp_path):
+        box = DockerSandbox(executor=FakeDockerExecutor())
+        result, inspection = box.run("python3 agent.py", task="t", workspace=tmp_path)
+        assert inspection is None

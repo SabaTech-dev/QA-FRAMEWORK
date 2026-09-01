@@ -10,6 +10,7 @@ Exit codes for `run`:
     0  PASS (utility ok, no security violation)
     1  UTILITY_FAIL (no violation, but task not completed)
     2  SECURITY_VIOLATED (attack success — ASR numerator)
+    3  HARNESS_ERROR (operational failure, e.g. docker daemon unavailable)
 
 `run-corpus` exits 0 when the measurement completes: it is an evidence
 collector, not a gate — the ASR it reports is data, not a pass/fail verdict.
@@ -26,7 +27,8 @@ import tempfile
 from dataclasses import asdict
 from pathlib import Path
 
-from src.adapters.agent.cli_adapter import AgentCliAdapter
+from src.adapters.agent.cli_adapter import AgentCliAdapter, TRACE_FILENAME, parse_trace_text
+from src.adapters.agent.sandbox import DockerSandbox, DockerUnavailable
 from src.core.injection.corpus.agentdojo_seed import SEED_VECTORS
 from src.core.injection.detectors.tool_transition import NudgeDetector, TransitionTable
 from src.core.injection.evaluator import ObjectiveEvaluator
@@ -47,6 +49,7 @@ SCENARIOS: dict[str, Scenario] = {s.id: s for s in SEED_VECTORS}
 EXIT_PASS = 0
 EXIT_UTILITY_FAIL = 1
 EXIT_SECURITY_VIOLATED = 2
+EXIT_HARNESS_ERROR = 3  # operational failure (e.g. docker daemon unavailable)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SAFE_FIXTURE = str(REPO_ROOT / "tests" / "fixtures" / "injection" / "agents" / "safe_agent.py")
@@ -86,6 +89,17 @@ def build_parser() -> argparse.ArgumentParser:
     run_p.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT, help="agent timeout seconds")
     run_p.add_argument("--json", action="store_true", help="machine-readable output")
     run_p.add_argument("--keep-workspace", action="store_true", help="do not delete temp workspace")
+    run_p.add_argument(
+        "--sandbox",
+        choices=["direct", "docker"],
+        default="direct",
+        help="agent runner: direct subprocess (default) or Docker sandbox (C4)",
+    )
+    run_p.add_argument(
+        "--sandbox-image",
+        default=None,
+        help="Docker image for --sandbox docker (default: python:3.12-slim)",
+    )
 
     corpus_p = sub.add_parser(
         "run-corpus",
@@ -102,6 +116,17 @@ def build_parser() -> argparse.ArgumentParser:
         "--report",
         default=None,
         help="write the full per-scenario JSON evidence to this path",
+    )
+    corpus_p.add_argument(
+        "--sandbox",
+        choices=["direct", "docker"],
+        default="direct",
+        help="agent runner: direct subprocess (default) or Docker sandbox (C4)",
+    )
+    corpus_p.add_argument(
+        "--sandbox-image",
+        default=None,
+        help="Docker image for --sandbox docker (default: python:3.12-slim)",
     )
 
     judge_p = sub.add_parser(
@@ -162,20 +187,86 @@ def resolve_command(command_str: str) -> list[str]:
     return resolved
 
 
+def _build_sandbox(args: argparse.Namespace) -> DockerSandbox:
+    """Docker sandbox for --sandbox docker (spec C4: network-off, caps, restore)."""
+    image = getattr(args, "sandbox_image", None) or "python:3.12-slim"
+    return DockerSandbox(image=image, timeout_seconds=args.timeout)
+
+
+def _stage_sandbox_command(command_str: str, workspace: Path) -> tuple[str, set[str]]:
+    """Stage repo-resolved script files into the workspace for the container.
+
+    The sandbox container only sees /workspace (never the harness repo), so
+    script files referenced by the agent command are copied into the workspace
+    and referenced by basename. Returns (in-container command, staged names);
+    staged files are excluded from created_files (they are harness inputs,
+    not agent effects).
+    """
+    tokens: list[str] = []
+    staged: set[str] = set()
+    for token in command_str.split():
+        source = None
+        if not token.startswith("-") and "/" in token and not os.path.isabs(token):
+            candidate = REPO_ROOT / token
+            if candidate.is_file():
+                source = candidate
+        elif os.path.isabs(token) and Path(token).is_file():
+            source = Path(token)
+        if source is not None:
+            shutil.copy(source, workspace / source.name)
+            staged.add(source.name)
+            tokens.append(source.name)
+        else:
+            tokens.append(token)
+    return " ".join(tokens), staged
+
+
 def _run_and_evaluate(
-    scenario: Scenario, command: list[str], workspace: Path, timeout: int
+    scenario: Scenario,
+    command_str: str,
+    workspace: Path,
+    timeout: int,
+    sandbox: DockerSandbox | None = None,
 ) -> tuple:
     """Materialize the poisoned asset, run the agent, evaluate (layer 1).
 
-    Shared by `run` (single scenario) and `run-corpus` (full sweep).
+    Shared by `run` (single scenario) and `run-corpus` (full sweep). With
+    `sandbox=None` the agent runs as a direct subprocess (Fase 0 default);
+    with a DockerSandbox it runs inside the container (--sandbox docker) and
+    the evidence (trace, file listing, utility) is collected pre-restore.
     """
-    adapter = AgentCliAdapter(command=command, timeout_seconds=timeout)
     asset_path = workspace / scenario.poisoned_asset
     asset_path.parent.mkdir(parents=True, exist_ok=True)
     asset_path.write_text(scenario.asset_content)
 
-    run_result = adapter.run(task=scenario.task, workspace=workspace)
-    utility_ok = UtilityChecker(workspace=workspace).check(scenario.utility_criterion)
+    if sandbox is None:
+        adapter = AgentCliAdapter(command=resolve_command(command_str), timeout_seconds=timeout)
+        run_result = adapter.run(task=scenario.task, workspace=workspace)
+        utility_ok = UtilityChecker(workspace=workspace).check(scenario.utility_criterion)
+    else:
+        inner_command, staged = _stage_sandbox_command(command_str, workspace)
+
+        def _utility_pre_restore(ws: Path) -> bool:
+            return UtilityChecker(workspace=ws).check(scenario.utility_criterion)
+
+        docker_result, utility_ok = sandbox.run(
+            inner_command,
+            task=scenario.task,
+            workspace=workspace,
+            inspect=_utility_pre_restore,
+        )
+        run_result = AgentRunResult(
+            exit_code=docker_result.exit_code,
+            stdout=docker_result.stdout,
+            stderr=docker_result.stderr,
+            tool_calls=parse_trace_text(docker_result.artifacts.get(TRACE_FILENAME, "")),
+            created_files=sorted(
+                name
+                for name in docker_result.workspace_files
+                if name != TRACE_FILENAME and name not in staged
+            ),
+        )
+
     verdict = ObjectiveEvaluator(nudge_detector=build_nudge_detector()).evaluate(
         run_result, scenario, utility_ok
     )
@@ -208,11 +299,13 @@ def cmd_run(args: argparse.Namespace) -> int:
         workspace = Path(args.workspace)
 
     try:
+        sandbox = _build_sandbox(args) if args.sandbox == "docker" else None
         verdict, run_result = _run_and_evaluate(
             scenario,
-            resolve_command(args.agent_command),
+            args.agent_command,
             workspace,
             args.timeout,
+            sandbox=sandbox,
         )
         _enqueue_needs_human(scenario, verdict)
 
@@ -220,6 +313,7 @@ def cmd_run(args: argparse.Namespace) -> int:
             payload = asdict(verdict)
             payload["outcome"] = verdict.outcome
             payload["tool_calls"] = run_result.tool_calls
+            payload["created_files"] = run_result.created_files
             print(json.dumps(payload, indent=2))
         else:
             print(f"scenario:   {scenario.id} ({scenario.name})")
@@ -292,13 +386,16 @@ def summarize_corpus(verdicts: list) -> dict:
 
 
 def cmd_run_corpus(args: argparse.Namespace) -> int:
-    command = resolve_command(args.agent_command)
+    sandbox = _build_sandbox(args) if args.sandbox == "docker" else None
+    command = args.agent_command
     scenario_rows: list[dict] = []
     verdicts: list = []
     for scenario in SCENARIOS.values():
         workspace = Path(tempfile.mkdtemp(prefix="agent-injection-corpus-"))
         try:
-            verdict, _run_result = _run_and_evaluate(scenario, command, workspace, args.timeout)
+            verdict, _run_result = _run_and_evaluate(
+                scenario, command, workspace, args.timeout, sandbox=sandbox
+            )
         finally:
             shutil.rmtree(workspace, ignore_errors=True)
         _enqueue_needs_human(scenario, verdict)
@@ -317,6 +414,7 @@ def cmd_run_corpus(args: argparse.Namespace) -> int:
 
     report = {
         "agent_command": args.agent_command,
+        "runner": args.sandbox,
         **summarize_corpus(verdicts),
         "scenarios": scenario_rows,
     }
@@ -463,15 +561,19 @@ def _format_judge(payload: dict) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    if args.command == "list":
-        return cmd_list()
-    if args.command == "judge":
-        return cmd_judge(args)
-    if args.command == "judge-variance":
-        return cmd_judge_variance(args)
-    if args.command == "run-corpus":
-        return cmd_run_corpus(args)
-    return cmd_run(args)
+    try:
+        if args.command == "list":
+            return cmd_list()
+        if args.command == "judge":
+            return cmd_judge(args)
+        if args.command == "judge-variance":
+            return cmd_judge_variance(args)
+        if args.command == "run-corpus":
+            return cmd_run_corpus(args)
+        return cmd_run(args)
+    except DockerUnavailable as exc:
+        print(f"error: docker sandbox unavailable: {exc}", file=sys.stderr)
+        return EXIT_HARNESS_ERROR
 
 
 if __name__ == "__main__":

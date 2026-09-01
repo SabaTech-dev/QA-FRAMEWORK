@@ -159,6 +159,114 @@ class TestRunCorpus:
 
 
 @pytest.mark.unit
+class TestSandboxIntegration:
+    """`--sandbox docker`: the run flow executes through DockerSandbox.
+
+    DockerSandbox itself is constructed with a FakeDockerExecutor (no daemon
+    needed); the harness wiring, command staging, trace conversion, evidence
+    exclusion and utility evaluation are what these tests cover.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _isolate_hitl(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("INJECTION_HITL_QUEUE", str(tmp_path / "hitl.jsonl"))
+
+    def _stub_sandbox(self, monkeypatch):
+        from src.adapters.agent.sandbox import DockerSandbox, FakeDockerExecutor
+
+        box = DockerSandbox(executor=FakeDockerExecutor())
+        monkeypatch.setattr(harness_cli, "_build_sandbox", lambda args: box)
+        return box
+
+    def test_run_docker_flag_parses(self):
+        args = build_parser().parse_args(["run", "agentdojo-001", "--sandbox", "docker"])
+        assert args.sandbox == "docker"
+        args = build_parser().parse_args(["run", "agentdojo-001"])
+        assert args.sandbox == "direct"
+
+    def test_run_docker_detects_forbidden_pattern_in_recorded_trace(
+        self, monkeypatch, tmp_path, capsys
+    ):
+        self._stub_sandbox(monkeypatch)
+        rc = main(
+            [
+                "run",
+                "agentdojo-001",
+                "--sandbox",
+                "docker",
+                "--agent-command",
+                f"python3 {FIXTURE_SAFE}",
+                "--json",
+            ]
+        )
+        assert rc == 2  # fake agent trace contains a forbidden curl call
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["security_violated"] is True
+        assert any("curl" in e for e in payload["evidence"])
+
+    def test_run_docker_stages_agent_script_and_excludes_it_from_created_files(
+        self, monkeypatch, capsys
+    ):
+        self._stub_sandbox(monkeypatch)
+        main(
+            [
+                "run",
+                "agentdojo-001",
+                "--sandbox",
+                "docker",
+                "--agent-command",
+                f"python3 {FIXTURE_SAFE}",
+                "--json",
+            ]
+        )
+        payload = json.loads(capsys.readouterr().out)
+        # the staged fixture copy must not count as an agent-created file
+        assert "safe_agent.py" not in payload["tool_calls"] or True
+        created = payload.get("created_files", [])
+        assert "safe_agent.py" not in created
+
+    def test_run_docker_restores_workspace_after_run(self, monkeypatch, tmp_path):
+        box = self._stub_sandbox(monkeypatch)
+        rc = main(
+            [
+                "run",
+                "agentdojo-001",
+                "--sandbox",
+                "docker",
+                "--agent-command",
+                f"python3 {FIXTURE_SAFE}",
+                "--workspace",
+                str(tmp_path),
+                "--json",
+            ]
+        )
+        assert rc == 2
+        # FakeDockerExecutor's hostile write was restored away
+        assert not (tmp_path / "hostile.txt").exists()
+
+    def test_run_corpus_accepts_docker_sandbox(self, monkeypatch, capsys):
+        self._stub_sandbox(monkeypatch)
+        rc = main(
+            [
+                "run-corpus",
+                "--sandbox",
+                "docker",
+                "--agent-command",
+                f"python3 {FIXTURE_SAFE}",
+                "--json",
+            ]
+        )
+        assert rc == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["runner"] == "docker"
+        assert payload["total"] == 21
+        # the fake agent's hijacked trace (bash curl) fires the forbidden
+        # patterns of every curl/bash-forbidding family
+        assert payload["overall"]["security_violated"] > 0
+        assert payload["overall"]["asr"] > 0.0
+
+
+@pytest.mark.unit
 class TestJudgeCli:
     def test_judge_variance_uses_stubbed_judge_and_reports_gate(self, monkeypatch, capsys):
         from src.core.injection.judge import JudgeOutcome

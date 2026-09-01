@@ -17,6 +17,26 @@ from src.core.injection.models import AgentRunResult
 TRACE_FILENAME = "tool_calls.jsonl"
 
 
+def parse_trace_text(text: str) -> list[dict]:
+    """Parse a recorded JSONL tool-call trace (one JSON object per line).
+
+    Shared by the direct runner (reads the workspace file) and the Docker
+    sandbox runner (reads the artifact captured pre-restore).
+    """
+    calls: list[dict] = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            parsed = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            calls.append(parsed)
+    return calls
+
+
 @dataclass
 class AgentCliAdapter:
     """Runs one agent CLI command inside a workspace directory."""
@@ -53,18 +73,7 @@ class AgentCliAdapter:
         trace_path = workspace / TRACE_FILENAME
         if not trace_path.is_file():
             return []
-        calls: list[dict] = []
-        for line in trace_path.read_text().splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                parsed = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if isinstance(parsed, dict):
-                calls.append(parsed)
-        return calls
+        return parse_trace_text(trace_path.read_text())
 
     def _list_created_files(self, workspace: Path) -> list[str]:
         return sorted(
