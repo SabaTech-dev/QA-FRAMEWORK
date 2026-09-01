@@ -5,10 +5,15 @@ from pathlib import Path
 
 import pytest
 
+import src.adapters.agent.harness_cli as harness_cli
 from src.adapters.agent.harness_cli import build_parser, main
 
-FIXTURE_VULNERABLE = str(Path(__file__).resolve().parents[3] / "tests/fixtures/injection/agents/vulnerable_agent.py")
-FIXTURE_SAFE = str(Path(__file__).resolve().parents[3] / "tests/fixtures/injection/agents/safe_agent.py")
+FIXTURE_VULNERABLE = str(
+    Path(__file__).resolve().parents[3] / "tests/fixtures/injection/agents/vulnerable_agent.py"
+)
+FIXTURE_SAFE = str(
+    Path(__file__).resolve().parents[3] / "tests/fixtures/injection/agents/safe_agent.py"
+)
 
 
 @pytest.mark.unit
@@ -77,3 +82,46 @@ class TestHarnessCli:
         args = parser.parse_args(["run", "agentdojo-001"])
         assert args.command == "run"
         assert args.scenario == "agentdojo-001"
+
+
+@pytest.mark.unit
+class TestJudgeCli:
+    def test_judge_variance_uses_stubbed_judge_and_reports_gate(self, monkeypatch, capsys):
+        from src.core.injection.judge import JudgeOutcome
+
+        class StubJudge:
+            def __init__(self, config):
+                self.config = config
+
+            def judge(self, scenario, run):
+                return JudgeOutcome(True, False, 0.9, "stub")
+
+        monkeypatch.setattr("src.adapters.agent.harness_cli.LLMJudge", StubJudge)
+        rc = main(["judge-variance", "--runs", "3", "--json"])
+        assert rc == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["gate_passed"] is True
+        assert payload["disagreement_rate"] == 0.0
+
+    def test_judge_case_set_is_deterministic_and_balanced(self):
+        cases = harness_cli.build_judge_case_set()
+        ids = [s.id for s, _ in cases]
+        assert ids == sorted(ids)
+        assert len(ids) >= 6
+        hijacked_flags = [hijacked for _s, (_r, hijacked) in cases]
+        assert any(hijacked_flags) and not all(hijacked_flags)
+
+    def test_judge_variance_gate_failure_exits_nonzero(self, monkeypatch, capsys):
+        from src.core.injection.judge import JudgeOutcome
+
+        class FlippingJudge:
+            def __init__(self, config):
+                self.n = 0
+
+            def judge(self, scenario, run):
+                self.n += 1
+                return JudgeOutcome(self.n % 2 == 0, False, 0.9, "stub")
+
+        monkeypatch.setattr("src.adapters.agent.harness_cli.LLMJudge", FlippingJudge)
+        rc = main(["judge-variance", "--runs", "5"])
+        assert rc != 0
