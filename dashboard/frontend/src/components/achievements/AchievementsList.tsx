@@ -62,7 +62,7 @@ export default function AchievementsList() {
       {/* Achievements Grid */}
       <Grid container spacing={2}>
         {filteredAchievements.map((achievement) => (
-          <Grid  key={achievement.id}>
+          <Grid size={{ xs: "auto" }} key={achievement.id}>
             <AchievementBadge achievement={achievement} size="medium" />
           </Grid>
         ))}

@@ -166,7 +166,7 @@ export default function Integrations() {
 
       {/* Providers Grid */}
       {!loading && providers.length > 0 && (
-        <Container sx={{ maxWidth: "xl" }}>
+        <Container maxWidth="xl">
           <Grid container spacing={3}>
             {providers.map((provider) => (
               <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}     key={provider.id}>

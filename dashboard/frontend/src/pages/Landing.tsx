@@ -127,7 +127,7 @@ const Landing: React.FC = () => {
           overflow: 'hidden',
         }}
       >
-        <Container sx={{ maxWidth: "lg" }}>
+        <Container maxWidth="lg">
           <Grid container spacing={4} sx={{ alignItems: "center" }}>
             <Grid size={{ xs: 12, md: 7 }}  >
               <Typography
@@ -194,7 +194,7 @@ const Landing: React.FC = () => {
 
       {/* Stats Section */}
       <Box sx={{ py: 6, bgcolor: 'grey.50' }}>
-        <Container sx={{ maxWidth: "lg" }}>
+        <Container maxWidth="lg">
           <Grid container spacing={4}>
             {stats.map((stat, index) => (
               <Grid size={{ xs: 6, md: 3 }}   key={index}>
@@ -213,7 +213,7 @@ const Landing: React.FC = () => {
       </Box>
 
       {/* Features Section */}
-      <Container  sx={{ py: { xs: 6, md: 10 }, maxWidth: "lg" }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 6, md: 10 } }}>
         <Typography variant="h3" align="center" gutterBottom sx={{ fontWeight: 'bold', mb: 6 }}>
           Powerful Features for Modern Teams
         </Typography>
@@ -248,7 +248,7 @@ const Landing: React.FC = () => {
 
       {/* Pricing Section */}
       <Box id="pricing" sx={{ py: { xs: 6, md: 10 }, bgcolor: 'grey.50' }}>
-        <Container sx={{ maxWidth: "lg" }}>
+        <Container maxWidth="lg">
           <Typography variant="h3" align="center" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
             Simple, Transparent Pricing
           </Typography>
@@ -324,7 +324,7 @@ const Landing: React.FC = () => {
 
       {/* CTA Section */}
       <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: 'primary.main', color: 'white' }}>
-        <Container sx={{ maxWidth: "md" }}>
+        <Container maxWidth="md">
           <Box sx={{ textAlign: 'center' }}>
             <Typography variant="h3" gutterBottom sx={{ fontWeight: 'bold' }}>
               Ready to Transform Your Testing?
@@ -352,7 +352,7 @@ const Landing: React.FC = () => {
 
       {/* Footer */}
       <Box sx={{ py: 4, bgcolor: 'grey.900', color: 'white' }}>
-        <Container sx={{ maxWidth: "lg" }}>
+        <Container maxWidth="lg">
           <Grid container spacing={4}>
             <Grid size={{ xs: 12, md: 4 }}  >
               <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>

@@ -36,7 +36,7 @@ export default function Profile() {
       <Card sx={{ mb: 4, boxShadow: 3 }}>
         <CardContent>
           <Grid container spacing={3} sx={{ alignItems: "center" }}>
-            <Grid >
+            <Grid size={{ xs: "auto" }}>
               <Avatar
                 sx={{
                   width: 100,
@@ -48,7 +48,7 @@ export default function Profile() {
                 <PersonIcon sx={{ fontSize: 60 }} />
               </Avatar>
             </Grid>
-            <Grid  size={{ xs: "auto" }}>
+            <Grid size={{ xs: "auto" }}>
               <Typography variant="h5" sx={{ fontWeight: "bold" }} gutterBottom>
                 {user?.username || 'QA Tester'}
               </Typography>

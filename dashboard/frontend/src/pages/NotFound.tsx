@@ -14,7 +14,7 @@ const NotFound: React.FC = () => {
         p: 2,
       }}
     >
-      <Container sx={{ maxWidth: "md" }}>
+      <Container maxWidth="md">
         <Paper
           elevation={24}
           sx={{
