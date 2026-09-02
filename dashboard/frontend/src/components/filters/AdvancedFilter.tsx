@@ -95,7 +95,7 @@ export default function AdvancedFilter({
 
   return (
     <Box sx={{ mb: 2 }}>
-      <Box display="flex" alignItems="center" gap={1}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}  >
         <IconButton onClick={() => setExpanded(!expanded)}>
           <FilterList />
         </IconButton>
@@ -104,9 +104,9 @@ export default function AdvancedFilter({
           placeholder="Search..."
           value={filters.search || ''}
           onChange={(e) => handleFilterChange('search', e.target.value)}
-          InputProps={{
+          slotProps={{ input: {
             startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />,
-          }}
+          } }}
           sx={{ flexGrow: 1, maxWidth: 400 }}
         />
         {activeFilterCount > 0 && (
@@ -122,7 +122,7 @@ export default function AdvancedFilter({
       <Collapse in={expanded}>
         <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}   >
               <FormControl fullWidth size="small">
                 <InputLabel>Status</InputLabel>
                 <Select
@@ -139,7 +139,7 @@ export default function AdvancedFilter({
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}   >
               <FormControl fullWidth size="small">
                 <InputLabel>Environment</InputLabel>
                 <Select
@@ -155,7 +155,7 @@ export default function AdvancedFilter({
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}   >
               <FormControl fullWidth size="small">
                 <InputLabel>Test Type</InputLabel>
                 <Select
@@ -173,7 +173,7 @@ export default function AdvancedFilter({
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}   >
               <TextField
                 fullWidth
                 size="small"
@@ -185,7 +185,7 @@ export default function AdvancedFilter({
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}  >
               <TextField
                 fullWidth
                 size="small"
@@ -193,11 +193,11 @@ export default function AdvancedFilter({
                 type="date"
                 value={filters.dateFrom || ''}
                 onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
-                InputLabelProps={{ shrink: true }}
+                slotProps={{ inputLabel: { shrink: true } }}
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}  >
               <TextField
                 fullWidth
                 size="small"
@@ -205,7 +205,7 @@ export default function AdvancedFilter({
                 type="date"
                 value={filters.dateTo || ''}
                 onChange={(e) => handleFilterChange('dateTo', e.target.value)}
-                InputLabelProps={{ shrink: true }}
+                slotProps={{ inputLabel: { shrink: true } }}
               />
             </Grid>
           </Grid>

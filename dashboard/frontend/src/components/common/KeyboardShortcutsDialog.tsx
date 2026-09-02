@@ -31,8 +31,8 @@ export default function KeyboardShortcutsDialog({
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Typography variant="h6" fontWeight="bold">
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}  >
+          <Typography variant="h6" sx={{ fontWeight: "bold" }}>
             Keyboard Shortcuts
           </Typography>
           <IconButton size="small" onClick={onClose}>
@@ -42,7 +42,7 @@ export default function KeyboardShortcutsDialog({
       </DialogTitle>
       <DialogContent>
         {Object.entries(groupedShortcuts).map(([category, shortcuts]) => (
-          <Box key={category} mb={3}>
+          <Box key={category} sx={{ mb: 3 }}>
             <Typography
               variant="subtitle2"
               color="textSecondary"
@@ -54,17 +54,15 @@ export default function KeyboardShortcutsDialog({
             {shortcuts.map((shortcut, index) => (
               <Box
                 key={index}
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-                py={1}
-                sx={{
-                  borderBottom: '1px solid',
+                
+                
+                
+                
+                sx={{ borderBottom: '1px solid',
                   borderColor: 'divider',
                   '&:last-child': {
                     borderBottom: 'none',
-                  },
-                }}
+                  }, display: "flex", justifyContent: "space-between", alignItems: "center", py: 1 }}
               >
                 <Typography variant="body2">{shortcut.description}</Typography>
                 <Chip

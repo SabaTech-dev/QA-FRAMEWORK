@@ -62,7 +62,7 @@ export default function SubscriptionStatus({
     return (
       <Card>
         <CardContent>
-          <Box display="flex" alignItems="center" justifyContent="space-between">
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}  >
             <Box>
               <Typography variant="h6">No Active Subscription</Typography>
               <Typography variant="body2" color="text.secondary">
@@ -94,8 +94,8 @@ export default function SubscriptionStatus({
     <Card>
       <CardContent>
         <Grid container spacing={2}>
-          <Grid item xs={12} md={8}>
-            <Box display="flex" alignItems="center" gap={2} mb={2}>
+          <Grid size={{ xs: 12, md: 8 }}  >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}   >
               <StatusIcon color={statusColor as any} sx={{ fontSize: 40 }} />
               <Box>
                 <Typography variant="h5">{subscription.plan_name}</Typography>
@@ -140,14 +140,14 @@ export default function SubscriptionStatus({
             )}
           </Grid>
 
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}  >
             <Typography variant="subtitle2" color="text.secondary" gutterBottom>
               Usage This Period
             </Typography>
 
             {subscription.usage && (
               <Box sx={{ mb: 2 }}>
-                <Box display="flex" justifyContent="space-between" mb={0.5}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}  >
                   <Typography variant="body2">Test Suites</Typography>
                   <Typography variant="body2">
                     {subscription.usage.suites_used}/{subscription.features.max_suites}
@@ -159,7 +159,7 @@ export default function SubscriptionStatus({
                   sx={{ height: 6, borderRadius: 3, mb: 1 }}
                 />
 
-                <Box display="flex" justifyContent="space-between" mb={0.5}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}  >
                   <Typography variant="body2">Test Cases</Typography>
                   <Typography variant="body2">
                     {subscription.usage.cases_used}/{subscription.features.max_cases}
@@ -175,7 +175,7 @@ export default function SubscriptionStatus({
 
             <Divider sx={{ my: 2 }} />
 
-            <Box display="flex" flexDirection="column" gap={1}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}  >
               <Button
                 variant="outlined"
                 size="small"

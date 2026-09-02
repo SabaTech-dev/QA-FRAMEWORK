@@ -70,7 +70,7 @@ export default function Executions() {
   if (isLoading) {
     return (
       <Box>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}   >
           <Typography variant="h4">Test Executions</Typography>
         </Box>
         <TableSkeleton rows={5} />
@@ -82,7 +82,7 @@ export default function Executions() {
   if (!executions?.data || executions.data.length === 0) {
     return (
       <Box>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}   >
           <Typography variant="h4">Test Executions</Typography>
         </Box>
         <EmptyState
@@ -101,7 +101,7 @@ export default function Executions() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}   >
         <Typography variant="h4">Test Executions</Typography>
       </Box>
 
@@ -145,7 +145,7 @@ export default function Executions() {
                 <TableCell>{new Date(execution.started_at).toLocaleString()}</TableCell>
                 <TableCell>{execution.duration ? `${execution.duration}s` : '-'}</TableCell>
                 <TableCell>
-                  <Box display="flex" gap={0.5}>
+                  <Box sx={{ display: "flex", gap: 0.5 }} >
                     <Chip
                       label={`P:${execution.passed_tests}`}
                       size="small"

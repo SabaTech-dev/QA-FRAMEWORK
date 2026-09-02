@@ -38,15 +38,15 @@ export default function AchievementBadge({
     <Tooltip
       title={
         <Box>
-          <Typography variant="subtitle2" fontWeight="bold">
+          <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
             {achievement.name}
           </Typography>
           <Typography variant="body2">{achievement.description}</Typography>
-          <Typography variant="caption" display="block" mt={1}>
+          <Typography variant="caption" sx={{ display: "block", mt: 1 }} >
             Points: {achievement.points} | Rarity: {achievement.rarity}
           </Typography>
           {!unlocked && progress > 0 && (
-            <Typography variant="caption" display="block">
+            <Typography variant="caption" sx={{ display: "block" }}>
               Progress: {Math.round(progress)}%
             </Typography>
           )}
@@ -92,15 +92,13 @@ export default function AchievementBadge({
         {/* Name */}
         <Typography
           variant={size === 'small' ? 'caption' : 'body2'}
-          fontWeight="bold"
-          textAlign="center"
-          sx={{
-            px: 1,
+          
+          
+          sx={{ px: 1,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            width: '100%',
-          }}
+            width: '100%', fontWeight: "bold", textAlign: "center" }}
         >
           {achievement.name}
         </Typography>

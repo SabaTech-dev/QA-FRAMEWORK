@@ -117,42 +117,39 @@ export default function Register() {
               fullWidth
               label="Username"
               variant="outlined"
-              margin="normal"
-              value={formData.username}
-              onChange={handleChange('username')}
-              InputProps={{
+              slotProps={{ input: {
                 startAdornment: (
                   <InputAdornment position="start">
                     <Person />
                   </InputAdornment>
                 ),
-              }}
+              } }}
+              value={formData.username}
+              onChange={handleChange('username')}
+              
             />
             <TextField
               fullWidth
               label="Email"
               type="email"
               variant="outlined"
-              margin="normal"
-              value={formData.email}
-              onChange={handleChange('email')}
-              InputProps={{
+              slotProps={{ input: {
                 startAdornment: (
                   <InputAdornment position="start">
                     <Email />
                   </InputAdornment>
                 ),
-              }}
+              } }}
+              value={formData.email}
+              onChange={handleChange('email')}
+              
             />
             <TextField
               fullWidth
               label="Password"
               type={showPassword ? 'text' : 'password'}
               variant="outlined"
-              margin="normal"
-              value={formData.password}
-              onChange={handleChange('password')}
-              InputProps={{
+              slotProps={{ input: {
                 startAdornment: (
                   <InputAdornment position="start">
                     <Lock />
@@ -165,14 +162,17 @@ export default function Register() {
                     </IconButton>
                   </InputAdornment>
                 ),
-              }}
+              } }}
+              value={formData.password}
+              onChange={handleChange('password')}
+              
             />
             <TextField
               fullWidth
               label="Confirm Password"
               type="password"
               variant="outlined"
-              margin="normal"
+              sx={{ mb: 2 }}
               value={formData.confirmPassword}
               onChange={handleChange('confirmPassword')}
               error={formData.confirmPassword && formData.password !== formData.confirmPassword}
@@ -207,14 +207,14 @@ export default function Register() {
             <Typography variant="h6" gutterBottom>
               Verify Your Email
             </Typography>
-            <Typography color="textSecondary" paragraph>
+            <Typography color="textSecondary" component="p">
               We've sent a verification code to {formData.email}
             </Typography>
             <TextField
               fullWidth
               label="Verification Code"
               variant="outlined"
-              margin="normal"
+              sx={{ mb: 2 }}
               value={verificationCode}
               onChange={(e) => setVerificationCode(e.target.value)}
               placeholder="Enter 6-digit code"
@@ -250,7 +250,7 @@ export default function Register() {
     >
       <Card sx={{ maxWidth: 500, width: '100%' }}>
         <CardContent sx={{ p: 4 }}>
-          <Typography variant="h4" gutterBottom align="center" fontWeight="bold">
+          <Typography variant="h4" gutterBottom align="center" sx={{ fontWeight: "bold" }}>
             Create Account
           </Typography>
           <Typography variant="body2" color="textSecondary" align="center" sx={{ mb: 3 }}>

@@ -163,7 +163,7 @@ export default function IntegrationCard({ provider, onConfigure, onTest }: Integ
       />
       <Divider />
       <CardContent sx={{ flexGrow: 1 }}>
-        <Typography variant="body2" color="text.secondary" paragraph>
+        <Typography variant="body2" color="text.secondary" component="p">
           Configure this integration to connect with {provider.name} and enable automated test sync.
         </Typography>
 
@@ -225,7 +225,7 @@ export default function IntegrationCard({ provider, onConfigure, onTest }: Integ
             fullWidth
             value={config.api_key || ''}
             onChange={(e) => setConfig({ ...config, api_key: e.target.value })}
-            margin="normal"
+            sx={{ mb: 2 }}
             helperText="Enter your API key for {provider.name}"
           />
 
@@ -234,7 +234,7 @@ export default function IntegrationCard({ provider, onConfigure, onTest }: Integ
             fullWidth
             value={config.api_url || ''}
             onChange={(e) => setConfig({ ...config, api_url: e.target.value })}
-            margin="normal"
+            sx={{ mb: 2 }}
             helperText="Enter your API URL (optional)"
           />
 
@@ -243,7 +243,7 @@ export default function IntegrationCard({ provider, onConfigure, onTest }: Integ
             fullWidth
             value={config.project_id || ''}
             onChange={(e) => setConfig({ ...config, project_id: e.target.value })}
-            margin="normal"
+            sx={{ mb: 2 }}
             helperText="Enter your project ID (optional)"
           />
 

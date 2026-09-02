@@ -28,15 +28,15 @@ export default function Profile() {
   return (
     <Box>
       {/* Header */}
-      <Typography variant="h4" gutterBottom fontWeight="bold">
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold" }}>
         Profile & Achievements
       </Typography>
 
       {/* User Info Card */}
       <Card sx={{ mb: 4, boxShadow: 3 }}>
         <CardContent>
-          <Grid container spacing={3} alignItems="center">
-            <Grid item>
+          <Grid container spacing={3} sx={{ alignItems: "center" }}>
+            <Grid >
               <Avatar
                 sx={{
                   width: 100,
@@ -48,14 +48,14 @@ export default function Profile() {
                 <PersonIcon sx={{ fontSize: 60 }} />
               </Avatar>
             </Grid>
-            <Grid item xs>
-              <Typography variant="h5" fontWeight="bold" gutterBottom>
+            <Grid  size={{ xs: "auto" }}>
+              <Typography variant="h5" sx={{ fontWeight: "bold" }} gutterBottom>
                 {user?.username || 'QA Tester'}
               </Typography>
               <Typography variant="body2" color="textSecondary" gutterBottom>
                 {user?.email || 'qa@example.com'}
               </Typography>
-              <Box display="flex" gap={1} mt={1}>
+              <Box sx={{ display: "flex", gap: 1, mt: 1 }}  >
                 <Chip
                   icon={<TrophyIcon />}
                   label={`${stats.unlockedCount} Achievements`}
@@ -76,8 +76,8 @@ export default function Profile() {
 
           {/* Progress */}
           <Box>
-            <Box display="flex" justifyContent="space-between" mb={1}>
-              <Typography variant="body2" fontWeight="bold">
+            <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}  >
+              <Typography variant="body2" sx={{ fontWeight: "bold" }}>
                 Completion Progress
               </Typography>
               <Typography variant="body2" color="textSecondary">

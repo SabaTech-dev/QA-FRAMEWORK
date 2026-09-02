@@ -128,8 +128,8 @@ export default function TestCases() {
   if (isLoading) {
     return (
       <Box>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-          <Box display="flex" alignItems="center" gap={2}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}   >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}  >
             <IconButton disabled>
               <ArrowBackIcon />
             </IconButton>
@@ -146,8 +146,8 @@ export default function TestCases() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Box display="flex" alignItems="center" gap={2}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}   >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}  >
           <Tooltip title="Back to Suites">
             <IconButton 
               onClick={() => navigate('/suites')}
@@ -251,7 +251,7 @@ export default function TestCases() {
             label="Name"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            margin="normal"
+            sx={{ mb: 2 }}
           />
           <TextField
             fullWidth
@@ -260,7 +260,7 @@ export default function TestCases() {
             rows={2}
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            margin="normal"
+            sx={{ mb: 2 }}
           />
           <TextField
             fullWidth
@@ -269,10 +269,10 @@ export default function TestCases() {
             rows={6}
             value={formData.test_code}
             onChange={(e) => setFormData({ ...formData, test_code: e.target.value })}
-            margin="normal"
+            sx={{ mb: 2 }}
             placeholder="def test_example():&#10;    assert True"
           />
-          <Box display="flex" gap={2} mt={2}>
+          <Box sx={{ display: "flex", gap: 2, mt: 2 }}  >
             <FormControl fullWidth>
               <InputLabel>Test Type</InputLabel>
               <Select
@@ -305,7 +305,7 @@ export default function TestCases() {
             label="Tags (comma-separated)"
             value={formData.tags}
             onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-            margin="normal"
+            sx={{ mb: 2 }}
             placeholder="smoke, regression, api"
           />
         </DialogContent>

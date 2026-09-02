@@ -115,10 +115,8 @@ export default function EmptyState({
       <Typography
         variant={isCompact ? 'h6' : 'h5'}
         gutterBottom
-        fontWeight="bold"
-        sx={{
-          animation: `${slideUp} 0.5s ease-out 0.1s both`,
-        }}
+        
+        sx={{ animation: `${slideUp} 0.5s ease-out 0.1s both`, fontWeight: "bold" }}
       >
         {title}
       </Typography>

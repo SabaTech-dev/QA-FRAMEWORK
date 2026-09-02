@@ -35,10 +35,10 @@ export default function TimeSavedCard({ executions, totalTests }: TimeSavedCardP
       }}
     >
       <CardContent>
-        <Box display="flex" alignItems="center" mb={2}>
+        <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}  >
           <TimeIcon sx={{ fontSize: 40, mr: 2, opacity: 0.9 }} />
           <Box>
-            <Typography variant="h6" gutterBottom fontWeight="bold">
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: "bold" }}>
               Time Saved
             </Typography>
             <Typography variant="body2" sx={{ opacity: 0.9 }}>
@@ -47,11 +47,11 @@ export default function TimeSavedCard({ executions, totalTests }: TimeSavedCardP
           </Box>
         </Box>
 
-        <Box mb={3}>
-          <Typography variant="h3" fontWeight="bold" gutterBottom>
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h3" sx={{ fontWeight: "bold" }} gutterBottom>
             {formattedTime}
           </Typography>
-          <Box display="flex" alignItems="center">
+          <Box sx={{ display: "flex", alignItems: "center" }} >
             <TrendingUpIcon sx={{ fontSize: 20, mr: 1 }} />
             <Typography variant="body2">
               {percentage}% faster than manual testing
@@ -60,9 +60,9 @@ export default function TimeSavedCard({ executions, totalTests }: TimeSavedCardP
         </Box>
 
         <Box>
-          <Box display="flex" justifyContent="space-between" mb={1}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}  >
             <Typography variant="body2">Efficiency</Typography>
-            <Typography variant="body2" fontWeight="bold">
+            <Typography variant="body2" sx={{ fontWeight: "bold" }}>
               {percentage}%
             </Typography>
           </Box>

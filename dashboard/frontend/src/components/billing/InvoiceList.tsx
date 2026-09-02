@@ -54,7 +54,7 @@ export default function InvoiceList({ invoices, isLoading }: InvoiceListProps) {
     return (
       <Card>
         <CardContent>
-          <Box display="flex" justifyContent="center" p={4}>
+          <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}  >
             <CircularProgress />
           </Box>
         </CardContent>
@@ -66,7 +66,7 @@ export default function InvoiceList({ invoices, isLoading }: InvoiceListProps) {
     return (
       <Card>
         <CardContent>
-          <Box display="flex" flexDirection="column" alignItems="center" p={4}>
+          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", p: 4 }}   >
             <ReceiptIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
             <Typography color="text.secondary">No invoices yet</Typography>
           </Box>
@@ -97,7 +97,7 @@ export default function InvoiceList({ invoices, isLoading }: InvoiceListProps) {
               {invoices.map((invoice) => (
                 <TableRow key={invoice.id}>
                   <TableCell>
-                    <Typography variant="body2" fontWeight="medium">
+                    <Typography variant="body2" sx={{ fontWeight: "medium" }}>
                       #{invoice.number}
                     </Typography>
                   </TableCell>

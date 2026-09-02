@@ -114,7 +114,7 @@ export default function TestSuites() {
   if (isLoading) {
     return (
       <Box>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}   >
           <Typography variant="h4">Test Suites</Typography>
           <Button variant="contained" disabled>
             New Suite
@@ -129,7 +129,7 @@ export default function TestSuites() {
   if (!suites?.data || suites.data.length === 0) {
     return (
       <Box>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}   >
           <Typography variant="h4">Test Suites</Typography>
           <Button
             variant="contained"
@@ -152,7 +152,7 @@ export default function TestSuites() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}   >
         <Typography variant="h4">Test Suites</Typography>
         <Button
           variant="contained"
@@ -250,7 +250,7 @@ export default function TestSuites() {
             label="Name"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            margin="normal"
+            sx={{ mb: 2 }}
           />
           <TextField
             fullWidth
@@ -259,7 +259,7 @@ export default function TestSuites() {
             rows={3}
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            margin="normal"
+            sx={{ mb: 2 }}
           />
           <TextField
             fullWidth
@@ -267,10 +267,10 @@ export default function TestSuites() {
             label="Framework Type"
             value={formData.framework_type}
             onChange={(e) => setFormData({ ...formData, framework_type: e.target.value })}
-            margin="normal"
-            SelectProps={{
+            slotProps={{ select: {
               native: true,
-            }}
+            } }}
+            
           >
             <option value="pytest">Pytest</option>
             <option value="unittest">Unittest</option>
