@@ -9,7 +9,8 @@ COPY dashboard/frontend/package*.json ./
 
 # Install ALL dependencies (including devDependencies for build)
 # npm 12: enforce del allowlist de install scripts (allowScripts en package.json)
-RUN npm ci --strict-allow-scripts
+# TODO: remover --legacy-peer-deps cuando typescript-eslint soporte TS7 (peer <6.1.0)
+RUN npm ci --legacy-peer-deps --strict-allow-scripts
 
 # Smoke post-install: fallar el build si el binario nativo no carga
 # (npm 12 bloquea scripts por defecto con exit 0 silencioso)
