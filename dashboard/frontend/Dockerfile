@@ -11,6 +11,8 @@ USER appuser
 
 # Copy package files
 COPY --chown=appuser:appgroup package*.json ./
+# TODO: remover cuando typescript-eslint soporte TS7 (peer <6.1.0)
+COPY --chown=appuser:appgroup .npmrc ./
 
 # Install dependencies
 # npm 12: enforce del allowlist de install scripts (allowScripts en package.json)
