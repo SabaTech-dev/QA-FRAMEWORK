@@ -462,22 +462,28 @@ jobs:
       - name: Derive preview URLs from deployed containers
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          IMG_TAG: ${{ github.sha }}
         run: |
           set -euo pipefail
-          FE_CID=$(docker ps -q --filter "name=qa-framework-frontend-pr-${PR_NUMBER}" | head -1)
-          BE_CID=$(docker ps -q --filter "name=qa-framework-backend-pr-${PR_NUMBER}" | head -1)
-          [ -n "${FE_CID}" ] || { echo "::error::frontend preview container not found"; exit 1; }
-          [ -n "${BE_CID}" ] || { echo "::error::backend preview container not found"; exit 1; }
+          # Same discovery the deploy jobs use (proven): ancestor filter on
+          # the exact image deployed by THIS run. Coolify container names do
+          # not embed the app name, so a name filter misses them.
+          FE_CID=$(docker ps -q --filter "ancestor=${REGISTRY}/qa-framework-frontend-pr-${PR_NUMBER}:${IMG_TAG}" | head -1)
+          BE_CID=$(docker ps -q --filter "ancestor=${REGISTRY}/qa-framework-backend-pr-${PR_NUMBER}:${IMG_TAG}" | head -1)
+          [ -n "${FE_CID}" ] || { echo "::error::frontend preview container not found (ancestor ${REGISTRY}/qa-framework-frontend-pr-${PR_NUMBER}:${IMG_TAG})"; docker ps --format '{{.Names}} {{.Image}}'; exit 1; }
+          [ -n "${BE_CID}" ] || { echo "::error::backend preview container not found (ancestor ${REGISTRY}/qa-framework-backend-pr-${PR_NUMBER}:${IMG_TAG})"; docker ps --format '{{.Names}} {{.Image}}'; exit 1; }
           FE_URL="http://$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${FE_CID}"):3000"
           BE_URL="http://$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${BE_CID}"):8000"
-          # Prefer the published host port when Coolify maps one
-          FE_PORT=$(docker port "${FE_CID}" 3000/tcp | head -1 | awk -F: '{print $NF}')
-          BE_PORT=$(docker port "${BE_CID}" 8000/tcp | head -1 | awk -F: '{print $NF}')
+          # Prefer the published host port when Coolify maps one (docker port
+          # exits 1 when nothing is published — hence the guard, Coolify
+          # preview apps run unpublished on the bridge network)
+          FE_PORT=$(docker port "${FE_CID}" 3000/tcp 2>/dev/null | head -1 | awk -F: '{print $NF}' || true)
+          BE_PORT=$(docker port "${BE_CID}" 8000/tcp 2>/dev/null | head -1 | awk -F: '{print $NF}' || true)
           if [ -n "${FE_PORT}" ]; then FE_URL="http://127.0.0.1:${FE_PORT}"; fi
           if [ -n "${BE_PORT}" ]; then BE_URL="http://127.0.0.1:${BE_PORT}"; fi
           echo "E2E_BASE_URL=${FE_URL}" >> "${GITHUB_ENV}"
           echo "E2E_API_URL=${BE_URL}" >> "${GITHUB_ENV}"
-          echo "Preview targets: frontend=${FE_URL} backend=${BE_URL}"
+          echo "Preview targets: frontend=${FE_URL} backend=${BE_URL} (fe_cid=${FE_CID} be_cid=${BE_CID})"
 
       - name: Backend /health probe (preview, from runner host)
         run: curl -fsS --retry 5 --retry-delay 3 --max-time 10 "$E2E_API_URL/health"
