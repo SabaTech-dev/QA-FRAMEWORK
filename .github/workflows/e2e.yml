@@ -3,8 +3,10 @@ name: E2E Tests
 on:
   push:
     branches: [main, master]
+    paths: ['dashboard/frontend/**']
   pull_request:
     branches: [main, master]
+    paths: ['dashboard/frontend/**']
   workflow_dispatch:
 
 permissions:
@@ -17,12 +19,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Card 4eb58505: smoke self-contained. Builds this tree's frontend and runs
+  # the regression suite against `vite preview` (config webServer) — no
+  # external stack involved. PR preview E2E lives in pr-deploy-coolify.yml
+  # (e2e-preview job) and runs against the deployed Coolify preview.
   e2e:
     runs-on: ubuntu-latest
-    # Capa 6 del CI rot (#111): job colgaba indefinidamente en "Install Playwright
-    # browsers" (ningún run completado jamás). Timeout = señal honesta + logs.
-    timeout-minutes: 30
-    
+    # Capa 6 del CI rot (#111): techo de burn = señal honesta + logs.
+    timeout-minutes: 20
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -36,7 +41,10 @@ jobs:
 
       - name: Install dependencies
         working-directory: dashboard/frontend
-        run: npm ci --strict-allow-scripts
+        # --legacy-peer-deps: TS7 vs typescript-eslint peers (mismo fix que
+        # Dockerfiles en 4c5db53). TODO: remover cuando typescript-eslint
+        # soporte TS7.
+        run: npm ci --legacy-peer-deps --strict-allow-scripts
 
       - name: Smoke test post-install (npm v12 install-scripts)
         working-directory: dashboard/frontend
@@ -44,18 +52,16 @@ jobs:
 
       - name: Install Playwright browsers
         working-directory: dashboard/frontend
-        # #111: este step cuelga indefinidamente (nunca completó un run).
+        # #111: este step puede colgar (historial documentado).
         # Timeout 10m + non-blocking hasta cerrar #111 (triage con artifacts).
         timeout-minutes: 10
         continue-on-error: true
         run: npx playwright install --with-deps chromium
 
-      - name: Run Playwright tests
+      - name: Run smoke regression suite
         working-directory: dashboard/frontend
-        # #111: suite never-green (nunca llegó a correr por el hang de browsers).
-        # Non-blocking hasta cerrar #111 — señal trackeda en el issue.
-        continue-on-error: true
-        run: npx playwright test --reporter=html
+        # El webServer del config hace build + vite preview (self-contained).
+        run: npx playwright test e2e/smoke.spec.ts --reporter=html
         env:
           CI: true
 
@@ -64,5 +70,48 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: playwright-report
-          path: dashboard/frontend/playwright-report/
+          path: |
+            dashboard/frontend/playwright-report/
+            dashboard/frontend/test-results/
+          retention-days: 7
+
+  # Card 4eb58505: smoke de prod en pushes a main — el stack real self-hosted
+  # (Coolify en jokerserver: frontend :3010, backend :8010). El runner
+  # coolify-deploy comparte host con el stack, por eso 127.0.0.1. Aquí sí
+  # corren los tests de API (E2E_API_URL): la BD real tiene el usuario Joker.
+  # Los PRs se saltan este job (el preview E2E vive en pr-deploy-coolify.yml).
+  e2e-prod-smoke:
+    name: E2E Prod Smoke (self-hosted)
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: [self-hosted, coolify-deploy]
+    timeout-minutes: 20
+    env:
+      E2E_BASE_URL: http://127.0.0.1:3010
+      E2E_API_URL: http://127.0.0.1:8010
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install dependencies
+        working-directory: dashboard/frontend
+        run: npm ci --legacy-peer-deps --strict-allow-scripts
+
+      - name: Install Playwright browsers
+        working-directory: dashboard/frontend
+        run: npx playwright install chromium
+
+      - name: Run suite against prod stack
+        working-directory: dashboard/frontend
+        run: npx playwright test e2e/smoke.spec.ts e2e/app.spec.ts --reporter=html
+        env:
+          CI: true
+
+      - name: Upload test artifacts
+        if: '!cancelled()'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-report-prod
+          path: |
+            dashboard/frontend/playwright-report/
+            dashboard/frontend/test-results/
           retention-days: 7
