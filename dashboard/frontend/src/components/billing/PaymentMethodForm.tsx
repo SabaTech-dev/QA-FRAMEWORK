@@ -73,7 +73,7 @@ export default function PaymentMethodForm({ open, onClose, onSubmit }: PaymentMe
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        <Box display="flex" alignItems="center" gap={1}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}  >
           <CreditCardIcon />
           Add Payment Method
         </Box>
@@ -95,39 +95,39 @@ export default function PaymentMethodForm({ open, onClose, onSubmit }: PaymentMe
 
         <Box sx={{ pt: 1 }}>
           <Grid container spacing={2}>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }} >
               <TextField
                 fullWidth
                 label="Card Number"
                 placeholder="1234 5678 9012 3456"
                 value={cardNumber}
                 onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                inputProps={{ maxLength: 19 }}
-                InputProps={{
+                slotProps={{ htmlInput: { maxLength: 19 }, input: {
                   startAdornment: <CreditCardIcon color="action" sx={{ mr: 1 }} />,
-                }}
+                } }}
+                
               />
             </Grid>
 
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }} >
               <TextField
                 fullWidth
                 label="Expiry"
                 placeholder="MM/YY"
                 value={expiry}
                 onChange={(e) => setExpiry(formatExpiry(e.target.value))}
-                inputProps={{ maxLength: 5 }}
+                slotProps={{ htmlInput: { maxLength: 5 } }}
               />
             </Grid>
 
-            <Grid item xs={6}>
+            <Grid size={{ xs: 6 }} >
               <TextField
                 fullWidth
                 label="CVC"
                 placeholder="123"
                 value={cvc}
                 onChange={(e) => setCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                inputProps={{ maxLength: 4 }}
+                slotProps={{ htmlInput: { maxLength: 4 } }}
               />
             </Grid>
           </Grid>

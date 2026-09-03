@@ -100,9 +100,9 @@ export default function PlanCard({ plan, onSelect, isLoading }: PlanCardProps) {
               </ListItemIcon>
               <ListItemText
                 primary={feature.name}
-                primaryTypographyProps={{
+                slotProps={{ primary: {
                   color: feature.included ? 'text.primary' : 'text.disabled',
-                }}
+                } }}
               />
             </ListItem>
           ))}

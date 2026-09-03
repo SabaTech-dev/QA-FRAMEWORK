@@ -66,7 +66,7 @@ function KPICard({ title, value, trend, icon, color }: KPICardProps) {
   return (
     <Card sx={{ height: '100%' }}>
       <CardContent>
-        <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}  >
           <Box>
             <Typography color="textSecondary" variant="body2" gutterBottom>
               {title}
@@ -75,7 +75,7 @@ function KPICard({ title, value, trend, icon, color }: KPICardProps) {
               {value}
             </Typography>
             {trend !== undefined && (
-              <Box display="flex" alignItems="center" mt={1}>
+              <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}  >
                 {trend >= 0 ? (
                   <>
                     <TrendingUp sx={{ color: 'success.main', fontSize: 20 }} />
@@ -143,16 +143,16 @@ export default function Analytics() {
         </Typography>
         <Grid container spacing={3} sx={{ mb: 3 }}>
           {[1, 2, 3, 4].map((i) => (
-            <Grid item xs={12} sm={6} md={3} key={i}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}    key={i}>
               <CardSkeleton />
             </Grid>
           ))}
         </Grid>
         <Grid container spacing={3}>
-          <Grid item xs={12} md={8}>
+          <Grid size={{ xs: 12, md: 8 }}  >
             <ChartSkeleton height={350} />
           </Grid>
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}  >
             <ChartSkeleton height={350} />
           </Grid>
         </Grid>
@@ -262,7 +262,7 @@ export default function Analytics() {
 
       {/* KPI Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}   >
           <KPICard
             title="Total Tests"
             value={totalTests.toLocaleString()}
@@ -271,7 +271,7 @@ export default function Analytics() {
             color={theme.palette.primary.main}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}   >
           <KPICard
             title="Success Rate"
             value={`${successRate.toFixed(1)}%`}
@@ -280,7 +280,7 @@ export default function Analytics() {
             color={theme.palette.success.main}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}   >
           <KPICard
             title="Active Users"
             value={activeUsers.toLocaleString()}
@@ -289,7 +289,7 @@ export default function Analytics() {
             color={theme.palette.secondary.main}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}   >
           <KPICard
             title="MRR"
             value={`$${mrr.toLocaleString()}`}
@@ -302,7 +302,7 @@ export default function Analytics() {
 
       {/* Charts Row 1 */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}  >
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -314,7 +314,7 @@ export default function Analytics() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}  >
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -330,7 +330,7 @@ export default function Analytics() {
 
       {/* Charts Row 2 */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}  >
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -342,7 +342,7 @@ export default function Analytics() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}  >
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -358,7 +358,7 @@ export default function Analytics() {
 
       {/* Tables */}
       <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}  >
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -402,7 +402,7 @@ export default function Analytics() {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}  >
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>

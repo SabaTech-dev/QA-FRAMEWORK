@@ -238,8 +238,7 @@ export default function NotificationDropdown() {
           vertical: 'top',
           horizontal: 'right',
         }}
-        TransitionComponent={Fade}
-        PaperProps={{
+        slotProps={{ transition: Fade, paper: {
           elevation: 3,
           sx: {
             width: { xs: '100vw', sm: 400 },
@@ -249,10 +248,10 @@ export default function NotificationDropdown() {
             borderRadius: 2,
             mt: 1,
           },
-        }}
-        MenuListProps={{
+        }, list: {
           sx: { p: 0 },
-        }}
+        } }}
+        
       >
         {/* Header */}
         <Box

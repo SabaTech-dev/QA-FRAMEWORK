@@ -14,7 +14,8 @@ COPY --chown=appuser:appgroup package*.json ./
 
 # Install dependencies
 # npm 12: enforce del allowlist de install scripts (allowScripts en package.json)
-RUN npm install --strict-allow-scripts
+# TODO: remover --legacy-peer-deps cuando typescript-eslint soporte TS7 (peer <6.1.0)
+RUN npm install --legacy-peer-deps --strict-allow-scripts
 
 # Smoke post-install: fallar el build si el binario nativo no carga
 COPY --chown=appuser:appgroup scripts/smoke-install.mjs ./scripts/smoke-install.mjs

@@ -22,10 +22,10 @@ const queryClient = new QueryClient({
 // Loading component for Suspense
 const LoadingFallback = () => (
   <Box
-    display="flex"
-    justifyContent="center"
-    alignItems="center"
-    minHeight="100vh"
+    sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}
+    
+    
+    
   >
     <CircularProgress />
   </Box>

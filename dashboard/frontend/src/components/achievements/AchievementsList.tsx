@@ -28,11 +28,11 @@ export default function AchievementsList() {
   return (
     <Box>
       {/* Stats Header */}
-      <Box mb={3}>
-        <Typography variant="h6" gutterBottom fontWeight="bold">
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h6" gutterBottom sx={{ fontWeight: "bold" }}>
           Your Achievements
         </Typography>
-        <Box display="flex" gap={2} alignItems="center">
+        <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}  >
           <Chip
             label={`${stats.unlockedCount}/${stats.totalCount} Unlocked`}
             color="primary"
@@ -62,7 +62,7 @@ export default function AchievementsList() {
       {/* Achievements Grid */}
       <Grid container spacing={2}>
         {filteredAchievements.map((achievement) => (
-          <Grid item key={achievement.id}>
+          <Grid size={{ xs: "auto" }} key={achievement.id}>
             <AchievementBadge achievement={achievement} size="medium" />
           </Grid>
         ))}
@@ -70,7 +70,7 @@ export default function AchievementsList() {
 
       {/* Empty State */}
       {filteredAchievements.length === 0 && (
-        <Box py={4} textAlign="center">
+        <Box sx={{ py: 4, textAlign: "center" }} >
           <Typography color="textSecondary">
             No achievements in this category yet
           </Typography>

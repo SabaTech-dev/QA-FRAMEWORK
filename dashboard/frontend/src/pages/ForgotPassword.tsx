@@ -62,10 +62,10 @@ export default function ForgotPassword() {
         <Card sx={{ maxWidth: 500, width: '100%' }}>
           <CardContent sx={{ p: 4, textAlign: 'center' }}>
             <Email sx={{ fontSize: 80, color: 'primary.main', mb: 2 }} />
-            <Typography variant="h4" gutterBottom fontWeight="bold">
+            <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold" }}>
               Check Your Email
             </Typography>
-            <Typography color="textSecondary" paragraph>
+            <Typography color="textSecondary" component="p">
               We've sent password reset instructions to:
             </Typography>
             <Typography variant="h6" color="primary" sx={{ mb: 3 }}>
@@ -119,10 +119,10 @@ export default function ForgotPassword() {
             Back to Login
           </Button>
           
-          <Typography variant="h4" gutterBottom fontWeight="bold">
+          <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold" }}>
             Forgot Password?
           </Typography>
-          <Typography color="textSecondary" paragraph>
+          <Typography color="textSecondary" component="p">
             No worries, we'll send you reset instructions.
           </Typography>
 
@@ -132,16 +132,16 @@ export default function ForgotPassword() {
               label="Email"
               type="email"
               variant="outlined"
-              margin="normal"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              InputProps={{
+              slotProps={{ input: {
                 startAdornment: (
                   <InputAdornment position="start">
                     <Email />
                   </InputAdornment>
                 ),
-              }}
+              } }}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              
             />
             <Button
               fullWidth

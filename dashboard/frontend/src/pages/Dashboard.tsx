@@ -85,16 +85,16 @@ const StatCard = ({ title, value, icon, color, trend, trendValue }: any) => (
     }}
   >
     <CardContent>
-      <Box display="flex" alignItems="flex-start" justifyContent="space-between">
+      <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}  >
         <Box>
           <Typography variant="overline" sx={{ opacity: 0.9, letterSpacing: 1 }}>
             {title}
           </Typography>
-          <Typography variant="h3" fontWeight="bold" sx={{ mt: 1 }}>
+          <Typography variant="h3"  sx={{ mt: 1, fontWeight: "bold" }}>
             {value}
           </Typography>
           {trend && (
-            <Box display="flex" alignItems="center" mt={1}>
+            <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}  >
               {trend === 'up' ? (
                 <TrendingUp sx={{ fontSize: 16, mr: 0.5 }} />
               ) : (
@@ -122,7 +122,7 @@ const LoadingSkeleton = () => (
   <Box>
     <Grid container spacing={3} sx={{ mb: 3 }}>
       {[1, 2, 3, 4].map((i) => (
-        <Grid item xs={12} sm={6} md={3} key={i}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}    key={i}>
           <Skeleton variant="rectangular" height={140} sx={{ borderRadius: 2 }} />
         </Grid>
       ))}
@@ -269,9 +269,9 @@ export default function Dashboard() {
     <Fade in timeout={500}>
       <Box>
         {/* Header */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}   >
           <Box>
-            <Typography variant="h4" fontWeight="bold" gutterBottom>
+            <Typography variant="h4" sx={{ fontWeight: "bold" }} gutterBottom>
               Dashboard
             </Typography>
             <Typography variant="body2" color="textSecondary">
@@ -287,7 +287,7 @@ export default function Dashboard() {
 
         {/* Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}   >
             <StatCard
               title="Total Executions"
               value={statsData?.total_executions || 0}
@@ -298,7 +298,7 @@ export default function Dashboard() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}   >
             <StatCard
               title="Test Suites"
               value={statsData?.total_test_suites || 0}
@@ -307,7 +307,7 @@ export default function Dashboard() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}   >
             <StatCard
               title="Success Rate"
               value={`${successRate}%`}
@@ -318,39 +318,39 @@ export default function Dashboard() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}   >
             <TimeSavedCard executions={recentData} totalTests={statsData?.total_tests} />
           </Grid>
         </Grid>
 
         {/* Charts Row */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} md={8}>
+          <Grid size={{ xs: 12, md: 8 }}  >
             <Card sx={{ height: '100%', boxShadow: 3 }}>
               <CardContent>
-                <Box display="flex" alignItems="center" mb={2}>
+                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}  >
                   <AutoGraph sx={{ mr: 1, color: 'primary.main' }} />
-                  <Typography variant="h6" fontWeight="medium">
+                  <Typography variant="h6" sx={{ fontWeight: "medium" }}>
                     Execution Trends
                   </Typography>
                 </Box>
-                <Box height={300}>
+                <Box sx={{ height: 300 }}>
                   <Line data={lineChartData} options={lineChartOptions} />
                 </Box>
               </CardContent>
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}  >
             <Card sx={{ height: '100%', boxShadow: 3 }}>
               <CardContent>
-                <Box display="flex" alignItems="center" mb={2}>
+                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}  >
                   <Assessment sx={{ mr: 1, color: 'secondary.main' }} />
-                  <Typography variant="h6" fontWeight="medium">
+                  <Typography variant="h6" sx={{ fontWeight: "medium" }}>
                     Test Types
                   </Typography>
                 </Box>
-                <Box height={300} display="flex" alignItems="center" justifyContent="center">
+                <Box sx={{ height: 300, display: "flex", alignItems: "center", justifyContent: "center" }}   >
                   <Doughnut data={testTypeData} options={doughnutOptions} />
                 </Box>
               </CardContent>
@@ -361,10 +361,10 @@ export default function Dashboard() {
         {/* Recent Executions */}
         <Card sx={{ boxShadow: 3 }}>
           <CardContent>
-            <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
-              <Box display="flex" alignItems="center">
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 3 }}   >
+              <Box sx={{ display: "flex", alignItems: "center" }} >
                 <Schedule sx={{ mr: 1, color: 'info.main' }} />
-                <Typography variant="h6" fontWeight="medium">
+                <Typography variant="h6" sx={{ fontWeight: "medium" }}>
                   Recent Executions
                 </Typography>
               </Box>
@@ -372,7 +372,7 @@ export default function Dashboard() {
             </Box>
 
             {recentData.length === 0 ? (
-              <Box py={4} textAlign="center">
+              <Box sx={{ py: 4, textAlign: "center" }} >
                 <Typography color="textSecondary">
                   No recent executions. Run some tests to see them here!
                 </Typography>
@@ -394,25 +394,25 @@ export default function Dashboard() {
                       },
                     }}
                   >
-                    <Box display="flex" alignItems="center" justifyContent="space-between">
+                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}  >
                       <Box>
-                        <Typography variant="subtitle1" fontWeight="medium">
+                        <Typography variant="subtitle1" sx={{ fontWeight: "medium" }}>
                           {execution.suite_name || `Execution #${execution.id}`}
                         </Typography>
                         <Typography variant="caption" color="textSecondary">
                           {execution.environment || 'production'} • {execution.started_at || 'Recently'}
                         </Typography>
                       </Box>
-                      <Box display="flex" alignItems="center" gap={1}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}  >
                         {execution.total_tests > 0 && (
-                          <Box display="flex" alignItems="center" gap={1} mr={1}>
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mr: 1 }}   >
                             <LinearProgress
                               variant="determinate"
                               value={(execution.passed / execution.total_tests) * 100}
                               sx={{ width: 60, height: 6, borderRadius: 3 }}
                               color="success"
                             />
-                            <Typography variant="caption" fontWeight="medium">
+                            <Typography variant="caption" sx={{ fontWeight: "medium" }}>
                               {execution.passed}/{execution.total_tests}
                             </Typography>
                           </Box>

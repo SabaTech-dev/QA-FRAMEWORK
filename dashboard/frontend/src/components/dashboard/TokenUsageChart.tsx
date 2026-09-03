@@ -31,8 +31,8 @@ const TokenUsageBar = ({ data }: { data: TokenUsageData }) => {
 
   return (
     <Box sx={{ mb: 2 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.5}>
-        <Typography variant="body2" fontWeight="medium" noWrap sx={{ maxWidth: '60%' }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }}   >
+        <Typography variant="body2"  noWrap sx={{ maxWidth: '60%', fontWeight: "medium" }}>
           {data.label}
         </Typography>
         <Typography variant="caption" color="textSecondary">
@@ -115,7 +115,7 @@ export default function TokenUsageChart({ data: propData, loading }: TokenUsageC
 
   // Legend
   const LegendItem = ({ color, label }: { color: string; label: string }) => (
-    <Box display="flex" alignItems="center" gap={1}>
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}  >
       <Box
         sx={{
           width: 10,
@@ -136,7 +136,7 @@ export default function TokenUsageChart({ data: propData, loading }: TokenUsageC
         <Typography variant="h6" gutterBottom>
           Token Usage
         </Typography>
-        <Box height={200} display="flex" alignItems="center" justifyContent="center">
+        <Box sx={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center" }}   >
           <Typography color="textSecondary">Loading...</Typography>
         </Box>
       </Paper>
@@ -149,7 +149,7 @@ export default function TokenUsageChart({ data: propData, loading }: TokenUsageC
         <Typography variant="h6" gutterBottom>
           Token Usage
         </Typography>
-        <Box py={4} textAlign="center">
+        <Box sx={{ py: 4, textAlign: "center" }} >
           <Typography color="textSecondary">
             No token usage data available yet.
           </Typography>
@@ -165,7 +165,7 @@ export default function TokenUsageChart({ data: propData, loading }: TokenUsageC
       </Typography>
 
       {/* Legend */}
-      <Box display="flex" gap={3} mb={3}>
+      <Box sx={{ display: "flex", gap: 3, mb: 3 }}  >
         <LegendItem color="#0ea5e9" label="Input" />
         <LegendItem color="#8b5cf6" label="Output" />
         <LegendItem color="#f59e0b" label="Cache" />

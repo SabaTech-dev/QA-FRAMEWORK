@@ -92,7 +92,7 @@ export default function Settings() {
           <Divider sx={{ mb: 2 }} />
           
           <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}  >
               <TextField
                 fullWidth
                 label="Username"
@@ -101,7 +101,7 @@ export default function Settings() {
                 helperText="Username cannot be changed"
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}  >
               <TextField
                 fullWidth
                 label="Email"
@@ -110,7 +110,7 @@ export default function Settings() {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}  >
               <TextField
                 fullWidth
                 label="Full Name"
@@ -118,7 +118,7 @@ export default function Settings() {
                 onChange={(e) => setFullName(e.target.value)}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }} >
               <Button variant="contained" onClick={handleSaveProfile}>
                 Save Profile
               </Button>

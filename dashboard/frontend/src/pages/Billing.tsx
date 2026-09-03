@@ -229,7 +229,7 @@ export default function Billing() {
 
   if (isLoading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}   >
         <CircularProgress />
       </Box>
     )
@@ -283,7 +283,7 @@ export default function Billing() {
       </Typography>
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {plansWithCurrent.map((plan: Plan & { current: boolean }) => (
-          <Grid item xs={12} sm={6} md={4} key={plan.id}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}    key={plan.id}>
             <PlanCard
               plan={plan}
               onSelect={handlePlanSelect}
@@ -301,10 +301,10 @@ export default function Billing() {
         <CardContent>
           {paymentMethods.length === 0 ? (
             <Box
-              display="flex"
-              flexDirection="column"
-              alignItems="center"
-              py={4}
+              sx={{ display: "flex", flexDirection: "column", alignItems: "center", py: 4 }}
+              
+              
+              
             >
               <CreditCardIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
               <Typography color="text.secondary" gutterBottom>
@@ -353,7 +353,7 @@ export default function Billing() {
                       </ListItemIcon>
                       <ListItemText
                         primary={
-                          <Box display="flex" alignItems="center" gap={1}>
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}  >
                             <Typography>
                               {method.brand} ****{method.last4}
                             </Typography>

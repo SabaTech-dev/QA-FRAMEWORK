@@ -440,6 +440,80 @@ jobs:
               });
             }
 
+  # ========================================
+  # E2E on the PR preview (card 4eb58505): the regression suite runs against
+  # the Coolify preview deployed by this same workflow from the PR code —
+  # no external stacks (Railway muerto / Vercel no-PR). URLs are derived at
+  # runtime from the deployed containers: published host port when Coolify
+  # maps one, container IP otherwise (runner shares the docker host).
+  # ========================================
+  e2e-preview:
+    name: E2E Preview Smoke
+    needs: [deploy-backend-preview, deploy-frontend-preview]
+    runs-on: [self-hosted, coolify-deploy]
+    permissions:
+      contents: read
+    if: github.event_name == 'pull_request' && github.event.action != 'closed' && vars.COOLIFY_CONFIGURED == 'true'
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Derive preview URLs from deployed containers
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          IMG_TAG: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          # Same discovery the deploy jobs use (proven): ancestor filter on
+          # the exact image deployed by THIS run. Coolify container names do
+          # not embed the app name, so a name filter misses them.
+          FE_CID=$(docker ps -q --filter "ancestor=${REGISTRY}/qa-framework-frontend-pr-${PR_NUMBER}:${IMG_TAG}" | head -1)
+          BE_CID=$(docker ps -q --filter "ancestor=${REGISTRY}/qa-framework-backend-pr-${PR_NUMBER}:${IMG_TAG}" | head -1)
+          [ -n "${FE_CID}" ] || { echo "::error::frontend preview container not found (ancestor ${REGISTRY}/qa-framework-frontend-pr-${PR_NUMBER}:${IMG_TAG})"; docker ps --format '{{.Names}} {{.Image}}'; exit 1; }
+          [ -n "${BE_CID}" ] || { echo "::error::backend preview container not found (ancestor ${REGISTRY}/qa-framework-backend-pr-${PR_NUMBER}:${IMG_TAG})"; docker ps --format '{{.Names}} {{.Image}}'; exit 1; }
+          FE_URL="http://$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${FE_CID}"):3000"
+          BE_URL="http://$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${BE_CID}"):8000"
+          # Prefer the published host port when Coolify maps one (docker port
+          # exits 1 when nothing is published — hence the guard, Coolify
+          # preview apps run unpublished on the bridge network)
+          FE_PORT=$(docker port "${FE_CID}" 3000/tcp 2>/dev/null | head -1 | awk -F: '{print $NF}' || true)
+          BE_PORT=$(docker port "${BE_CID}" 8000/tcp 2>/dev/null | head -1 | awk -F: '{print $NF}' || true)
+          if [ -n "${FE_PORT}" ]; then FE_URL="http://127.0.0.1:${FE_PORT}"; fi
+          if [ -n "${BE_PORT}" ]; then BE_URL="http://127.0.0.1:${BE_PORT}"; fi
+          echo "E2E_BASE_URL=${FE_URL}" >> "${GITHUB_ENV}"
+          echo "E2E_API_URL=${BE_URL}" >> "${GITHUB_ENV}"
+          echo "Preview targets: frontend=${FE_URL} backend=${BE_URL} (fe_cid=${FE_CID} be_cid=${BE_CID})"
+
+      - name: Backend /health probe (preview, from runner host)
+        run: curl -fsS --retry 5 --retry-delay 3 --max-time 10 "$E2E_API_URL/health"
+
+      - name: Install dependencies
+        working-directory: dashboard/frontend
+        # --legacy-peer-deps: TS7 vs typescript-eslint peers (mismo fix que Dockerfiles en 4c5db53)
+        run: npm ci --legacy-peer-deps --strict-allow-scripts
+
+      - name: Install Playwright browsers
+        working-directory: dashboard/frontend
+        run: npx playwright install chromium
+
+      - name: Run smoke regression suite against preview
+        working-directory: dashboard/frontend
+        # Confluence: playwright.config usa E2E_BASE_URL (sin webServer local)
+        run: npx playwright test e2e/smoke.spec.ts --reporter=html
+        env:
+          CI: true
+
+      - name: Upload test artifacts (report + visual spot-check)
+        if: '!cancelled()'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: playwright-report-preview
+          path: |
+            dashboard/frontend/playwright-report/
+            dashboard/frontend/test-results/
+          retention-days: 7
+
   # Cleanup Preview Deployments on PR Close — fail loud (sin continue-on-error).
   cleanup-previews:
     name: Cleanup Preview Deployments

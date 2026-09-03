@@ -156,7 +156,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
     <Box sx={{ maxWidth: 800, mx: 'auto', mt: 4, px: 2 }}>
       {/* Header with skip option */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" fontWeight="bold">
+        <Typography variant="h4" sx={{ fontWeight: "bold" }}>
           Welcome to QA-FRAMEWORK 🚀
         </Typography>
         <Tooltip title="Skip onboarding">
@@ -170,7 +170,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
         {STEPS.map((step, index) => (
           <Step key={step.key} completed={completedSteps[step.key] || false}>
             <StepLabel
-              StepIconComponent={() => (
+              slotProps={{
+                stepIcon: {
+                  component: () => (
                 <Box
                   sx={{
                     width: 32,
@@ -190,7 +192,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
                 >
                   {completedSteps[step.key] ? <CheckIcon fontSize="small" /> : step.icon}
                 </Box>
-              )}
+                  ),
+                },
+              }}
             >
               {step.label}
             </StepLabel>
@@ -232,7 +236,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
               <Typography variant="h5" gutterBottom>
                 🎉 Setup Complete!
               </Typography>
-              <Typography color="textSecondary" paragraph>
+              <Typography color="textSecondary" component="p">
                 You're ready to start testing. Let's go to your dashboard.
               </Typography>
               <Button
@@ -279,7 +283,7 @@ const WelcomeStep: React.FC = () => (
     <Typography variant="h5" gutterBottom>
       Let's get you started! 🎯
     </Typography>
-    <Typography paragraph color="textSecondary">
+    <Typography component="p" color="textSecondary">
       In just a few steps, you'll have your first test suite up and running.
       Here's what we'll set up:
     </Typography>
@@ -308,7 +312,7 @@ const ConnectRepoStep: React.FC = () => {
       <Typography variant="h5" gutterBottom>
         Connect Your Repository
       </Typography>
-      <Typography paragraph color="textSecondary">
+      <Typography component="p" color="textSecondary">
         Enter your GitHub repository URL to enable CI/CD integration.
         You can also connect via OAuth later in Settings.
       </Typography>
@@ -368,7 +372,7 @@ const CreateSuiteStep: React.FC<{ onComplete: () => void }> = ({ onComplete }) =
       <Typography variant="h5" gutterBottom>
         Create Your First Test Suite
       </Typography>
-      <Typography paragraph color="textSecondary">
+      <Typography component="p" color="textSecondary">
         A test suite groups related tests together. Let's create one now.
       </Typography>
 
@@ -434,7 +438,7 @@ const RunTestStep: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
       <Typography variant="h5" gutterBottom>
         Run Your First Test
       </Typography>
-      <Typography paragraph color="textSecondary">
+      <Typography component="p" color="textSecondary">
         Here's a sample test. You'll be able to create more complex tests
         once you're set up.
       </Typography>
@@ -486,7 +490,7 @@ const SetupNotificationsStep: React.FC = () => {
       <Typography variant="h5" gutterBottom>
         Configure Notifications
       </Typography>
-      <Typography paragraph color="textSecondary">
+      <Typography component="p" color="textSecondary">
         Get notified when tests complete, fail, or need attention.
         You can always change these later in Settings.
       </Typography>

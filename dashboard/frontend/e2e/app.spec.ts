@@ -1,11 +1,20 @@
 import { test, expect } from '@playwright/test';
 
-const FRONTEND_URL = 'https://frontend-phi-three-52.vercel.app';
-const BACKEND_URL = 'https://qa-framework-production.up.railway.app';
+// Card 4eb58505: no hardcoded external targets.
+//   - Frontend navigations are relative and resolve against the playwright
+//     config baseURL (vite preview locally, Coolify preview on PRs,
+//     self-hosted prod on main pushes).
+//   - API tests require a deployed backend injected via E2E_API_URL and are
+//     skipped otherwise: fresh preview backends boot with an empty database
+//     (create_all, no seed), so login-dependent checks only run against the
+//     real prod stack in the `e2e-prod-smoke` job.
+const BACKEND_URL = process.env.E2E_API_URL ?? '';
+const hasApi = BACKEND_URL !== '';
 
 test.describe('QA-FRAMEWORK E2E Tests', () => {
-  
+
   test('Backend health check', async ({ request }) => {
+    test.skip(!hasApi, 'E2E_API_URL not set — requires a deployed backend');
     const response = await request.get(`${BACKEND_URL}/health`);
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
@@ -13,11 +22,13 @@ test.describe('QA-FRAMEWORK E2E Tests', () => {
   });
 
   test('Backend API docs accessible', async ({ request }) => {
+    test.skip(!hasApi, 'E2E_API_URL not set — requires a deployed backend');
     const response = await request.get(`${BACKEND_URL}/api/v1/docs`);
     expect(response.ok()).toBeTruthy();
   });
 
   test('Login API works', async ({ request }) => {
+    test.skip(!hasApi, 'E2E_API_URL not set — requires a deployed backend');
     const response = await request.post(`${BACKEND_URL}/api/v1/auth/login`, {
       headers: { 'Content-Type': 'application/json' },
       data: { username: 'Joker', password: 'Joker123!' }
@@ -29,6 +40,7 @@ test.describe('QA-FRAMEWORK E2E Tests', () => {
   });
 
   test('Get user info with token', async ({ request }) => {
+    test.skip(!hasApi, 'E2E_API_URL not set — requires a deployed backend');
     // First login
     const loginResponse = await request.post(`${BACKEND_URL}/api/v1/auth/login`, {
       headers: { 'Content-Type': 'application/json' },
@@ -47,12 +59,12 @@ test.describe('QA-FRAMEWORK E2E Tests', () => {
   });
 
   test('Frontend loads', async ({ page }) => {
-    await page.goto(FRONTEND_URL);
+    await page.goto('/');
     await expect(page.locator('body')).toBeVisible();
   });
 
   test('Login page displays correctly', async ({ page }) => {
-    await page.goto(`${FRONTEND_URL}/login`);
+    await page.goto('/login');
     // Wait for page to load
     await page.waitForLoadState('networkidle');
     // Check for login form elements
@@ -61,20 +73,20 @@ test.describe('QA-FRAMEWORK E2E Tests', () => {
   });
 
   test('Full login flow', async ({ page }) => {
-    await page.goto(`${FRONTEND_URL}/login`);
+    await page.goto('/login');
     await page.waitForLoadState('networkidle');
-    
+
     // Fill login form using placeholder or type
     const inputs = page.locator('input');
     await inputs.nth(0).fill('Joker');
     await inputs.nth(1).fill('Joker123!');
-    
+
     // Submit
     await page.click('button:has-text("Login")');
-    
+
     // Wait for redirect or success
     await page.waitForTimeout(5000);
-    
+
     // Check if we're no longer on login page (successful login redirects)
     const url = page.url();
     // Either redirected to home or still on login with error
@@ -82,6 +94,7 @@ test.describe('QA-FRAMEWORK E2E Tests', () => {
   });
 
   test('Billing plans accessible without auth', async ({ request }) => {
+    test.skip(!hasApi, 'E2E_API_URL not set — requires a deployed backend');
     const response = await request.get(`${BACKEND_URL}/api/v1/billing/plans`);
     expect(response.ok()).toBeTruthy();
     const data = await response.json();

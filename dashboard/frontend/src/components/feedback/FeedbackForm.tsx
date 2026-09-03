@@ -197,7 +197,7 @@ export default function FeedbackForm({ onSuccess, compact = false }: FeedbackFor
                 placeholder="Brief summary of your feedback"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                inputProps={{ maxLength: 200 }}
+                slotProps={{ htmlInput: { maxLength: 200 } }}
               />
 
               {/* Description */}

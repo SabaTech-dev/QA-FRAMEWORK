@@ -76,7 +76,7 @@ export default function Login() {
     >
       <Card sx={{ maxWidth: 400, width: '100%' }}>
         <CardContent sx={{ p: 4 }}>
-          <Typography variant="h4" gutterBottom align="center" fontWeight="bold">
+          <Typography variant="h4" gutterBottom align="center" sx={{ fontWeight: "bold" }}>
             QA Framework
           </Typography>
           <Typography variant="body2" gutterBottom align="center" color="textSecondary">
@@ -94,26 +94,26 @@ export default function Login() {
               fullWidth
               label="Username"
               variant="outlined"
-              margin="normal"
+              slotProps={{ htmlInput: {
+                'aria-label': 'Username',
+              } }}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               disabled={loginMutation.isLoading}
-              inputProps={{
-                'aria-label': 'Username',
-              }}
+              
             />
             <TextField
               fullWidth
               label="Password"
               type="password"
               variant="outlined"
-              margin="normal"
+              slotProps={{ htmlInput: {
+                'aria-label': 'Password',
+              } }}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loginMutation.isLoading}
-              inputProps={{
-                'aria-label': 'Password',
-              }}
+              
             />
             <LoadingButton
               fullWidth

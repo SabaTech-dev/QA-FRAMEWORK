@@ -335,51 +335,11 @@ jobs:
             -m e2e \
             --junitxml=junit-e2e.xml
 
-      - name: Set up Node.js for Playwright TypeScript tests
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: '26'
-
-      - name: Install frontend dependencies
-        run: |
-          cd dashboard/frontend
-          npm ci --strict-allow-scripts
-
-      - name: Smoke test post-install (npm v12 install-scripts)
-        run: |
-          cd dashboard/frontend
-          node scripts/smoke-install.mjs
-
-      - name: Install Playwright browsers
-        # #111: hang documentado (ningún run completó jamás). Timeout de step =
-        # fail-fast + logs de diagnóstico que el issue necesita; non-blocking para
-        # no enmascarar el resto del pipeline (flag se remueve al cerrar #111).
-        timeout-minutes: 10
-        continue-on-error: true
-        run: |
-          cd dashboard/frontend
-          npx playwright install --with-deps chromium
-
-      - name: Run Playwright TypeScript E2E tests
-        # #111: suite sin señal histórica (hang aguas arriba); non-blocking hasta
-        # cierre de diagnóstico del issue.
-        continue-on-error: true
-        run: |
-          cd dashboard/frontend
-          npx playwright test --reporter=list
-        env:
-          CI: true
-
-      - name: Upload Playwright test results
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: always()
-        with:
-          name: playwright-test-results
-          path: |
-            dashboard/frontend/test-results/
-            dashboard/frontend/playwright-report/
-            dashboard/frontend/blob-report/
-          retention-days: 7
+      # Card 4eb58505: la suite TypeScript de Playwright se ELIMINÓ de acá —
+      # ownership movido a e2e.yml (smoke self-contained + prod-smoke en main)
+      # y a pr-deploy-coolify.yml (e2e-preview contra el preview del PR).
+      # Antes apuntaba a stacks externos (Railway 404 / Vercel no-PR) y el
+      # npm ci sin --legacy-peer-deps moría de ERESOLVE con TS7.
 
       - name: Upload E2E test results
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

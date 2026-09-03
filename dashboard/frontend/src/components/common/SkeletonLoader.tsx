@@ -83,7 +83,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
   return (
     <Grid container spacing={2}>
       {[...Array(count)].map((_, i) => (
-        <Grid item xs={12} sm={6} md={4} key={i}>
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}    key={i}>
           {renderCard()}
         </Grid>
       ))}
@@ -127,8 +127,8 @@ export const ChartSkeleton: React.FC<{ height?: number }> = ({ height = 300 }) =
 export const StatsCardSkeleton: React.FC = () => (
   <Card sx={{ height: '100%' }}>
     <CardContent>
-      <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-        <Box flex={1}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}  >
+        <Box sx={{ flex: 1 }}>
           <Skeleton variant="text" width="40%" height={20} />
           <Skeleton variant="text" width="60%" height={40} sx={{ mt: 1 }} />
           <Skeleton variant="text" width="30%" height={20} sx={{ mt: 1 }} />

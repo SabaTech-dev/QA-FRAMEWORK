@@ -29,11 +29,11 @@ const NotFound: React.FC = () => {
             404
           </Typography>
           
-          <Typography variant="h4" gutterBottom fontWeight="bold">
+          <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold" }}>
             Page Not Found
           </Typography>
           
-          <Typography variant="body1" color="textSecondary" paragraph sx={{ mb: 4 }}>
+          <Typography variant="body1" color="textSecondary" component="p" sx={{ mb: 4 }}>
             Oops! The page you're looking for doesn't exist or has been moved.
           </Typography>
           

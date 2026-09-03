@@ -85,7 +85,7 @@ export default function Integrations() {
           mb: 4,
         }}
       >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+        <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}  spacing={2}>
           <Box>
             <Typography variant="h4" component="h1" gutterBottom>
               Integrations
@@ -169,7 +169,7 @@ export default function Integrations() {
         <Container maxWidth="xl">
           <Grid container spacing={3}>
             {providers.map((provider) => (
-              <Grid item xs={12} sm={6} md={4} lg={3} key={provider.id}>
+              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}     key={provider.id}>
                 <IntegrationCard
                   provider={provider}
                   onConfigure={handleConfigure}

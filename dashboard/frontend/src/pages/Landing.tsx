@@ -128,8 +128,8 @@ const Landing: React.FC = () => {
         }}
       >
         <Container maxWidth="lg">
-          <Grid container spacing={4} alignItems="center">
-            <Grid item xs={12} md={7}>
+          <Grid container spacing={4} sx={{ alignItems: "center" }}>
+            <Grid size={{ xs: 12, md: 7 }}  >
               <Typography
                 variant={isMobile ? 'h3' : 'h2'}
                 component="h1"
@@ -173,7 +173,7 @@ const Landing: React.FC = () => {
                 </Button>
               </Box>
             </Grid>
-            <Grid item xs={12} md={5}>
+            <Grid size={{ xs: 12, md: 5 }}  >
               {/* Placeholder for hero image/illustration */}
               <Box
                 sx={{
@@ -197,7 +197,7 @@ const Landing: React.FC = () => {
         <Container maxWidth="lg">
           <Grid container spacing={4}>
             {stats.map((stat, index) => (
-              <Grid item xs={6} md={3} key={index}>
+              <Grid size={{ xs: 6, md: 3 }}   key={index}>
                 <Box sx={{ textAlign: 'center' }}>
                   <Typography variant="h3" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
                     {stat.value}
@@ -219,7 +219,7 @@ const Landing: React.FC = () => {
         </Typography>
         <Grid container spacing={4}>
           {features.map((feature, index) => (
-            <Grid item xs={12} md={6} key={index}>
+            <Grid size={{ xs: 12, md: 6 }}   key={index}>
               <Card
                 sx={{
                   height: '100%',
@@ -255,9 +255,9 @@ const Landing: React.FC = () => {
           <Typography variant="h6" align="center" color="text.secondary" sx={{ mb: 6 }}>
             Start free, scale as you grow
           </Typography>
-          <Grid container spacing={4} justifyContent="center">
+          <Grid container spacing={4} sx={{ justifyContent: "center" }}>
             {pricingPlans.map((plan, index) => (
-              <Grid item xs={12} md={4} key={index}>
+              <Grid size={{ xs: 12, md: 4 }}   key={index}>
                 <Card
                   sx={{
                     height: '100%',
@@ -354,7 +354,7 @@ const Landing: React.FC = () => {
       <Box sx={{ py: 4, bgcolor: 'grey.900', color: 'white' }}>
         <Container maxWidth="lg">
           <Grid container spacing={4}>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}  >
               <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
                 QA-FRAMEWORK
               </Typography>
@@ -362,7 +362,7 @@ const Landing: React.FC = () => {
                 AI-powered testing platform for modern software teams.
               </Typography>
             </Grid>
-            <Grid item xs={6} md={2}>
+            <Grid size={{ xs: 6, md: 2 }}  >
               <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
                 Product
               </Typography>
@@ -376,7 +376,7 @@ const Landing: React.FC = () => {
                 Documentation
               </Typography>
             </Grid>
-            <Grid item xs={6} md={2}>
+            <Grid size={{ xs: 6, md: 2 }}  >
               <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
                 Company
               </Typography>
@@ -390,7 +390,7 @@ const Landing: React.FC = () => {
                 Careers
               </Typography>
             </Grid>
-            <Grid item xs={6} md={2}>
+            <Grid size={{ xs: 6, md: 2 }}  >
               <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
                 Legal
               </Typography>
@@ -404,7 +404,7 @@ const Landing: React.FC = () => {
                 Security
               </Typography>
             </Grid>
-            <Grid item xs={6} md={2}>
+            <Grid size={{ xs: 6, md: 2 }}  >
               <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
                 Connect
               </Typography>

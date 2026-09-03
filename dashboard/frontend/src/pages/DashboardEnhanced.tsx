@@ -108,12 +108,12 @@ function EnhancedStatCard({
       }}
     >
       <CardContent>
-        <Box display="flex" alignItems="center" justifyContent="space-between">
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}  >
           <Box>
             <Typography variant="body2" sx={{ opacity: 0.9 }}>
               {title}
             </Typography>
-            <Typography variant="h3" fontWeight="bold" sx={{ my: 1 }}>
+            <Typography variant="h3"  sx={{ my: 1, fontWeight: "bold" }}>
               {value}
             </Typography>
             {subtitle && (
@@ -125,7 +125,7 @@ function EnhancedStatCard({
           <Box sx={{ opacity: 0.8 }}>{icon}</Box>
         </Box>
         {trend && (
-          <Box display="flex" alignItems="center" mt={1}>
+          <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}  >
             {trend === 'up' && <TrendingUp sx={{ mr: 0.5 }} />}
             {trend === 'down' && <TrendingDown sx={{ mr: 0.5 }} />}
             <Typography variant="caption">
@@ -197,7 +197,7 @@ export default function Dashboard() {
 
   if (statsLoading || trendsLoading || recentLoading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}   >
         <CircularProgress />
       </Box>
     )
@@ -328,9 +328,9 @@ export default function Dashboard() {
       <DisclosureBanner />
 
       {/* Header with Actions */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Box display="flex" alignItems="center" gap={2}>
-          <Typography variant="h4" fontWeight="bold">
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}   >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}  >
+          <Typography variant="h4" sx={{ fontWeight: "bold" }}>
             Dashboard
           </Typography>
           {/* Live Indicator */}
@@ -407,7 +407,7 @@ export default function Dashboard() {
 
       {/* Enhanced Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={2.4}>
+        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}   >
           <EnhancedStatCard
             title="Total Executions"
             value={statsData?.total_executions || 0}
@@ -417,7 +417,7 @@ export default function Dashboard() {
           />
         </Grid>
 
-        <Grid item xs={12} sm={6} md={2.4}>
+        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}   >
           <EnhancedStatCard
             title="Test Suites"
             value={statsData?.total_test_suites || 0}
@@ -426,7 +426,7 @@ export default function Dashboard() {
           />
         </Grid>
 
-        <Grid item xs={12} sm={6} md={2.4}>
+        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}   >
           <EnhancedStatCard
             title="Success Rate"
             value={`${statsData?.success_rate || 0}%`}
@@ -436,7 +436,7 @@ export default function Dashboard() {
           />
         </Grid>
 
-        <Grid item xs={12} sm={6} md={2.4}>
+        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}   >
           <EnhancedStatCard
             title="Time Saved"
             value="127h"
@@ -447,7 +447,7 @@ export default function Dashboard() {
           />
         </Grid>
 
-        <Grid item xs={12} sm={6} md={2.4}>
+        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}   >
           <EnhancedStatCard
             title="Flaky Detected"
             value={statsData?.flaky_tests || 8}
@@ -459,10 +459,10 @@ export default function Dashboard() {
 
       {/* Charts */}
       <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}  >
           <Card>
             <CardContent>
-              <Typography variant="h6" gutterBottom fontWeight="bold">
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: "bold" }}>
                 Execution Trends (Last 30 Days)
               </Typography>
               <Line
@@ -485,10 +485,10 @@ export default function Dashboard() {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}  >
           <Card>
             <CardContent>
-              <Typography variant="h6" gutterBottom fontWeight="bold">
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: "bold" }}>
                 Test Types Distribution
               </Typography>
               <Doughnut
@@ -511,8 +511,8 @@ export default function Dashboard() {
       <Box sx={{ mt: 3 }}>
         <Card>
           <CardContent>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="h6" fontWeight="bold">
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}   >
+              <Typography variant="h6" sx={{ fontWeight: "bold" }}>
                 Recent Executions
               </Typography>
               <Button
@@ -528,11 +528,10 @@ export default function Dashboard() {
             {recentData.map((execution: any) => (
               <Fade in key={execution.id}>
                 <Box
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  sx={{
-                    py: 1.5,
+                  
+                  
+                  
+                  sx={{ py: 1.5,
                     px: 2,
                     mb: 1,
                     borderRadius: 1,
@@ -540,18 +539,17 @@ export default function Dashboard() {
                     transition: 'background-color 0.2s',
                     '&:hover': {
                       bgcolor: 'action.hover',
-                    },
-                  }}
+                    }, display: "flex", alignItems: "center", justifyContent: "space-between" }}
                 >
                   <Box>
-                    <Typography variant="body1" fontWeight="medium">
+                    <Typography variant="body1" sx={{ fontWeight: "medium" }}>
                       {execution.suite_name}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       {execution.environment} • {execution.started_at}
                     </Typography>
                   </Box>
-                  <Box display="flex" alignItems="center" gap={1}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}  >
                     <Chip
                       size="small"
                       label={`${execution.passed}/${execution.total_tests} passed`}

@@ -32,17 +32,17 @@ class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <Box
-          display="flex"
-          flexDirection="column"
-          alignItems="center"
-          justifyContent="center"
-          minHeight="100vh"
-          p={3}
+          sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", p: 3 }}
+          
+          
+          
+          
+          
         >
           <Typography variant="h4" gutterBottom>
             Something went wrong
           </Typography>
-          <Typography variant="body1" color="textSecondary" paragraph>
+          <Typography variant="body1" color="textSecondary" component="p">
             {this.state.error?.message || 'An unexpected error occurred'}
           </Typography>
           <Button
