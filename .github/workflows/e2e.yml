@@ -78,7 +78,11 @@ jobs:
   # Card 4eb58505: smoke de prod en pushes a main — el stack real self-hosted
   # (Coolify en jokerserver: frontend :3010, backend :8010). El runner
   # coolify-deploy comparte host con el stack, por eso 127.0.0.1. Aquí sí
-  # corren los tests de API (E2E_API_URL): la BD real tiene el usuario Joker.
+  # corren los tests de API (E2E_API_URL).
+  # Card 64763175: la BD real NO tiene el usuario Joker con el password del
+  # repo (user real: 'joker', password propio) y docs está off en production
+  # por diseño (2972521c). Auth via secrets E2E_AUTH_* (hasta configurarlos,
+  # los auth tests se saltan — skip honesto, no rojo) y docs espera 404.
   # Los PRs se saltan este job (el preview E2E vive en pr-deploy-coolify.yml).
   e2e-prod-smoke:
     name: E2E Prod Smoke (self-hosted)
@@ -88,6 +92,9 @@ jobs:
     env:
       E2E_BASE_URL: http://127.0.0.1:3010
       E2E_API_URL: http://127.0.0.1:8010
+      E2E_DOCS_DISABLED: '1'
+      E2E_AUTH_USERNAME: ${{ secrets.E2E_AUTH_USERNAME || '' }}
+      E2E_AUTH_PASSWORD: ${{ secrets.E2E_AUTH_PASSWORD || '' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
