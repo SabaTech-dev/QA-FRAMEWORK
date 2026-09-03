@@ -175,7 +175,7 @@ export default function Register() {
               margin="normal"
               value={formData.confirmPassword}
               onChange={handleChange('confirmPassword')}
-              error={formData.confirmPassword && formData.password !== formData.confirmPassword}
+              error={Boolean(formData.confirmPassword && formData.password !== formData.confirmPassword)}
               helperText={
                 formData.confirmPassword && formData.password !== formData.confirmPassword
                   ? 'Passwords do not match'
