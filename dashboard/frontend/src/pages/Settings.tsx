@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -17,7 +17,7 @@ import {
   FormControl,
   FormLabel,
   Paper,
-} from '@mui/material'
+} from "@mui/material";
 import {
   Person as PersonIcon,
   Notifications as NotificationsIcon,
@@ -26,55 +26,75 @@ import {
   LightMode as LightModeIcon,
   DarkMode as DarkModeIcon,
   SettingsBrightness as SystemModeIcon,
-} from '@mui/icons-material'
-import useAuthStore from '../stores/authStore'
-import { useThemeContext, ThemeMode } from '../theme'
+} from "@mui/icons-material";
+import useAuthStore from "../stores/authStore";
+import { useThemeContext, ThemeMode } from "../theme";
 
 export default function Settings() {
-  const { user } = useAuthStore()
-  const { mode, actualMode, setMode } = useThemeContext()
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' })
-  
+  const { user } = useAuthStore();
+  const { mode, actualMode, setMode } = useThemeContext();
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success" as "success" | "error",
+  });
+
   // Profile settings
-  const [fullName, setFullName] = useState(user?.full_name || '')
-  const [email, setEmail] = useState(user?.email || '')
-  
+  const [fullName, setFullName] = useState(user?.full_name || "");
+  const [email, setEmail] = useState(user?.email || "");
+
   // Notification settings
-  const [emailNotifications, setEmailNotifications] = useState(true)
-  const [testFailureAlerts, setTestFailureAlerts] = useState(true)
-  const [weeklyReports, setWeeklyReports] = useState(false)
-  
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [testFailureAlerts, setTestFailureAlerts] = useState(true);
+  const [weeklyReports, setWeeklyReports] = useState(false);
+
   // Appearance settings
-  const [compactMode, setCompactMode] = useState(false)
+  const [compactMode, setCompactMode] = useState(false);
 
   // Sync theme mode from context
-  const [themeMode, setThemeMode] = useState<ThemeMode>(mode)
+  const [themeMode, setThemeMode] = useState<ThemeMode>(mode);
 
   useEffect(() => {
-    setThemeMode(mode)
-  }, [mode])
+    setThemeMode(mode);
+  }, [mode]);
 
   const handleThemeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newMode = event.target.value as ThemeMode
-    setThemeMode(newMode)
-    setMode(newMode)
-    setSnackbar({ open: true, message: `Theme changed to ${newMode} mode`, severity: 'success' })
-  }
+    const newMode = event.target.value as ThemeMode;
+    setThemeMode(newMode);
+    setMode(newMode);
+    setSnackbar({
+      open: true,
+      message: `Theme changed to ${newMode} mode`,
+      severity: "success",
+    });
+  };
 
   const handleSaveProfile = () => {
     // TODO: Implement profile update API call
-    setSnackbar({ open: true, message: 'Profile updated successfully!', severity: 'success' })
-  }
+    setSnackbar({
+      open: true,
+      message: "Profile updated successfully!",
+      severity: "success",
+    });
+  };
 
   const handleSaveNotifications = () => {
     // TODO: Implement notification settings update
-    setSnackbar({ open: true, message: 'Notification settings saved!', severity: 'success' })
-  }
+    setSnackbar({
+      open: true,
+      message: "Notification settings saved!",
+      severity: "success",
+    });
+  };
 
   const handleSaveAppearance = () => {
     // Theme is already saved via handleThemeChange
-    setSnackbar({ open: true, message: 'Appearance settings saved!', severity: 'success' })
-  }
+    setSnackbar({
+      open: true,
+      message: "Appearance settings saved!",
+      severity: "success",
+    });
+  };
 
   return (
     <Box>
@@ -85,23 +105,23 @@ export default function Settings() {
       {/* Profile Settings */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
             <PersonIcon sx={{ mr: 1 }} />
             <Typography variant="h6">Profile Settings</Typography>
           </Box>
           <Divider sx={{ mb: 2 }} />
-          
+
           <Grid container spacing={2}>
-            <Grid size={{ xs: 12, md: 6 }}  >
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Username"
-                value={user?.username || ''}
+                value={user?.username || ""}
                 disabled
                 helperText="Username cannot be changed"
               />
             </Grid>
-            <Grid size={{ xs: 12, md: 6 }}  >
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Email"
@@ -110,7 +130,7 @@ export default function Settings() {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </Grid>
-            <Grid size={{ xs: 12, md: 6 }}  >
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Full Name"
@@ -118,7 +138,7 @@ export default function Settings() {
                 onChange={(e) => setFullName(e.target.value)}
               />
             </Grid>
-            <Grid size={{ xs: 12 }} >
+            <Grid size={{ xs: 12 }}>
               <Button variant="contained" onClick={handleSaveProfile}>
                 Save Profile
               </Button>
@@ -130,12 +150,12 @@ export default function Settings() {
       {/* Notification Settings */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
             <NotificationsIcon sx={{ mr: 1 }} />
             <Typography variant="h6">Notification Settings</Typography>
           </Box>
           <Divider sx={{ mb: 2 }} />
-          
+
           <FormControlLabel
             control={
               <Switch
@@ -177,13 +197,13 @@ export default function Settings() {
       {/* Appearance Settings */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
             <PaletteIcon sx={{ mr: 1 }} />
             <Typography variant="h6">Appearance</Typography>
           </Box>
           <Divider sx={{ mb: 2 }} />
-          
-          <FormControl component="fieldset" sx={{ width: '100%' }}>
+
+          <FormControl component="fieldset" sx={{ width: "100%" }}>
             <FormLabel component="legend" sx={{ mb: 2 }}>
               Theme Mode
             </FormLabel>
@@ -192,27 +212,31 @@ export default function Settings() {
               onChange={handleThemeChange}
               name="theme-mode-radio"
             >
-              <Paper 
-                sx={{ 
-                  p: 2, 
-                  mb: 1, 
-                  cursor: 'pointer',
-                  border: themeMode === 'light' ? 2 : 0,
-                  borderColor: 'primary.main',
-                  '&:hover': { bgcolor: 'action.hover' },
+              <Paper
+                sx={{
+                  p: 2,
+                  mb: 1,
+                  cursor: "pointer",
+                  border: themeMode === "light" ? 2 : 0,
+                  borderColor: "primary.main",
+                  "&:hover": { bgcolor: "action.hover" },
                 }}
                 onClick={() => {
-                  setThemeMode('light')
-                  setMode('light')
-                  setSnackbar({ open: true, message: 'Theme changed to light mode', severity: 'success' })
+                  setThemeMode("light");
+                  setMode("light");
+                  setSnackbar({
+                    open: true,
+                    message: "Theme changed to light mode",
+                    severity: "success",
+                  });
                 }}
               >
-                <FormControlLabel 
-                  value="light" 
-                  control={<Radio />} 
+                <FormControlLabel
+                  value="light"
+                  control={<Radio />}
                   label={
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <LightModeIcon sx={{ mr: 1, color: 'warning.main' }} />
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <LightModeIcon sx={{ mr: 1, color: "warning.main" }} />
                       <Box>
                         <Typography>Light</Typography>
                         <Typography variant="caption" color="text.secondary">
@@ -223,28 +247,32 @@ export default function Settings() {
                   }
                 />
               </Paper>
-              
-              <Paper 
-                sx={{ 
-                  p: 2, 
-                  mb: 1, 
-                  cursor: 'pointer',
-                  border: themeMode === 'dark' ? 2 : 0,
-                  borderColor: 'primary.main',
-                  '&:hover': { bgcolor: 'action.hover' },
+
+              <Paper
+                sx={{
+                  p: 2,
+                  mb: 1,
+                  cursor: "pointer",
+                  border: themeMode === "dark" ? 2 : 0,
+                  borderColor: "primary.main",
+                  "&:hover": { bgcolor: "action.hover" },
                 }}
                 onClick={() => {
-                  setThemeMode('dark')
-                  setMode('dark')
-                  setSnackbar({ open: true, message: 'Theme changed to dark mode', severity: 'success' })
+                  setThemeMode("dark");
+                  setMode("dark");
+                  setSnackbar({
+                    open: true,
+                    message: "Theme changed to dark mode",
+                    severity: "success",
+                  });
                 }}
               >
-                <FormControlLabel 
-                  value="dark" 
-                  control={<Radio />} 
+                <FormControlLabel
+                  value="dark"
+                  control={<Radio />}
                   label={
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <DarkModeIcon sx={{ mr: 1, color: 'info.main' }} />
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <DarkModeIcon sx={{ mr: 1, color: "info.main" }} />
                       <Box>
                         <Typography>Dark</Typography>
                         <Typography variant="caption" color="text.secondary">
@@ -255,27 +283,31 @@ export default function Settings() {
                   }
                 />
               </Paper>
-              
-              <Paper 
-                sx={{ 
-                  p: 2, 
-                  cursor: 'pointer',
-                  border: themeMode === 'system' ? 2 : 0,
-                  borderColor: 'primary.main',
-                  '&:hover': { bgcolor: 'action.hover' },
+
+              <Paper
+                sx={{
+                  p: 2,
+                  cursor: "pointer",
+                  border: themeMode === "system" ? 2 : 0,
+                  borderColor: "primary.main",
+                  "&:hover": { bgcolor: "action.hover" },
                 }}
                 onClick={() => {
-                  setThemeMode('system')
-                  setMode('system')
-                  setSnackbar({ open: true, message: 'Theme set to follow system preference', severity: 'success' })
+                  setThemeMode("system");
+                  setMode("system");
+                  setSnackbar({
+                    open: true,
+                    message: "Theme set to follow system preference",
+                    severity: "success",
+                  });
                 }}
               >
-                <FormControlLabel 
-                  value="system" 
-                  control={<Radio />} 
+                <FormControlLabel
+                  value="system"
+                  control={<Radio />}
                   label={
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <SystemModeIcon sx={{ mr: 1, color: 'success.main' }} />
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <SystemModeIcon sx={{ mr: 1, color: "success.main" }} />
                       <Box>
                         <Typography>System</Typography>
                         <Typography variant="caption" color="text.secondary">
@@ -288,9 +320,9 @@ export default function Settings() {
               </Paper>
             </RadioGroup>
           </FormControl>
-          
+
           <Divider sx={{ my: 2 }} />
-          
+
           <FormControlLabel
             control={
               <Switch
@@ -312,20 +344,20 @@ export default function Settings() {
       {/* Account Info */}
       <Card>
         <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
             <SecurityIcon sx={{ mr: 1 }} />
             <Typography variant="h6">Account Information</Typography>
           </Box>
           <Divider sx={{ mb: 2 }} />
-          
+
           <Typography variant="body2" color="textSecondary">
-            <strong>Subscription:</strong> {user?.subscription_plan || 'Free'}
+            <strong>Subscription:</strong> {user?.subscription_plan || "Free"}
           </Typography>
           <Typography variant="body2" color="textSecondary">
-            <strong>Status:</strong> {user?.subscription_status || 'Active'}
+            <strong>Status:</strong> {user?.subscription_status || "Active"}
           </Typography>
           <Typography variant="body2" color="textSecondary">
-            <strong>Role:</strong> {user?.is_superuser ? 'Admin' : 'User'}
+            <strong>Role:</strong> {user?.is_superuser ? "Admin" : "User"}
           </Typography>
         </CardContent>
       </Card>
@@ -335,10 +367,13 @@ export default function Settings() {
         autoHideDuration={3000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
       >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })}>
+        <Alert
+          severity={snackbar.severity}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>
     </Box>
-  )
+  );
 }

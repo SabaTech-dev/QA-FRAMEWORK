@@ -6,9 +6,9 @@ import {
   Box,
   Chip,
   IconButton,
-} from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
-import { DEFAULT_SHORTCUTS } from '../../hooks/useKeyboardShortcuts';
+} from "@mui/material";
+import { Close as CloseIcon } from "@mui/icons-material";
+import { DEFAULT_SHORTCUTS } from "../../hooks/useKeyboardShortcuts";
 
 interface KeyboardShortcutsDialogProps {
   open: boolean;
@@ -20,18 +20,27 @@ export default function KeyboardShortcutsDialog({
   onClose,
 }: KeyboardShortcutsDialogProps) {
   // Group shortcuts by category
-  const groupedShortcuts = DEFAULT_SHORTCUTS.reduce((acc, shortcut) => {
-    if (!acc[shortcut.category]) {
-      acc[shortcut.category] = [];
-    }
-    acc[shortcut.category].push(shortcut);
-    return acc;
-  }, {} as Record<string, typeof DEFAULT_SHORTCUTS>);
+  const groupedShortcuts = DEFAULT_SHORTCUTS.reduce(
+    (acc, shortcut) => {
+      if (!acc[shortcut.category]) {
+        acc[shortcut.category] = [];
+      }
+      acc[shortcut.category].push(shortcut);
+      return acc;
+    },
+    {} as Record<string, typeof DEFAULT_SHORTCUTS>,
+  );
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}  >
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <Typography variant="h6" sx={{ fontWeight: "bold" }}>
             Keyboard Shortcuts
           </Typography>
@@ -47,22 +56,25 @@ export default function KeyboardShortcutsDialog({
               variant="subtitle2"
               color="textSecondary"
               gutterBottom
-              sx={{ fontWeight: 'bold', mb: 1 }}
+              sx={{ fontWeight: "bold", mb: 1 }}
             >
               {category}
             </Typography>
             {shortcuts.map((shortcut, index) => (
               <Box
                 key={index}
-                
-                
-                
-                
-                sx={{ borderBottom: '1px solid',
-                  borderColor: 'divider',
-                  '&:last-child': {
-                    borderBottom: 'none',
-                  }, display: "flex", justifyContent: "space-between", alignItems: "center", py: 1 }}
+
+                sx={{
+                  borderBottom: "1px solid",
+                  borderColor: "divider",
+                  "&:last-child": {
+                    borderBottom: "none",
+                  },
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  py: 1,
+                }}
               >
                 <Typography variant="body2">{shortcut.description}</Typography>
                 <Chip
@@ -70,9 +82,9 @@ export default function KeyboardShortcutsDialog({
                   size="small"
                   variant="outlined"
                   sx={{
-                    fontFamily: 'monospace',
-                    fontWeight: 'bold',
-                    minWidth: '40px',
+                    fontFamily: "monospace",
+                    fontWeight: "bold",
+                    minWidth: "40px",
                   }}
                 />
               </Box>

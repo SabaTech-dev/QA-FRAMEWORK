@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Card,
@@ -27,7 +27,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Refresh as RefreshIcon,
   AutoFixHigh as AutoFixHighIcon,
@@ -35,9 +35,9 @@ import {
   Warning as WarningIcon,
   CheckCircle as CheckCircleIcon,
   History as HistoryIcon,
-} from '@mui/icons-material';
-import EmptyState from '../components/common/EmptyState';
-import DisclosureBanner from '../components/common/DisclosureBanner';
+} from "@mui/icons-material";
+import EmptyState from "../components/common/EmptyState";
+import DisclosureBanner from "../components/common/DisclosureBanner";
 
 interface Selector {
   id: string;
@@ -80,7 +80,9 @@ const SelfHealingDashboard: React.FC = () => {
   const [sessions, setSessions] = useState<HealingSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [healDialogOpen, setHealDialogOpen] = useState(false);
-  const [selectedSelector, setSelectedSelector] = useState<Selector | null>(null);
+  const [selectedSelector, setSelectedSelector] = useState<Selector | null>(
+    null,
+  );
   const [healResults, setHealResults] = useState<HealingResult[]>([]);
   const [stats, setStats] = useState({
     totalSelectors: 0,
@@ -100,41 +102,41 @@ const SelfHealingDashboard: React.FC = () => {
       // For now, using mock data
       const mockSelectors: Selector[] = [
         {
-          id: '1',
-          value: '#submit-button',
-          selector_type: 'id',
+          id: "1",
+          value: "#submit-button",
+          selector_type: "id",
           confidence_score: 0.95,
-          confidence_level: 'high',
+          confidence_level: "high",
           is_active: true,
           usage_count: 150,
           success_rate: 0.98,
         },
         {
-          id: '2',
-          value: '.btn-primary',
-          selector_type: 'css',
+          id: "2",
+          value: ".btn-primary",
+          selector_type: "css",
           confidence_score: 0.72,
-          confidence_level: 'medium',
+          confidence_level: "medium",
           is_active: true,
           usage_count: 89,
           success_rate: 0.85,
         },
         {
-          id: '3',
+          id: "3",
           value: '//div[@class="container"]/button',
-          selector_type: 'xpath',
+          selector_type: "xpath",
           confidence_score: 0.45,
-          confidence_level: 'low',
+          confidence_level: "low",
           is_active: true,
           usage_count: 23,
           success_rate: 0.52,
         },
         {
-          id: '4',
+          id: "4",
           value: '[data-testid="login-form"]',
-          selector_type: 'data_attribute',
+          selector_type: "data_attribute",
           confidence_score: 0.91,
-          confidence_level: 'high',
+          confidence_level: "high",
           is_active: true,
           usage_count: 200,
           success_rate: 0.96,
@@ -143,26 +145,26 @@ const SelfHealingDashboard: React.FC = () => {
 
       const mockSessions: HealingSession[] = [
         {
-          id: 's1',
-          status: 'success',
+          id: "s1",
+          status: "success",
           total_selectors: 12,
           successful_heals: 11,
           failed_heals: 1,
           success_rate: 0.92,
           average_confidence: 0.85,
-          started_at: '2026-02-25T02:30:00Z',
-          completed_at: '2026-02-25T02:31:15Z',
+          started_at: "2026-02-25T02:30:00Z",
+          completed_at: "2026-02-25T02:31:15Z",
         },
         {
-          id: 's2',
-          status: 'partial',
+          id: "s2",
+          status: "partial",
           total_selectors: 8,
           successful_heals: 5,
           failed_heals: 3,
           success_rate: 0.62,
           average_confidence: 0.68,
-          started_at: '2026-02-24T18:45:00Z',
-          completed_at: '2026-02-24T18:46:30Z',
+          started_at: "2026-02-24T18:45:00Z",
+          completed_at: "2026-02-24T18:46:30Z",
         },
       ];
 
@@ -170,19 +172,25 @@ const SelfHealingDashboard: React.FC = () => {
       setSessions(mockSessions);
 
       // Calculate stats
-      const lowConf = mockSelectors.filter(s => s.confidence_score < 0.5).length;
-      const avgConf = mockSelectors.reduce((sum, s) => sum + s.confidence_score, 0) / mockSelectors.length;
+      const lowConf = mockSelectors.filter(
+        (s) => s.confidence_score < 0.5,
+      ).length;
+      const avgConf =
+        mockSelectors.reduce((sum, s) => sum + s.confidence_score, 0) /
+        mockSelectors.length;
 
       setStats({
         totalSelectors: mockSelectors.length,
         lowConfidence: lowConf,
         avgConfidence: avgConf,
-        healSuccessRate: mockSessions.length > 0
-          ? mockSessions.reduce((sum, s) => sum + s.success_rate, 0) / mockSessions.length
-          : 0,
+        healSuccessRate:
+          mockSessions.length > 0
+            ? mockSessions.reduce((sum, s) => sum + s.success_rate, 0) /
+              mockSessions.length
+            : 0,
       });
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
     }
@@ -195,14 +203,16 @@ const SelfHealingDashboard: React.FC = () => {
     // Simulate healing process
     setTimeout(() => {
       const mockResult: HealingResult = {
-        id: 'r1',
+        id: "r1",
         original_selector_value: selector.value,
-        healed_selector_value: selector.confidence_score < 0.5
-          ? `#healed-${selector.id}`
-          : undefined,
-        status: selector.confidence_score < 0.5 ? 'success' : 'skipped',
-        confidence_score: selector.confidence_score < 0.5 ? 0.85 : selector.confidence_score,
-        confidence_level: 'high',
+        healed_selector_value:
+          selector.confidence_score < 0.5
+            ? `#healed-${selector.id}`
+            : undefined,
+        status: selector.confidence_score < 0.5 ? "success" : "skipped",
+        confidence_score:
+          selector.confidence_score < 0.5 ? 0.85 : selector.confidence_score,
+        confidence_level: "high",
         healing_time_ms: 1250,
         attempts: 3,
         created_at: new Date().toISOString(),
@@ -213,19 +223,27 @@ const SelfHealingDashboard: React.FC = () => {
 
   const getConfidenceColor = (level: string) => {
     switch (level) {
-      case 'high': return 'success';
-      case 'medium': return 'warning';
-      case 'low': return 'error';
-      default: return 'default';
+      case "high":
+        return "success";
+      case "medium":
+        return "warning";
+      case "low":
+        return "error";
+      default:
+        return "default";
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'success': return <CheckCircleIcon color="success" />;
-      case 'failed': return <WarningIcon color="error" />;
-      case 'partial': return <TrendingUpIcon color="warning" />;
-      default: return <HistoryIcon color="action" />;
+      case "success":
+        return <CheckCircleIcon color="success" />;
+      case "failed":
+        return <WarningIcon color="error" />;
+      case "partial":
+        return <TrendingUpIcon color="warning" />;
+      default:
+        return <HistoryIcon color="action" />;
     }
   };
 
@@ -242,7 +260,7 @@ const SelfHealingDashboard: React.FC = () => {
     return (
       <Box sx={{ p: 3 }}>
         <Typography variant="h4" gutterBottom>
-          <AutoFixHighIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+          <AutoFixHighIcon sx={{ mr: 1, verticalAlign: "middle" }} />
           Self-Healing Dashboard
         </Typography>
         {/* EU AI Act Art. 50(1) — esta pagina usa analisis IA (self-healing) */}
@@ -254,7 +272,7 @@ const SelfHealingDashboard: React.FC = () => {
           actionLabel="Learn More"
           onAction={() => {
             // Navigate to documentation or show help
-            window.open('https://docs.example.com/self-healing', '_blank');
+            window.open("https://docs.example.com/self-healing", "_blank");
           }}
         />
       </Box>
@@ -264,7 +282,7 @@ const SelfHealingDashboard: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
-        <AutoFixHighIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+        <AutoFixHighIcon sx={{ mr: 1, verticalAlign: "middle" }} />
         Self-Healing Dashboard
       </Typography>
 
@@ -273,7 +291,7 @@ const SelfHealingDashboard: React.FC = () => {
 
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}   >
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -283,7 +301,7 @@ const SelfHealingDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}   >
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -295,7 +313,7 @@ const SelfHealingDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}   >
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -312,7 +330,7 @@ const SelfHealingDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}   >
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -329,14 +347,22 @@ const SelfHealingDashboard: React.FC = () => {
       {/* Low Confidence Alert */}
       {stats.lowConfidence > 0 && (
         <Alert severity="warning" sx={{ mb: 3 }}>
-          {stats.lowConfidence} selector(s) have low confidence and may need healing
+          {stats.lowConfidence} selector(s) have low confidence and may need
+          healing
         </Alert>
       )}
 
       {/* Selectors Table */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2,
+            }}
+          >
             <Typography variant="h6">Selectors</Typography>
             <Button
               variant="outlined"
@@ -362,7 +388,10 @@ const SelfHealingDashboard: React.FC = () => {
                 {selectors.map((selector) => (
                   <TableRow key={selector.id}>
                     <TableCell>
-                      <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontFamily: "monospace" }}
+                      >
                         {selector.value}
                       </Typography>
                     </TableCell>
@@ -370,12 +399,16 @@ const SelfHealingDashboard: React.FC = () => {
                       <Chip label={selector.selector_type} size="small" />
                     </TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
                         <LinearProgress
                           variant="determinate"
                           value={selector.confidence_score * 100}
                           sx={{ width: 60 }}
-                          color={getConfidenceColor(selector.confidence_level) as any}
+                          color={
+                            getConfidenceColor(selector.confidence_level) as any
+                          }
                         />
                         <Typography variant="body2">
                           {(selector.confidence_score * 100).toFixed(0)}%
@@ -429,14 +462,22 @@ const SelfHealingDashboard: React.FC = () => {
                 {sessions.map((session) => (
                   <TableRow key={session.id}>
                     <TableCell>
-                      <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontFamily: "monospace" }}
+                      >
                         {session.id}
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
                         {getStatusIcon(session.status)}
-                        <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
+                        <Typography
+                          variant="body2"
+                          sx={{ textTransform: "capitalize" }}
+                        >
                           {session.status}
                         </Typography>
                       </Box>
@@ -462,7 +503,11 @@ const SelfHealingDashboard: React.FC = () => {
       </Card>
 
       {/* Heal Dialog */}
-      <Dialog open={healDialogOpen} onClose={() => setHealDialogOpen(false)} maxWidth="md">
+      <Dialog
+        open={healDialogOpen}
+        onClose={() => setHealDialogOpen(false)}
+        maxWidth="md"
+      >
         <DialogTitle>Heal Selector</DialogTitle>
         <DialogContent>
           {selectedSelector && (
@@ -470,14 +515,25 @@ const SelfHealingDashboard: React.FC = () => {
               <Typography variant="body2" color="textSecondary">
                 Original Selector:
               </Typography>
-              <Typography variant="body1" sx={{ fontFamily: 'monospace', mb: 2 }}>
+              <Typography
+                variant="body1"
+                sx={{ fontFamily: "monospace", mb: 2 }}
+              >
                 {selectedSelector.value}
               </Typography>
 
               {healResults.length > 0 ? (
                 <Box>
-                  <Alert severity={healResults[0].status === 'success' ? 'success' : 'info'} sx={{ mb: 2 }}>
-                    Healing {healResults[0].status === 'success' ? 'completed successfully' : 'skipped (confidence OK)'}
+                  <Alert
+                    severity={
+                      healResults[0].status === "success" ? "success" : "info"
+                    }
+                    sx={{ mb: 2 }}
+                  >
+                    Healing{" "}
+                    {healResults[0].status === "success"
+                      ? "completed successfully"
+                      : "skipped (confidence OK)"}
                   </Alert>
 
                   {healResults[0].healed_selector_value && (
@@ -485,7 +541,10 @@ const SelfHealingDashboard: React.FC = () => {
                       <Typography variant="body2" color="textSecondary">
                         Healed Selector:
                       </Typography>
-                      <Typography variant="body1" sx={{ fontFamily: 'monospace', color: 'success.main' }}>
+                      <Typography
+                        variant="body1"
+                        sx={{ fontFamily: "monospace", color: "success.main" }}
+                      >
                         {healResults[0].healed_selector_value}
                       </Typography>
                     </Box>
@@ -493,7 +552,8 @@ const SelfHealingDashboard: React.FC = () => {
 
                   <Box sx={{ mt: 2 }}>
                     <Typography variant="body2">
-                      Confidence: {(healResults[0].confidence_score * 100).toFixed(1)}%
+                      Confidence:{" "}
+                      {(healResults[0].confidence_score * 100).toFixed(1)}%
                     </Typography>
                     <Typography variant="body2">
                       Healing Time: {healResults[0].healing_time_ms}ms
@@ -504,7 +564,7 @@ const SelfHealingDashboard: React.FC = () => {
                   </Box>
                 </Box>
               ) : (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                   <LinearProgress sx={{ flex: 1 }} />
                   <Typography>Analyzing selector...</Typography>
                 </Box>
