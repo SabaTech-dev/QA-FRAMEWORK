@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from "react";
 import {
   Container,
   Typography,
@@ -12,67 +12,70 @@ import {
   Chip,
   Stack,
   useTheme,
-} from '@mui/material'
+} from "@mui/material";
 import {
   Extension as ExtensionIcon,
   Sync as SyncIcon,
   Info as InfoIcon,
-} from '@mui/icons-material'
-import IntegrationCard from '../components/integrations/IntegrationCard'
-import { Provider, integrationsAPI } from '../api/integrations'
-import useAuthStore from '../stores/authStore'
-import EmptyState from '../components/common/EmptyState'
+} from "@mui/icons-material";
+import IntegrationCard from "../components/integrations/IntegrationCard";
+import { Provider, integrationsAPI } from "../api/integrations";
+import useAuthStore from "../stores/authStore";
+import EmptyState from "../components/common/EmptyState";
 
 export default function Integrations() {
-  const theme = useTheme()
-  const { token } = useAuthStore()
-  const [providers, setProviders] = useState<Provider[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [configuring, setConfiguring] = useState<string | null>(null)
+  const theme = useTheme();
+  const { token } = useAuthStore();
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [configuring, setConfiguring] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchProviders()
-  }, [])
+    fetchProviders();
+  }, []);
 
   const fetchProviders = async () => {
     try {
-      setLoading(true)
-      setError(null)
-      const response = await integrationsAPI.getProviders()
-      setProviders(response.data)
+      setLoading(true);
+      setError(null);
+      const response = await integrationsAPI.getProviders();
+      setProviders(response.data);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load providers. Please try again.')
-      console.error('Error fetching providers:', err)
+      setError(
+        err.response?.data?.detail ||
+          "Failed to load providers. Please try again.",
+      );
+      console.error("Error fetching providers:", err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleConfigure = async (provider: Provider) => {
     try {
-      setConfiguring(provider.id)
+      setConfiguring(provider.id);
       // In a real implementation, this would call an API to save the configuration
-      console.log('Configuring provider:', provider)
+      console.log("Configuring provider:", provider);
       // await integrationsAPI.configure(provider.id, config)
     } catch (err: any) {
-      console.error('Failed to configure provider:', err)
-      setError(err.response?.data?.detail || 'Failed to configure provider')
+      console.error("Failed to configure provider:", err);
+      setError(err.response?.data?.detail || "Failed to configure provider");
     } finally {
-      setConfiguring(null)
+      setConfiguring(null);
     }
-  }
+  };
 
   const handleTest = async (providerId: string) => {
     try {
-      await integrationsAPI.testConnection(providerId)
+      await integrationsAPI.testConnection(providerId);
       // Refresh providers after successful test
-      await fetchProviders()
+      await fetchProviders();
     } catch (err: any) {
-      console.error('Failed to test connection:', err)
-      setError(err.response?.data?.detail || 'Failed to test connection')
+      console.error("Failed to test connection:", err);
+      setError(err.response?.data?.detail || "Failed to test connection");
     }
-  }
+  };
 
   return (
     <Box>
@@ -85,7 +88,11 @@ export default function Integrations() {
           mb: 4,
         }}
       >
-        <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}  spacing={2}>
+        <Stack
+          direction="row"
+          sx={{ alignItems: "center", justifyContent: "space-between" }}
+          spacing={2}
+        >
           <Box>
             <Typography variant="h4" component="h1" gutterBottom>
               Integrations
@@ -111,12 +118,13 @@ export default function Integrations() {
           icon={<InfoIcon />}
           severity="info"
           sx={{
-            '& .MuiAlert-icon': {
-              fontSize: '1.5rem',
+            "& .MuiAlert-icon": {
+              fontSize: "1.5rem",
             },
           }}
         >
-          Connect your test automation tools to automatically sync test cases and execution results.
+          Connect your test automation tools to automatically sync test cases
+          and execution results.
         </Alert>
       </Box>
 
@@ -124,10 +132,10 @@ export default function Integrations() {
       {loading && (
         <Box
           sx={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            minHeight: '400px',
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "400px",
           }}
         >
           <CircularProgress size={60} />
@@ -139,11 +147,7 @@ export default function Integrations() {
         <Box sx={{ mb: 4 }}>
           <Alert severity="error">
             {error}
-            <Button
-              size="small"
-              onClick={() => setError(null)}
-              sx={{ ml: 2 }}
-            >
+            <Button size="small" onClick={() => setError(null)} sx={{ ml: 2 }}>
               Dismiss
             </Button>
           </Alert>
@@ -159,7 +163,7 @@ export default function Integrations() {
           actionLabel="Configure Integration"
           onAction={() => {
             // In a real implementation, this would open a dialog to select an integration
-            alert('Integration configuration wizard coming soon!')
+            alert("Integration configuration wizard coming soon!");
           }}
         />
       )}
@@ -169,7 +173,7 @@ export default function Integrations() {
         <Container maxWidth="xl">
           <Grid container spacing={3}>
             {providers.map((provider) => (
-              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}     key={provider.id}>
+              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={provider.id}>
                 <IntegrationCard
                   provider={provider}
                   onConfigure={handleConfigure}
@@ -181,5 +185,5 @@ export default function Integrations() {
         </Container>
       )}
     </Box>
-  )
+  );
 }

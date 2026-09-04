@@ -8,15 +8,15 @@ import {
   Chip,
   Divider,
   LinearProgress,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Person as PersonIcon,
   EmojiEvents as TrophyIcon,
   Stars as StarsIcon,
-} from '@mui/icons-material';
-import AchievementsList from '../components/achievements/AchievementsList';
-import { useAchievementsStore } from '../stores/achievementsStore';
-import useAuthStore from '../stores/authStore';
+} from "@mui/icons-material";
+import AchievementsList from "../components/achievements/AchievementsList";
+import { useAchievementsStore } from "../stores/achievementsStore";
+import useAuthStore from "../stores/authStore";
 
 export default function Profile() {
   const { user } = useAuthStore();
@@ -41,7 +41,7 @@ export default function Profile() {
                 sx={{
                   width: 100,
                   height: 100,
-                  bgcolor: 'primary.main',
+                  bgcolor: "primary.main",
                   fontSize: 48,
                 }}
               >
@@ -50,12 +50,12 @@ export default function Profile() {
             </Grid>
             <Grid size={{ xs: "auto" }}>
               <Typography variant="h5" sx={{ fontWeight: "bold" }} gutterBottom>
-                {user?.username || 'QA Tester'}
+                {user?.username || "QA Tester"}
               </Typography>
               <Typography variant="body2" color="textSecondary" gutterBottom>
-                {user?.email || 'qa@example.com'}
+                {user?.email || "qa@example.com"}
               </Typography>
-              <Box sx={{ display: "flex", gap: 1, mt: 1 }}  >
+              <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
                 <Chip
                   icon={<TrophyIcon />}
                   label={`${stats.unlockedCount} Achievements`}
@@ -76,7 +76,9 @@ export default function Profile() {
 
           {/* Progress */}
           <Box>
-            <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}  >
+            <Box
+              sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
+            >
               <Typography variant="body2" sx={{ fontWeight: "bold" }}>
                 Completion Progress
               </Typography>
@@ -91,10 +93,11 @@ export default function Profile() {
               sx={{
                 height: 10,
                 borderRadius: 5,
-                backgroundColor: '#E0E0E0',
-                '& .MuiLinearProgress-bar': {
+                backgroundColor: "#E0E0E0",
+                "& .MuiLinearProgress-bar": {
                   borderRadius: 5,
-                  background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+                  background:
+                    "linear-gradient(90deg, #667eea 0%, #764ba2 100%)",
                 },
               }}
             />

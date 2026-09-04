@@ -1,4 +1,4 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices } from "@playwright/test";
 
 // Card 4eb58505: E2E targets are env-driven — zero hardcoded external stacks.
 //   - CI (PR): pr-deploy-coolify.yml injects E2E_BASE_URL pointing at the
@@ -10,30 +10,30 @@ import { defineConfig, devices } from '@playwright/test';
 const E2E_BASE_URL = process.env.E2E_BASE_URL;
 
 export default defineConfig({
-  testDir: './e2e',
+  testDir: "./e2e",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: 'html',
+  reporter: "html",
   use: {
-    baseURL: E2E_BASE_URL ?? 'http://localhost:4173',
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
+    baseURL: E2E_BASE_URL ?? "http://localhost:4173",
+    trace: "on-first-retry",
+    screenshot: "only-on-failure",
     // no `video`: requires the ffmpeg playwright binary — not worth the CI
     // dependency for this suite (screenshots + trace carry the evidence).
   },
   projects: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
     },
   ],
   webServer: E2E_BASE_URL
     ? undefined
     : {
-        command: 'npm run build && npm run preview -- --port 4173 --strictPort',
-        url: 'http://localhost:4173',
+        command: "npm run build && npm run preview -- --port 4173 --strictPort",
+        url: "http://localhost:4173",
         reuseExistingServer: !process.env.CI,
         timeout: 180_000,
       },

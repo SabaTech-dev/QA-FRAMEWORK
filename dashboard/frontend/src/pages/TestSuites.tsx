@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "react-query";
 import {
   Box,
   Card,
@@ -22,99 +22,110 @@ import {
   TextField,
   Tooltip,
   CircularProgress,
-} from '@mui/material'
+} from "@mui/material";
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   PlayArrow as PlayArrowIcon,
-} from '@mui/icons-material'
-import { useNavigate } from 'react-router-dom'
-import { suitesAPI, executionsAPI } from '../api/client'
-import toast from 'react-hot-toast'
-import EmptyState from '../components/common/EmptyState'
-import LoadingButton from '../components/common/LoadingButton'
-import SkeletonLoader, { TableSkeleton } from '../components/common/SkeletonLoader'
+} from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
+import { suitesAPI, executionsAPI } from "../api/client";
+import toast from "react-hot-toast";
+import EmptyState from "../components/common/EmptyState";
+import LoadingButton from "../components/common/LoadingButton";
+import SkeletonLoader, {
+  TableSkeleton,
+} from "../components/common/SkeletonLoader";
 
 export default function TestSuites() {
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
-  const [openDialog, setOpenDialog] = useState(false)
-  const [editingSuite, setEditingSuite] = useState<any>(null)
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [openDialog, setOpenDialog] = useState(false);
+  const [editingSuite, setEditingSuite] = useState<any>(null);
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    framework_type: 'pytest',
-  })
+    name: "",
+    description: "",
+    framework_type: "pytest",
+  });
 
-  const { data: suites, isLoading } = useQuery('suites', () => suitesAPI.getAll())
+  const { data: suites, isLoading } = useQuery("suites", () =>
+    suitesAPI.getAll(),
+  );
 
-  const createMutation = useMutation(
-    (data: any) => suitesAPI.create(data),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries('suites')
-        toast.success('Suite created successfully')
-        handleCloseDialog()
-      },
-      onError: () => { toast.error('Failed to create suite') },
-    }
-  )
+  const createMutation = useMutation((data: any) => suitesAPI.create(data), {
+    onSuccess: () => {
+      queryClient.invalidateQueries("suites");
+      toast.success("Suite created successfully");
+      handleCloseDialog();
+    },
+    onError: () => {
+      toast.error("Failed to create suite");
+    },
+  });
 
-  const deleteMutation = useMutation(
-    (id: number) => suitesAPI.delete(id),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries('suites')
-        toast.success('Suite deleted successfully')
-      },
-      onError: () => { toast.error('Failed to delete suite') },
-    }
-  )
+  const deleteMutation = useMutation((id: number) => suitesAPI.delete(id), {
+    onSuccess: () => {
+      queryClient.invalidateQueries("suites");
+      toast.success("Suite deleted successfully");
+    },
+    onError: () => {
+      toast.error("Failed to delete suite");
+    },
+  });
 
   const executeMutation = useMutation(
     (suiteId: number) => executionsAPI.create({ suite_id: suiteId }),
     {
       onSuccess: () => {
-        toast.success('Execution started')
-        navigate('/executions')
+        toast.success("Execution started");
+        navigate("/executions");
       },
-      onError: () => { toast.error('Failed to start execution') },
-    }
-  )
+      onError: () => {
+        toast.error("Failed to start execution");
+      },
+    },
+  );
 
   const handleOpenDialog = (suite?: any) => {
     if (suite) {
-      setEditingSuite(suite)
+      setEditingSuite(suite);
       setFormData({
         name: suite.name,
-        description: suite.description || '',
+        description: suite.description || "",
         framework_type: suite.framework_type,
-      })
+      });
     } else {
-      setEditingSuite(null)
-      setFormData({ name: '', description: '', framework_type: 'pytest' })
+      setEditingSuite(null);
+      setFormData({ name: "", description: "", framework_type: "pytest" });
     }
-    setOpenDialog(true)
-  }
+    setOpenDialog(true);
+  };
 
   const handleCloseDialog = () => {
-    setOpenDialog(false)
-    setEditingSuite(null)
-  }
+    setOpenDialog(false);
+    setEditingSuite(null);
+  };
 
   const handleSubmit = () => {
     if (!formData.name) {
-      toast.error('Name is required')
-      return
+      toast.error("Name is required");
+      return;
     }
-    createMutation.mutate(formData)
-  }
+    createMutation.mutate(formData);
+  };
 
   if (isLoading) {
     return (
       <Box>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}   >
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
           <Typography variant="h4">Test Suites</Typography>
           <Button variant="contained" disabled>
             New Suite
@@ -122,14 +133,21 @@ export default function TestSuites() {
         </Box>
         <TableSkeleton rows={5} />
       </Box>
-    )
+    );
   }
 
   // Show empty state if no suites
   if (!suites?.data || suites.data.length === 0) {
     return (
       <Box>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}   >
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
           <Typography variant="h4">Test Suites</Typography>
           <Button
             variant="contained"
@@ -147,12 +165,19 @@ export default function TestSuites() {
           onAction={() => handleOpenDialog()}
         />
       </Box>
-    )
+    );
   }
 
   return (
     <Box>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}   >
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
         <Typography variant="h4">Test Suites</Typography>
         <Button
           variant="contained"
@@ -186,8 +211,8 @@ export default function TestSuites() {
                 <TableCell>{suite.tests?.length || 0}</TableCell>
                 <TableCell>
                   <Chip
-                    label={suite.is_active ? 'Active' : 'Inactive'}
-                    color={suite.is_active ? 'success' : 'default'}
+                    label={suite.is_active ? "Active" : "Inactive"}
+                    color={suite.is_active ? "success" : "default"}
                     size="small"
                   />
                 </TableCell>
@@ -209,7 +234,11 @@ export default function TestSuites() {
                       disabled={executeMutation.isLoading}
                       aria-label="Execute test suite"
                     >
-                      {executeMutation.isLoading ? <CircularProgress size={20} /> : <PlayArrowIcon />}
+                      {executeMutation.isLoading ? (
+                        <CircularProgress size={20} />
+                      ) : (
+                        <PlayArrowIcon />
+                      )}
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Edit Suite">
@@ -229,7 +258,11 @@ export default function TestSuites() {
                       disabled={deleteMutation.isLoading}
                       aria-label="Delete test suite"
                     >
-                      {deleteMutation.isLoading ? <CircularProgress size={20} /> : <DeleteIcon />}
+                      {deleteMutation.isLoading ? (
+                        <CircularProgress size={20} />
+                      ) : (
+                        <DeleteIcon />
+                      )}
                     </IconButton>
                   </Tooltip>
                 </TableCell>
@@ -240,9 +273,14 @@ export default function TestSuites() {
       </TableContainer>
 
       {/* Create/Edit Dialog */}
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+      <Dialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>
-          {editingSuite ? 'Edit Test Suite' : 'Create Test Suite'}
+          {editingSuite ? "Edit Test Suite" : "Create Test Suite"}
         </DialogTitle>
         <DialogContent>
           <TextField
@@ -258,7 +296,9 @@ export default function TestSuites() {
             multiline
             rows={3}
             value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, description: e.target.value })
+            }
             sx={{ mb: 2 }}
           />
           <TextField
@@ -266,11 +306,14 @@ export default function TestSuites() {
             select
             label="Framework Type"
             value={formData.framework_type}
-            onChange={(e) => setFormData({ ...formData, framework_type: e.target.value })}
-            slotProps={{ select: {
-              native: true,
-            } }}
-            
+            onChange={(e) =>
+              setFormData({ ...formData, framework_type: e.target.value })
+            }
+            slotProps={{
+              select: {
+                native: true,
+              },
+            }}
           >
             <option value="pytest">Pytest</option>
             <option value="unittest">Unittest</option>
@@ -284,10 +327,10 @@ export default function TestSuites() {
             onClick={handleSubmit}
             variant="contained"
           >
-            {editingSuite ? 'Update' : 'Create'}
+            {editingSuite ? "Update" : "Create"}
           </LoadingButton>
         </DialogActions>
       </Dialog>
     </Box>
-  )
+  );
 }

@@ -1,12 +1,12 @@
-import React, { Suspense } from 'react'
-import ReactDOM from 'react-dom/client'
-import './index.css'
-import { QueryClient, QueryClientProvider } from 'react-query'
-import { Toaster } from 'react-hot-toast'
-import { CircularProgress, Box } from '@mui/material'
-import ErrorBoundary from './components/ErrorBoundary'
-import App from './App'
-import { ThemeProvider } from './theme'
+import React, { Suspense } from "react";
+import ReactDOM from "react-dom/client";
+import "./index.css";
+import { QueryClient, QueryClientProvider } from "react-query";
+import { Toaster } from "react-hot-toast";
+import { CircularProgress, Box } from "@mui/material";
+import ErrorBoundary from "./components/ErrorBoundary";
+import App from "./App";
+import { ThemeProvider } from "./theme";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,21 +17,23 @@ const queryClient = new QueryClient({
       cacheTime: 10 * 60 * 1000, // 10 minutes
     },
   },
-})
+});
 
 // Loading component for Suspense
 const LoadingFallback = () => (
   <Box
-    sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}
-    
-    
-    
+    sx={{
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      minHeight: "100vh",
+    }}
   >
     <CircularProgress />
   </Box>
-)
+);
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
@@ -39,7 +41,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Suspense fallback={<LoadingFallback />}>
             <App />
           </Suspense>
-          <Toaster 
+          <Toaster
             position="top-right"
             toastOptions={{
               duration: 4000,
@@ -49,4 +51,4 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       </QueryClientProvider>
     </ErrorBoundary>
   </React.StrictMode>,
-)
+);

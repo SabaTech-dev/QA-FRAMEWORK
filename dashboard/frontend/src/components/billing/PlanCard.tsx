@@ -9,52 +9,52 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-} from '@mui/material'
+} from "@mui/material";
 import {
   Check as CheckIcon,
   Close as CloseIcon,
   Star as StarIcon,
-} from '@mui/icons-material'
+} from "@mui/icons-material";
 
 interface PlanFeature {
-  name: string
-  included: boolean
+  name: string;
+  included: boolean;
 }
 
 interface Plan {
-  id: string
-  name: string
-  price: number
-  interval: 'month' | 'year'
-  features: PlanFeature[]
-  popular?: boolean
-  current?: boolean
+  id: string;
+  name: string;
+  price: number;
+  interval: "month" | "year";
+  features: PlanFeature[];
+  popular?: boolean;
+  current?: boolean;
 }
 
 interface PlanCardProps {
-  plan: Plan
-  onSelect: (planId: string) => void
-  isLoading?: boolean
+  plan: Plan;
+  onSelect: (planId: string) => void;
+  isLoading?: boolean;
 }
 
 export default function PlanCard({ plan, onSelect, isLoading }: PlanCardProps) {
   const formatPrice = (price: number) => {
-    if (price === 0) return 'Free'
-    return `$${price}/${plan.interval}`
-  }
+    if (price === 0) return "Free";
+    return `$${price}/${plan.interval}`;
+  };
 
   return (
     <Card
       sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        position: 'relative',
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        position: "relative",
         border: plan.popular ? 2 : 0,
-        borderColor: 'primary.main',
-        transform: plan.popular ? 'scale(1.02)' : 'none',
-        transition: 'transform 0.2s',
-        '&:hover': {
+        borderColor: "primary.main",
+        transform: plan.popular ? "scale(1.02)" : "none",
+        transition: "transform 0.2s",
+        "&:hover": {
           boxShadow: 6,
         },
       }}
@@ -65,7 +65,7 @@ export default function PlanCard({ plan, onSelect, isLoading }: PlanCardProps) {
           label="Most Popular"
           color="primary"
           sx={{
-            position: 'absolute',
+            position: "absolute",
             top: -12,
             right: 16,
           }}
@@ -100,9 +100,11 @@ export default function PlanCard({ plan, onSelect, isLoading }: PlanCardProps) {
               </ListItemIcon>
               <ListItemText
                 primary={feature.name}
-                slotProps={{ primary: {
-                  color: feature.included ? 'text.primary' : 'text.disabled',
-                } }}
+                slotProps={{
+                  primary: {
+                    color: feature.included ? "text.primary" : "text.disabled",
+                  },
+                }}
               />
             </ListItem>
           ))}
@@ -111,15 +113,19 @@ export default function PlanCard({ plan, onSelect, isLoading }: PlanCardProps) {
 
       <Box sx={{ p: 2, pt: 0 }}>
         <Button
-          variant={plan.current ? 'outlined' : 'contained'}
+          variant={plan.current ? "outlined" : "contained"}
           fullWidth
           disabled={plan.current || isLoading}
           onClick={() => onSelect(plan.id)}
           sx={{ mt: 1 }}
         >
-          {plan.current ? 'Current Plan' : plan.price === 0 ? 'Downgrade' : 'Select Plan'}
+          {plan.current
+            ? "Current Plan"
+            : plan.price === 0
+              ? "Downgrade"
+              : "Select Plan"}
         </Button>
       </Box>
     </Card>
-  )
+  );
 }

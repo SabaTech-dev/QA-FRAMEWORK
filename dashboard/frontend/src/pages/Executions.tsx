@@ -1,4 +1,4 @@
-import { useQuery } from 'react-query'
+import { useQuery } from "react-query";
 import {
   Box,
   Card,
@@ -15,74 +15,101 @@ import {
   IconButton,
   CircularProgress,
   Tooltip,
-} from '@mui/material'
+} from "@mui/material";
 import {
   PlayArrow as PlayArrowIcon,
   Stop as StopIcon,
   Visibility as VisibilityIcon,
-} from '@mui/icons-material'
-import { executionsAPI } from '../api/client'
-import { celebrateFirstSuccess, celebratePerfectScore } from '../utils/celebrations'
-import toast from 'react-hot-toast'
-import EmptyState from '../components/common/EmptyState'
-import SkeletonLoader, { TableSkeleton } from '../components/common/SkeletonLoader'
+} from "@mui/icons-material";
+import { executionsAPI } from "../api/client";
+import {
+  celebrateFirstSuccess,
+  celebratePerfectScore,
+} from "../utils/celebrations";
+import toast from "react-hot-toast";
+import EmptyState from "../components/common/EmptyState";
+import SkeletonLoader, {
+  TableSkeleton,
+} from "../components/common/SkeletonLoader";
 
 export default function Executions() {
-  const { data: executions, isLoading, refetch } = useQuery('executions', () =>
-    executionsAPI.getAll()
-  )
+  const {
+    data: executions,
+    isLoading,
+    refetch,
+  } = useQuery("executions", () => executionsAPI.getAll());
 
   const handleSuccessCelebration = () => {
     // Celebrate first successful test (session-based)
-    celebrateFirstSuccess()
+    celebrateFirstSuccess();
 
     // Check for 100% pass rate
     executions?.data?.forEach((execution: any) => {
       if (
-        execution.status === 'completed' &&
+        execution.status === "completed" &&
         execution.total_tests > 0 &&
         execution.passed_tests === execution.total_tests
       ) {
-        celebratePerfectScore()
+        celebratePerfectScore();
       }
-    })
-  }
+    });
+  };
 
   const startExecution = (executionId: number) => {
-    executionsAPI.start(executionId).then(() => {
-      toast.success('Execution started')
-      refetch()
-    }).catch(() => {
-      toast.error('Failed to start execution')
-    })
-  }
+    executionsAPI
+      .start(executionId)
+      .then(() => {
+        toast.success("Execution started");
+        refetch();
+      })
+      .catch(() => {
+        toast.error("Failed to start execution");
+      });
+  };
 
   const stopExecution = (executionId: number) => {
-    executionsAPI.stop(executionId).then(() => {
-      toast.success('Execution stopped')
-      refetch()
-      handleSuccessCelebration()
-    }).catch(() => {
-      toast.error('Failed to stop execution')
-    })
-  }
+    executionsAPI
+      .stop(executionId)
+      .then(() => {
+        toast.success("Execution stopped");
+        refetch();
+        handleSuccessCelebration();
+      })
+      .catch(() => {
+        toast.error("Failed to stop execution");
+      });
+  };
 
   if (isLoading) {
     return (
       <Box>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}   >
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
           <Typography variant="h4">Test Executions</Typography>
         </Box>
         <TableSkeleton rows={5} />
       </Box>
-    )
+    );
   }
 
   // Show empty state if no executions
   if (!executions?.data || executions.data.length === 0) {
     return (
       <Box>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}   >
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
           <Typography variant="h4">Test Executions</Typography>
         </Box>
         <EmptyState
@@ -92,16 +119,23 @@ export default function Executions() {
           actionLabel="Run Your First Test"
           onAction={() => {
             // Navigate to suites to run a test
-            window.location.href = '/suites'
+            window.location.href = "/suites";
           }}
         />
       </Box>
-    )
+    );
   }
 
   return (
     <Box>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}   >
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
         <Typography variant="h4">Test Executions</Typography>
       </Box>
 
@@ -128,13 +162,13 @@ export default function Executions() {
                   <Chip
                     label={execution.status}
                     color={
-                      execution.status === 'completed'
-                        ? 'success'
-                        : execution.status === 'running'
-                        ? 'primary'
-                        : execution.status === 'failed'
-                        ? 'error'
-                        : 'default'
+                      execution.status === "completed"
+                        ? "success"
+                        : execution.status === "running"
+                          ? "primary"
+                          : execution.status === "failed"
+                            ? "error"
+                            : "default"
                     }
                     size="small"
                   />
@@ -142,10 +176,14 @@ export default function Executions() {
                 <TableCell>
                   <Chip label={execution.environment} size="small" />
                 </TableCell>
-                <TableCell>{new Date(execution.started_at).toLocaleString()}</TableCell>
-                <TableCell>{execution.duration ? `${execution.duration}s` : '-'}</TableCell>
                 <TableCell>
-                  <Box sx={{ display: "flex", gap: 0.5 }} >
+                  {new Date(execution.started_at).toLocaleString()}
+                </TableCell>
+                <TableCell>
+                  {execution.duration ? `${execution.duration}s` : "-"}
+                </TableCell>
+                <TableCell>
+                  <Box sx={{ display: "flex", gap: 0.5 }}>
                     <Chip
                       label={`P:${execution.passed_tests}`}
                       size="small"
@@ -164,7 +202,7 @@ export default function Executions() {
                   </Box>
                 </TableCell>
                 <TableCell>
-                  {execution.status === 'running' ? (
+                  {execution.status === "running" ? (
                     <Tooltip title="Stop Execution">
                       <IconButton
                         size="small"
@@ -188,7 +226,10 @@ export default function Executions() {
                     </Tooltip>
                   )}
                   <Tooltip title="View Details">
-                    <IconButton size="small" aria-label="View execution details">
+                    <IconButton
+                      size="small"
+                      aria-label="View execution details"
+                    >
                       <VisibilityIcon />
                     </IconButton>
                   </Tooltip>
@@ -199,5 +240,5 @@ export default function Executions() {
         </Table>
       </TableContainer>
     </Box>
-  )
+  );
 }

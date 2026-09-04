@@ -1,18 +1,30 @@
-import { Card, CardContent, Typography, Box, LinearProgress } from '@mui/material';
-import { AccessTime as TimeIcon, TrendingUp as TrendingUpIcon } from '@mui/icons-material';
-import { useMemo } from 'react';
+import {
+  Card,
+  CardContent,
+  Typography,
+  Box,
+  LinearProgress,
+} from "@mui/material";
+import {
+  AccessTime as TimeIcon,
+  TrendingUp as TrendingUpIcon,
+} from "@mui/icons-material";
+import { useMemo } from "react";
 import {
   calculateCumulativeTimeSaved,
   formatTimeSaved,
   calculateTimeSavedPercentage,
-} from '../../utils/timeCalculations';
+} from "../../utils/timeCalculations";
 
 interface TimeSavedCardProps {
   executions: any[];
   totalTests?: number;
 }
 
-export default function TimeSavedCard({ executions, totalTests }: TimeSavedCardProps) {
+export default function TimeSavedCard({
+  executions,
+  totalTests,
+}: TimeSavedCardProps) {
   const timeSaved = useMemo(() => {
     return calculateCumulativeTimeSaved(executions || []);
   }, [executions]);
@@ -27,15 +39,15 @@ export default function TimeSavedCard({ executions, totalTests }: TimeSavedCardP
   return (
     <Card
       sx={{
-        height: '100%',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        color: 'white',
-        position: 'relative',
-        overflow: 'hidden',
+        height: "100%",
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        color: "white",
+        position: "relative",
+        overflow: "hidden",
       }}
     >
       <CardContent>
-        <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}  >
+        <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
           <TimeIcon sx={{ fontSize: 40, mr: 2, opacity: 0.9 }} />
           <Box>
             <Typography variant="h6" gutterBottom sx={{ fontWeight: "bold" }}>
@@ -51,7 +63,7 @@ export default function TimeSavedCard({ executions, totalTests }: TimeSavedCardP
           <Typography variant="h3" sx={{ fontWeight: "bold" }} gutterBottom>
             {formattedTime}
           </Typography>
-          <Box sx={{ display: "flex", alignItems: "center" }} >
+          <Box sx={{ display: "flex", alignItems: "center" }}>
             <TrendingUpIcon sx={{ fontSize: 20, mr: 1 }} />
             <Typography variant="body2">
               {percentage}% faster than manual testing
@@ -60,7 +72,7 @@ export default function TimeSavedCard({ executions, totalTests }: TimeSavedCardP
         </Box>
 
         <Box>
-          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}  >
+          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
             <Typography variant="body2">Efficiency</Typography>
             <Typography variant="body2" sx={{ fontWeight: "bold" }}>
               {percentage}%
@@ -72,9 +84,9 @@ export default function TimeSavedCard({ executions, totalTests }: TimeSavedCardP
             sx={{
               height: 8,
               borderRadius: 4,
-              backgroundColor: 'rgba(255, 255, 255, 0.3)',
-              '& .MuiLinearProgress-bar': {
-                backgroundColor: 'white',
+              backgroundColor: "rgba(255, 255, 255, 0.3)",
+              "& .MuiLinearProgress-bar": {
+                backgroundColor: "white",
                 borderRadius: 4,
               },
             }}
@@ -84,24 +96,24 @@ export default function TimeSavedCard({ executions, totalTests }: TimeSavedCardP
         {/* Decorative elements */}
         <Box
           sx={{
-            position: 'absolute',
+            position: "absolute",
             top: -20,
             right: -20,
             width: 120,
             height: 120,
-            borderRadius: '50%',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            borderRadius: "50%",
+            backgroundColor: "rgba(255, 255, 255, 0.1)",
           }}
         />
         <Box
           sx={{
-            position: 'absolute',
+            position: "absolute",
             bottom: -30,
             left: -30,
             width: 100,
             height: 100,
-            borderRadius: '50%',
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: "50%",
+            backgroundColor: "rgba(255, 255, 255, 0.05)",
           }}
         />
       </CardContent>

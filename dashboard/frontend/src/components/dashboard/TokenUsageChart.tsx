@@ -1,38 +1,49 @@
 // Token Usage Chart - Estilo ClawX
 // Gráfico de barras apiladas mostrando input/output/cache tokens
 
-import { Box, Typography, Paper, Tooltip } from '@mui/material'
-import { useQuery } from 'react-query'
-import { dashboardAPI } from '../../api/client'
+import { Box, Typography, Paper, Tooltip } from "@mui/material";
+import { useQuery } from "react-query";
+import { dashboardAPI } from "../../api/client";
 
 interface TokenUsageData {
-  label: string
-  inputTokens: number
-  outputTokens: number
-  cacheTokens: number
-  totalTokens: number
+  label: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheTokens: number;
+  totalTokens: number;
 }
 
 interface TokenUsageChartProps {
-  data?: TokenUsageData[]
-  loading?: boolean
+  data?: TokenUsageData[];
+  loading?: boolean;
 }
 
 const TokenUsageBar = ({ data }: { data: TokenUsageData }) => {
-  const maxTokens = Math.max(data.totalTokens, 1)
-  const inputPercent = (data.inputTokens / data.totalTokens) * 100
-  const outputPercent = (data.outputTokens / data.totalTokens) * 100
-  const cachePercent = (data.cacheTokens / data.totalTokens) * 100
-  const barWidth = Math.max((data.totalTokens / maxTokens) * 100, 6)
+  const maxTokens = Math.max(data.totalTokens, 1);
+  const inputPercent = (data.inputTokens / data.totalTokens) * 100;
+  const outputPercent = (data.outputTokens / data.totalTokens) * 100;
+  const cachePercent = (data.cacheTokens / data.totalTokens) * 100;
+  const barWidth = Math.max((data.totalTokens / maxTokens) * 100, 6);
 
   const formatTokens = (value: number): string => {
-    return Intl.NumberFormat().format(value)
-  }
+    return Intl.NumberFormat().format(value);
+  };
 
   return (
     <Box sx={{ mb: 2 }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }}   >
-        <Typography variant="body2"  noWrap sx={{ maxWidth: '60%', fontWeight: "medium" }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 0.5,
+        }}
+      >
+        <Typography
+          variant="body2"
+          noWrap
+          sx={{ maxWidth: "60%", fontWeight: "medium" }}
+        >
           {data.label}
         </Typography>
         <Typography variant="caption" color="textSecondary">
@@ -42,9 +53,9 @@ const TokenUsageBar = ({ data }: { data: TokenUsageData }) => {
       <Box
         sx={{
           height: 12,
-          bgcolor: 'grey.200',
+          bgcolor: "grey.200",
           borderRadius: 6,
-          overflow: 'hidden',
+          overflow: "hidden",
         }}
       >
         <Tooltip
@@ -59,20 +70,20 @@ const TokenUsageBar = ({ data }: { data: TokenUsageData }) => {
         >
           <Box
             sx={{
-              height: '100%',
+              height: "100%",
               width: `${barWidth}%`,
-              display: 'flex',
+              display: "flex",
               borderRadius: 6,
-              overflow: 'hidden',
-              cursor: 'pointer',
-              transition: 'width 0.3s ease',
+              overflow: "hidden",
+              cursor: "pointer",
+              transition: "width 0.3s ease",
             }}
           >
             {data.inputTokens > 0 && (
               <Box
                 sx={{
                   width: `${inputPercent}%`,
-                  bgcolor: '#0ea5e9', // sky-500
+                  bgcolor: "#0ea5e9", // sky-500
                 }}
               />
             )}
@@ -80,7 +91,7 @@ const TokenUsageBar = ({ data }: { data: TokenUsageData }) => {
               <Box
                 sx={{
                   width: `${outputPercent}%`,
-                  bgcolor: '#8b5cf6', // violet-500
+                  bgcolor: "#8b5cf6", // violet-500
                 }}
               />
             )}
@@ -88,7 +99,7 @@ const TokenUsageBar = ({ data }: { data: TokenUsageData }) => {
               <Box
                 sx={{
                   width: `${cachePercent}%`,
-                  bgcolor: '#f59e0b', // amber-500
+                  bgcolor: "#f59e0b", // amber-500
                 }}
               />
             )}
@@ -96,31 +107,34 @@ const TokenUsageBar = ({ data }: { data: TokenUsageData }) => {
         </Tooltip>
       </Box>
     </Box>
-  )
-}
+  );
+};
 
-export default function TokenUsageChart({ data: propData, loading }: TokenUsageChartProps) {
+export default function TokenUsageChart({
+  data: propData,
+  loading,
+}: TokenUsageChartProps) {
   // Use provided data or fetch from API
   const { data: apiData, isLoading } = useQuery(
-    'token-usage',
+    "token-usage",
     async (): Promise<{ data: TokenUsageData[] }> => {
-      const response = await dashboardAPI.getTokenUsage?.()
-      return response ?? { data: [] }
+      const response = await dashboardAPI.getTokenUsage?.();
+      return response ?? { data: [] };
     },
-    { enabled: !propData }
-  )
+    { enabled: !propData },
+  );
 
-  const usageData = propData || apiData?.data || []
-  const isLoadingData = loading || isLoading
+  const usageData = propData || apiData?.data || [];
+  const isLoadingData = loading || isLoading;
 
   // Legend
   const LegendItem = ({ color, label }: { color: string; label: string }) => (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}  >
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
       <Box
         sx={{
           width: 10,
           height: 10,
-          borderRadius: '50%',
+          borderRadius: "50%",
           bgcolor: color,
         }}
       />
@@ -128,7 +142,7 @@ export default function TokenUsageChart({ data: propData, loading }: TokenUsageC
         {label}
       </Typography>
     </Box>
-  )
+  );
 
   if (isLoadingData) {
     return (
@@ -136,11 +150,18 @@ export default function TokenUsageChart({ data: propData, loading }: TokenUsageC
         <Typography variant="h6" gutterBottom>
           Token Usage
         </Typography>
-        <Box sx={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center" }}   >
+        <Box
+          sx={{
+            height: 200,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <Typography color="textSecondary">Loading...</Typography>
         </Box>
       </Paper>
-    )
+    );
   }
 
   if (usageData.length === 0) {
@@ -149,13 +170,13 @@ export default function TokenUsageChart({ data: propData, loading }: TokenUsageC
         <Typography variant="h6" gutterBottom>
           Token Usage
         </Typography>
-        <Box sx={{ py: 4, textAlign: "center" }} >
+        <Box sx={{ py: 4, textAlign: "center" }}>
           <Typography color="textSecondary">
             No token usage data available yet.
           </Typography>
         </Box>
       </Paper>
-    )
+    );
   }
 
   return (
@@ -165,7 +186,7 @@ export default function TokenUsageChart({ data: propData, loading }: TokenUsageC
       </Typography>
 
       {/* Legend */}
-      <Box sx={{ display: "flex", gap: 3, mb: 3 }}  >
+      <Box sx={{ display: "flex", gap: 3, mb: 3 }}>
         <LegendItem color="#0ea5e9" label="Input" />
         <LegendItem color="#8b5cf6" label="Output" />
         <LegendItem color="#f59e0b" label="Cache" />
@@ -178,5 +199,5 @@ export default function TokenUsageChart({ data: propData, loading }: TokenUsageC
         ))}
       </Box>
     </Paper>
-  )
+  );
 }

@@ -1,19 +1,19 @@
-import { Box, Typography, Paper, Tooltip, LinearProgress } from '@mui/material';
-import { Achievement } from '../../types/achievements';
-import { useAchievementsStore } from '../../stores/achievementsStore';
+import { Box, Typography, Paper, Tooltip, LinearProgress } from "@mui/material";
+import { Achievement } from "../../types/achievements";
+import { useAchievementsStore } from "../../stores/achievementsStore";
 
 interface AchievementBadgeProps {
   achievement: Achievement;
-  size?: 'small' | 'medium' | 'large';
+  size?: "small" | "medium" | "large";
   showProgress?: boolean;
 }
 
 const RARITY_COLORS = {
-  common: '#9E9E9E',
-  uncommon: '#4CAF50',
-  rare: '#2196F3',
-  epic: '#9C27B0',
-  legendary: '#FF9800',
+  common: "#9E9E9E",
+  uncommon: "#4CAF50",
+  rare: "#2196F3",
+  epic: "#9C27B0",
+  legendary: "#FF9800",
 };
 
 const SIZE_CONFIG = {
@@ -24,7 +24,7 @@ const SIZE_CONFIG = {
 
 export default function AchievementBadge({
   achievement,
-  size = 'medium',
+  size = "medium",
   showProgress = true,
 }: AchievementBadgeProps) {
   const { isUnlocked, getProgress } = useAchievementsStore();
@@ -42,7 +42,7 @@ export default function AchievementBadge({
             {achievement.name}
           </Typography>
           <Typography variant="body2">{achievement.description}</Typography>
-          <Typography variant="caption" sx={{ display: "block", mt: 1 }} >
+          <Typography variant="caption" sx={{ display: "block", mt: 1 }}>
             Points: {achievement.points} | Rarity: {achievement.rarity}
           </Typography>
           {!unlocked && progress > 0 && (
@@ -59,21 +59,21 @@ export default function AchievementBadge({
         sx={{
           width: config.width,
           height: config.height,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          border: `3px solid ${unlocked ? rarityColor : '#E0E0E0'}`,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          position: "relative",
+          border: `3px solid ${unlocked ? rarityColor : "#E0E0E0"}`,
           borderRadius: 2,
           background: unlocked
             ? `linear-gradient(135deg, ${rarityColor}22 0%, ${rarityColor}44 100%)`
-            : '#F5F5F5',
+            : "#F5F5F5",
           opacity: unlocked ? 1 : 0.5,
-          transition: 'all 0.3s ease',
-          cursor: 'pointer',
-          '&:hover': {
-            transform: 'scale(1.05)',
+          transition: "all 0.3s ease",
+          cursor: "pointer",
+          "&:hover": {
+            transform: "scale(1.05)",
             boxShadow: unlocked ? 6 : 2,
           },
         }}
@@ -82,7 +82,7 @@ export default function AchievementBadge({
         <Typography
           sx={{
             fontSize: config.iconSize,
-            filter: unlocked ? 'none' : 'grayscale(100%)',
+            filter: unlocked ? "none" : "grayscale(100%)",
             mb: 1,
           }}
         >
@@ -91,29 +91,32 @@ export default function AchievementBadge({
 
         {/* Name */}
         <Typography
-          variant={size === 'small' ? 'caption' : 'body2'}
-          
-          
-          sx={{ px: 1,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            width: '100%', fontWeight: "bold", textAlign: "center" }}
+          variant={size === "small" ? "caption" : "body2"}
+
+          sx={{
+            px: 1,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            width: "100%",
+            fontWeight: "bold",
+            textAlign: "center",
+          }}
         >
           {achievement.name}
         </Typography>
 
         {/* Progress Bar */}
         {showProgress && !unlocked && progress > 0 && (
-          <Box sx={{ width: '80%', mt: 1 }}>
+          <Box sx={{ width: "80%", mt: 1 }}>
             <LinearProgress
               variant="determinate"
               value={progress}
               sx={{
                 height: 4,
                 borderRadius: 2,
-                backgroundColor: '#E0E0E0',
-                '& .MuiLinearProgress-bar': {
+                backgroundColor: "#E0E0E0",
+                "& .MuiLinearProgress-bar": {
                   backgroundColor: rarityColor,
                   borderRadius: 2,
                 },
@@ -126,19 +129,19 @@ export default function AchievementBadge({
         {unlocked && (
           <Box
             sx={{
-              position: 'absolute',
+              position: "absolute",
               top: -8,
               right: -8,
               width: 24,
               height: 24,
-              borderRadius: '50%',
+              borderRadius: "50%",
               backgroundColor: rarityColor,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "white",
               fontSize: 14,
-              fontWeight: 'bold',
+              fontWeight: "bold",
             }}
           >
             ✓
