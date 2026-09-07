@@ -138,7 +138,7 @@ class TestCreateStripeCustomer:
         import stripe
         
         with patch('services.stripe_service.stripe.Customer') as mock_customer_api:
-            mock_customer_api.create.side_effect = stripe.error.StripeError("API error")
+            mock_customer_api.create.side_effect = stripe.StripeError("API error")
             
             with pytest.raises(Exception) as exc_info:
                 await create_stripe_customer(mock_db, mock_user)
@@ -226,7 +226,7 @@ class TestCreateSubscription:
         mock_user.stripe_customer_id = "cus_test123"
         
         with patch('services.stripe_service.stripe.Subscription') as mock_sub_api:
-            mock_sub_api.create.side_effect = stripe.error.StripeError("API error")
+            mock_sub_api.create.side_effect = stripe.StripeError("API error")
             
             with pytest.raises(Exception) as exc_info:
                 await create_subscription(mock_db, mock_user, "pro")
@@ -294,7 +294,7 @@ class TestCancelSubscription:
         mock_user.stripe_subscription_id = "sub_test123"
         
         with patch('services.stripe_service.stripe.Subscription') as mock_sub_api:
-            mock_sub_api.delete.side_effect = stripe.error.StripeError("API error")
+            mock_sub_api.delete.side_effect = stripe.StripeError("API error")
             
             with pytest.raises(Exception) as exc_info:
                 await cancel_subscription(mock_db, mock_user, immediately=True)
@@ -389,7 +389,7 @@ class TestUpdateSubscription:
         
         with patch('services.stripe_service.stripe.Subscription') as mock_sub_api:
             mock_sub_api.retrieve.return_value = mock_subscription
-            mock_sub_api.modify.side_effect = stripe.error.StripeError("API error")
+            mock_sub_api.modify.side_effect = stripe.StripeError("API error")
             
             with pytest.raises(Exception) as exc_info:
                 await update_subscription(mock_db, mock_user, "pro")
@@ -642,3 +642,32 @@ class TestPricingPlans:
 # Run tests
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--cov=services/stripe_service", "--cov-report=term-missing"])
+
+
+class TestStripeSDK15Regression:
+    """Regression: SDK >= 11 removed the stripe.error package.
+
+    The service must catch `stripe.StripeError` (top-level). Before the fix,
+    evaluating the `except stripe.error.StripeError` clause raised
+    ModuleNotFoundError, masking the real failure path (card 7c37a29f, PR #230).
+    """
+
+    @pytest.mark.asyncio
+    async def test_real_stripe_error_is_caught_not_masked(self, mock_db, mock_user):
+        """A real stripe.StripeError raised by the SDK hits the service except
+        clause: no ModuleNotFoundError/AttributeError, mapped to HTTP-style
+        'Failed to create subscription' exception."""
+        import stripe
+
+        mock_user.stripe_customer_id = "cus_test123"
+
+        with patch('services.stripe_service.stripe.Subscription') as mock_sub_api:
+            mock_sub_api.create.side_effect = stripe.StripeError("boom")
+
+            with pytest.raises(Exception) as exc_info:
+                await create_subscription(mock_db, mock_user, "pro")
+
+        assert type(exc_info.value) not in (ModuleNotFoundError, AttributeError)
+        assert "Failed to create subscription" in str(exc_info.value)
+        # The mapped message carries the SDK error text (error path, not crash)
+        assert "boom" in str(exc_info.value)

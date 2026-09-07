@@ -287,12 +287,12 @@ class TestStripeCheckoutFlow:
             mock_customer_create.return_value = MagicMock(**stripe_test_customer)
 
             # Simulate declined card
-            mock_pm_attach.side_effect = stripe.error.CardError(
+            mock_pm_attach.side_effect = stripe.CardError(
                 "Your card was declined.", param="payment_method", code="card_declined"
             )
 
             # Verify error handling
-            with pytest.raises(stripe.error.CardError) as exc_info:
+            with pytest.raises(stripe.CardError) as exc_info:
                 stripe.PaymentMethod.attach("pm_declined", customer="cus_test_e2e_123")
 
             assert "declined" in str(exc_info.value).lower()
@@ -580,11 +580,11 @@ class TestStripeErrorHandling:
         THEN: Appropriate error is raised with correct message
         """
         with patch("stripe.PaymentIntent.create") as mock_create:
-            mock_create.side_effect = stripe.error.CardError(
+            mock_create.side_effect = stripe.CardError(
                 "Your card was declined.", param=None, code="card_declined"
             )
 
-            with pytest.raises(stripe.error.CardError) as exc_info:
+            with pytest.raises(stripe.CardError) as exc_info:
                 stripe.PaymentIntent.create(
                     amount=9900, currency="usd", payment_method="pm_declined", confirm=True
                 )
@@ -599,11 +599,11 @@ class TestStripeErrorHandling:
         THEN: Specific error for insufficient funds is raised
         """
         with patch("stripe.PaymentIntent.create") as mock_create:
-            mock_create.side_effect = stripe.error.CardError(
+            mock_create.side_effect = stripe.CardError(
                 "Your card has insufficient funds.", param=None, code="insufficient_funds"
             )
 
-            with pytest.raises(stripe.error.CardError) as exc_info:
+            with pytest.raises(stripe.CardError) as exc_info:
                 stripe.PaymentIntent.create(
                     amount=9900, currency="usd", payment_method="pm_insufficient", confirm=True
                 )
@@ -618,11 +618,11 @@ class TestStripeErrorHandling:
         THEN: Specific error for expired card is raised
         """
         with patch("stripe.PaymentIntent.create") as mock_create:
-            mock_create.side_effect = stripe.error.CardError(
+            mock_create.side_effect = stripe.CardError(
                 "Your card has expired.", param="exp_month", code="expired_card"
             )
 
-            with pytest.raises(stripe.error.CardError) as exc_info:
+            with pytest.raises(stripe.CardError) as exc_info:
                 stripe.PaymentIntent.create(
                     amount=9900, currency="usd", payment_method="pm_expired", confirm=True
                 )
@@ -637,11 +637,11 @@ class TestStripeErrorHandling:
         THEN: Specific error for CVC mismatch is raised
         """
         with patch("stripe.PaymentIntent.create") as mock_create:
-            mock_create.side_effect = stripe.error.CardError(
+            mock_create.side_effect = stripe.CardError(
                 "Your card's security code is incorrect.", param="cvc", code="incorrect_cvc"
             )
 
-            with pytest.raises(stripe.error.CardError) as exc_info:
+            with pytest.raises(stripe.CardError) as exc_info:
                 stripe.PaymentIntent.create(
                     amount=9900, currency="usd", payment_method="pm_wrong_cvc", confirm=True
                 )
@@ -656,11 +656,11 @@ class TestStripeErrorHandling:
         THEN: Error is properly handled
         """
         with patch("stripe.Customer.create") as mock_create:
-            mock_create.side_effect = stripe.error.APIConnectionError(
+            mock_create.side_effect = stripe.APIConnectionError(
                 "Unexpected error communicating with Stripe."
             )
 
-            with pytest.raises(stripe.error.APIConnectionError):
+            with pytest.raises(stripe.APIConnectionError):
                 stripe.Customer.create(email=mock_user.email, name=mock_user.username)
 
 

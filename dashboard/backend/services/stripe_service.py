@@ -25,7 +25,7 @@ stripe.api_key = settings.STRIPE_API_KEY.get_secret_value() if settings.STRIPE_A
 # SDK >= v11 defaults to max_network_retries=2 with a 5s timeout, which can block
 # the FastAPI event loop for ~15s worst case per call (these SDK calls are made
 # synchronously inside async handlers). Explicitly disable retries; caller-level
-# error handling (stripe.error.StripeError) remains the failure path.
+# error handling (stripe.StripeError) remains the failure path.
 # Follow-up (out of scope): wrap SDK calls in asyncio.to_thread.
 stripe.max_network_retries = 0
 
@@ -121,7 +121,7 @@ async def create_stripe_customer(
         logger.info("Stripe customer created successfully", customer_id=customer.id)
         return customer
 
-    except stripe.error.StripeError as e:
+    except stripe.StripeError as e:
         logger.error("Failed to create Stripe customer", error=str(e))
         raise Exception(f"Failed to create customer: {str(e)}")
 
@@ -224,7 +224,7 @@ async def create_subscription(
             "client_secret": _resolve_client_secret(subscription.latest_invoice),
         }
 
-    except stripe.error.StripeError as e:
+    except stripe.StripeError as e:
         logger.error("Failed to create subscription", error=str(e))
         raise Exception(f"Failed to create subscription: {str(e)}")
 
@@ -263,7 +263,7 @@ async def cancel_subscription(
         logger.info("Subscription cancelled", subscription_id=user.stripe_subscription_id)
         return {"status": subscription.status}
 
-    except stripe.error.StripeError as e:
+    except stripe.StripeError as e:
         logger.error("Failed to cancel subscription", error=str(e))
         raise Exception(f"Failed to cancel subscription: {str(e)}")
 
@@ -307,7 +307,7 @@ async def update_subscription(db: AsyncSession, user: User, new_plan_id: str) ->
         logger.info("Subscription updated successfully", new_plan_id=new_plan_id)
         return {"status": "updated", "plan": new_plan_id}
 
-    except stripe.error.StripeError as e:
+    except stripe.StripeError as e:
         logger.error("Failed to update subscription", error=str(e))
         raise Exception(f"Failed to update subscription: {str(e)}")
 
