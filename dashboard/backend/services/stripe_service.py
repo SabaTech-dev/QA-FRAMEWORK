@@ -22,6 +22,13 @@ logger = get_logger(__name__)
 # Configure Stripe API key
 stripe.api_key = settings.STRIPE_API_KEY.get_secret_value() if settings.STRIPE_API_KEY else None
 
+# SDK >= v11 defaults to max_network_retries=2 with a 5s timeout, which can block
+# the FastAPI event loop for ~15s worst case per call (these SDK calls are made
+# synchronously inside async handlers). Explicitly disable retries; caller-level
+# error handling (stripe.error.StripeError) remains the failure path.
+# Follow-up (out of scope): wrap SDK calls in asyncio.to_thread.
+stripe.max_network_retries = 0
+
 
 # Pricing Plans - Uses Stripe Price IDs from config
 PRICING_PLANS = {
@@ -119,6 +126,31 @@ async def create_stripe_customer(
         raise Exception(f"Failed to create customer: {str(e)}")
 
 
+def _resolve_client_secret(latest_invoice: Any) -> Optional[str]:
+    """
+    Resolve the PaymentIntent client_secret from an Invoice across API shapes.
+
+    Pre-basil API (< 2025-03-31): invoice.payment_intent.client_secret
+    Basil+ API (>= 2025-03-31):  invoice.payments.data[i].payment.client_secret
+    """
+    if latest_invoice is None:
+        return None
+    payment_intent = getattr(latest_invoice, "payment_intent", None)
+    if payment_intent is not None:
+        return getattr(payment_intent, "client_secret", None)
+    payments = getattr(latest_invoice, "payments", None)
+    payments_data = getattr(payments, "data", None) if payments is not None else None
+    if payments_data:
+        for payment in payments_data:
+            payment_intent = getattr(payment, "payment", None) or getattr(
+                payment, "payment_intent", None
+            )
+            client_secret = getattr(payment_intent, "client_secret", None)
+            if client_secret:
+                return client_secret
+    return None
+
+
 async def create_subscription(
     db: AsyncSession, user: User, plan_id: str, payment_method_id: Optional[str] = None
 ) -> Dict[str, Any]:
@@ -154,22 +186,31 @@ async def create_subscription(
 
     try:
         # Create subscription in Stripe
+        # NOTE (stripe-python >= 12, API 2025-03-31.basil): Invoice.payment_intent was
+        # removed in favor of the InvoicePayment resource (Invoice.payments). We expand
+        # both shapes and resolve the client_secret defensively so the code works
+        # against pre-basil and basil+ API responses.
         subscription = stripe.Subscription.create(
             customer=user.stripe_customer_id,
             items=[{"price": plan["price_id"]}],
             payment_behavior="default_incomplete",
-            expand=["latest_invoice.payment_intent"],
+            expand=["latest_invoice", "latest_invoice.payments"],
         )
 
         # Update user subscription info
         user.subscription_plan = plan_id
         user.subscription_status = subscription.status
         user.stripe_subscription_id = subscription.id
+        # NOTE (basil): current_period_start/end moved from Subscription to
+        # SubscriptionItem (items.data[0]). Read from the item with a defensive
+        # fallback to the subscription root for older API shapes.
+        items_data = subscription["items"]["data"] if "items" in subscription else []
+        first_item = items_data[0] if items_data else subscription
         user.subscription_current_period_start = datetime.fromtimestamp(
-            subscription.current_period_start
+            getattr(first_item, "current_period_start", 0) or 0
         )
         user.subscription_current_period_end = datetime.fromtimestamp(
-            subscription.current_period_end
+            getattr(first_item, "current_period_end", 0) or 0
         )
         await db.commit()
 
@@ -180,7 +221,7 @@ async def create_subscription(
         return {
             "subscription_id": subscription.id,
             "status": subscription.status,
-            "client_secret": subscription.latest_invoice.payment_intent.client_secret,
+            "client_secret": _resolve_client_secret(subscription.latest_invoice),
         }
 
     except stripe.error.StripeError as e:
