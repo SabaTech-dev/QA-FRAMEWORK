@@ -116,7 +116,7 @@ jobs:
 
       - name: Upload backend image artifact
         if: vars.COOLIFY_CONFIGURED == 'true'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: backend-image
           path: /tmp/qa-backend-image.tar.gz
@@ -131,7 +131,7 @@ jobs:
 
       - name: Upload frontend image artifact
         if: vars.COOLIFY_CONFIGURED == 'true'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: frontend-image
           path: /tmp/qa-frontend-image.tar.gz
@@ -175,7 +175,7 @@ jobs:
       status: ${{ steps.deploy.outputs.status }}
     steps:
       - name: Download backend image (built by security-gate)
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: backend-image
           path: ./image
@@ -314,7 +314,7 @@ jobs:
       status: ${{ steps.deploy.outputs.status }}
     steps:
       - name: Download frontend image (built by security-gate)
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: frontend-image
           path: ./image
@@ -506,7 +506,7 @@ jobs:
 
       - name: Upload test artifacts (report + visual spot-check)
         if: '!cancelled()'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: playwright-report-preview
           path: |
