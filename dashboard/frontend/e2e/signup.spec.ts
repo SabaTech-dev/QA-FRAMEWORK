@@ -10,7 +10,7 @@ test.describe('Signup Flow', () => {
     await expect(inputs.first()).toBeVisible();
   });
 
-  test('Signup with valid data creates user', async ({ page }) => {
+  test('Signup with valid data creates user', { lock: 'signup' }, async ({ page }) => {
     await page.goto('/signup');
     await page.waitForLoadState('networkidle');
     
@@ -30,7 +30,7 @@ test.describe('Signup Flow', () => {
     expect(url).not.toContain('/signup');
   });
 
-  test('Signup with existing email shows error', async ({ page }) => {
+  test('Signup with existing email shows error', { lock: 'signup' }, async ({ page }) => {
     await page.goto('/signup');
     await page.waitForLoadState('networkidle');
     
