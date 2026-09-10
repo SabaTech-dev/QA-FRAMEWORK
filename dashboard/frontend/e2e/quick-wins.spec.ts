@@ -29,7 +29,7 @@ test.describe('Quick Wins - Celebrations & Time Saved', () => {
     }
   })
 
-  test('Empty State - Test Suites page shows empty state when no suites', async ({ page }) => {
+  test('Empty State - Test Suites page shows empty state when no suites', { lock: 'suites' }, async ({ page }) => {
     // Navigate to Test Suites page
     await page.click('text=Test Suites')
 
@@ -59,7 +59,7 @@ test.describe('Quick Wins - Celebrations & Time Saved', () => {
     }
   })
 
-  test('Empty State - Executions page shows empty state when no executions', async ({ page }) => {
+  test('Empty State - Executions page shows empty state when no executions', { lock: 'suites' }, async ({ page }) => {
     // Navigate to Executions page
     await page.click('text=Executions')
 

@@ -14,7 +14,11 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // Card 98fb84ec: the `workers: 1` pin (full serialization to protect
+  // shared-state tests) is gone — @playwright/test 1.63 test locks now
+  // serialize ONLY the specs that mutate/read shared backend state (see
+  // `lock:` in projects/execution/quick-wins/signup/checkout specs). The
+  // rest of the suite runs parallel in CI like it already did locally.
   reporter: "html",
   use: {
     baseURL: E2E_BASE_URL ?? "http://localhost:4173",

@@ -16,7 +16,7 @@ test.describe('Test Execution Flow', () => {
     await expect(page).toHaveURL(/.*executions.*/);
   });
 
-  test('Run test suite', async ({ page }) => {
+  test('Run test suite', { lock: 'suites' }, async ({ page }) => {
     await page.click('text=Test Suites');
     await page.waitForURL('**/suites');
     

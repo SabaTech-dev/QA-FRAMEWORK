@@ -25,7 +25,7 @@ test.describe('Stripe Checkout Flow', () => {
     }
   });
 
-  test('Checkout button redirects to Stripe', async ({ page }) => {
+  test('Checkout button redirects to Stripe', { lock: 'billing' }, async ({ page }) => {
     // Navegar a pricing si existe
     const pricingLink = page.locator('a:has-text("Pricing"), a:has-text("Plans")').first();
     

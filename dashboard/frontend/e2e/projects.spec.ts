@@ -17,7 +17,7 @@ test.describe('Project Management Flow', () => {
     await expect(page).toHaveURL(/.*suites.*/);
   });
 
-  test('Create new test suite', async ({ page }) => {
+  test('Create new test suite', { lock: 'suites' }, async ({ page }) => {
     await page.click('text=Test Suites');
     await page.waitForURL('**/suites');
     
@@ -36,7 +36,7 @@ test.describe('Project Management Flow', () => {
     }
   });
 
-  test('Create test case in suite', async ({ page }) => {
+  test('Create test case in suite', { lock: 'suites' }, async ({ page }) => {
     await page.click('text=Test Suites');
     await page.waitForURL('**/suites');
     
