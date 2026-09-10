@@ -142,8 +142,15 @@ class RateLimiter:
             if authenticated:
                 # Degraded mode: never lock out authenticated users
                 return True, {"limit": 0, "remaining": 0, "reset": 0, "error": str(e)}
-            # F-3: fail CLOSED for anonymous traffic when Redis is down
-            return False, {"limit": 0, "remaining": 0, "reset": 0, "error": str(e)}
+            # F-3: fail CLOSED for anonymous traffic when Redis is down.
+            # Flagged so the middleware answers 503 (outage), not 429 (abuse).
+            return False, {
+                "limit": 0,
+                "remaining": 0,
+                "reset": 0,
+                "redis_outage": True,
+                "error": str(e),
+            }
 
         denied, limit, remaining, reset = (int(res[0]), int(res[1]), int(res[2]), int(res[3]))
         return denied == 0, {
@@ -187,6 +194,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if request.url.path.rstrip("/") in self._skip_paths_norm:
             return await call_next(request)
 
+        # CORS preflight must never consume rate-limit budget (a 429 on
+        # OPTIONS breaks the app in the browser; login at 20/min would
+        # otherwise cost ~2 requests per attempt)
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         identifier, plan, authenticated = self._get_identity(request)
 
         is_allowed, rate_info = await self.rate_limiter.is_allowed(
@@ -204,6 +217,21 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         }
 
         if not is_allowed:
+            # Redis outage (fail-closed anonymous): honest 503 with a
+            # generic body — never claim "rate limit exceeded" (limit=0)
+            # for an infrastructure failure, and never leak the error.
+            if rate_info.get("redis_outage"):
+                logger.error(
+                    "Rate limiter Redis outage: failing closed for anonymous",
+                    identifier=identifier,
+                    endpoint=request.url.path,
+                )
+                return JSONResponse(
+                    status_code=503,
+                    content={"detail": "Service temporarily unavailable"},
+                    headers={"Retry-After": "30"},
+                )
+
             # Rate limit exceeded
             logger.warning(
                 "Rate limit exceeded",
@@ -211,6 +239,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 endpoint=request.url.path,
                 limit=rate_info.get("limit"),
             )
+
+            reset = rate_info.get("reset", 0)
+            headers["Retry-After"] = str(max(1, int(reset - time.time())))
 
             return JSONResponse(
                 status_code=429,

@@ -280,6 +280,55 @@ class TestRateLimitMiddleware:
         assert response.status_code == 429
         assert response.headers["X-RateLimit-Remaining"] == "0"
 
+    def test_429_includes_retry_after(self, app, mock_redis):
+        """A real limit hit must tell the client when to retry (>= 1s)"""
+        reset = int(__import__("time").time()) + 120
+        mock_redis.eval = AsyncMock(return_value=_eval_result(2, 100, 0, reset))
+        client = TestClient(app)
+
+        response = client.get("/test")
+
+        assert response.status_code == 429
+        retry_after = int(response.headers["Retry-After"])
+        assert 1 <= retry_after <= 120
+
+    def test_redis_outage_anonymous_returns_503_not_429(self, app, mock_redis):
+        """Redis down + anonymous: honest 503 with generic body, no
+        'rate limit exceeded' lie and no limit=0 leak"""
+        mock_redis.eval = AsyncMock(side_effect=Exception("Redis error"))
+        client = TestClient(app)
+
+        response = client.get("/test")
+
+        assert response.status_code == 503
+        assert response.headers["Retry-After"] == "30"
+        assert "unavailable" in response.json()["detail"].lower()
+        assert "Redis error" not in response.text
+        assert "X-RateLimit-Limit" not in response.headers
+
+    def test_redis_outage_authenticated_still_allowed(self, app, mock_redis):
+        mock_redis.eval = AsyncMock(side_effect=Exception("Redis error"))
+        token = create_access_token({"sub": "alice", "plan": "pro"})
+        client = TestClient(app)
+
+        response = client.get("/test", headers={"Authorization": f"Bearer {token}"})
+
+        assert response.status_code == 200
+
+    def test_options_preflight_skips_limiter(self, app):
+        """CORS preflight must not consume rate-limit budget"""
+        limiter = Mock()
+        limiter.is_allowed = AsyncMock(
+            return_value=(True, {"limit": 100, "remaining": 99, "reset": 0})
+        )
+        app.add_middleware(RateLimitMiddleware, rate_limiter=limiter)
+        client = TestClient(app)
+
+        response = client.options("/test")
+
+        assert response.status_code in (200, 405)  # routed by CORS/app, not 429
+        limiter.is_allowed.assert_not_called()
+
 
 class TestSkipPathTrailingSlash:
     """card f90a8079: trailing-slash tolerant skip paths"""
