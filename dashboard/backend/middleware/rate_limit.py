@@ -18,6 +18,7 @@ card e8a6b3a7:
 """
 
 import time
+from uuid import uuid4
 from typing import Optional, Callable
 from fastapi import Request, Response, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -132,7 +133,7 @@ class RateLimiter:
         args: list = []
         for _, limit, window in checks:
             args.extend([limit, window, now])
-        args.append(f"{now}-{id(self)}-{len(keys)}-{now}")  # unique member nonce
+        args.append(uuid4().hex)  # unique member nonce: same-timestamp requests must not collide
 
         try:
             res = await self.redis.eval(_SLIDING_WINDOW_LUA, len(keys), *(keys + args))
