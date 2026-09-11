@@ -22,6 +22,29 @@ PROD_ENV = {
 }
 
 
+@pytest.fixture(autouse=True)
+def _hermetic_rate_limiter(monkeypatch):
+    """Card e8a6b3a7 (QA gate): keep these tests hermetic without Redis.
+
+    These are docs-contract tests (routing + docs enable/disable in dev
+    vs prod), NOT limiter tests (covered by tests/middleware/). The
+    /api/v1/{docs,openapi.json,redoc} paths are not in the limiter's
+    skip_paths, so once the real redis module is active (suites that need
+    it pop the conftest mocks) and no local Redis is reachable, the F-3
+    fail-closed path 503-blocks anonymous requests and fails BOTH
+    directions of the contract. Class-level allow-all stub keeps the
+    middleware pipeline running (skip_paths, OPTIONS, identity, headers)
+    with zero Redis dependency.
+    """
+    from middleware.rate_limit import RateLimiter
+
+    async def _allow_all(self, identifier, plan, endpoint, authenticated=False):
+        return True, {"limit": 1, "remaining": 1, "reset": 0}
+
+    monkeypatch.setattr(RateLimiter, "is_allowed", _allow_all)
+
+
+
 @pytest.fixture()
 def dev_app(monkeypatch):
     for var in ("ENVIRONMENT", "QA_VISUAL_ENABLED", "ACCURACY_TESTING_ENABLED"):
