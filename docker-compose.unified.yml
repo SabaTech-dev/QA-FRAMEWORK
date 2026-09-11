@@ -21,6 +21,10 @@ services:
       - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required - set it via env or a local overrides file}
       - ENVIRONMENT=production
       - LOG_LEVEL=INFO
+      # Comma-separated IPs/CIDRs of trusted reverse proxies (see
+      # dashboard/backend/docs/reverse-proxy-rate-limit.md). Empty = no
+      # proxy trusted, X-Forwarded-For ignored.
+      - TRUSTED_PROXIES=${TRUSTED_PROXIES:-}
     depends_on:
       postgres:
         condition: service_healthy

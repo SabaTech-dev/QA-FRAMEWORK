@@ -41,7 +41,7 @@ def limiter(fake_redis):
 class TestLuaScriptRuntime:
     async def test_script_is_executed_for_real(self, fake_redis):
         """The Lua script itself runs inside fakeredis's interpreter"""
-        await fake_redis.eval(_SLIDING_WINDOW_LUA, 1, "k", 5, 60, 1000.0, "n1")
+        await fake_redis.eval(_SLIDING_WINDOW_LUA, 1, "k", 5, 60, 1000.0, "n1", 5)
         assert await fake_redis.zcard("k") == 1
 
     async def test_burst_limit_enforced(self, limiter):
@@ -90,3 +90,50 @@ class TestLuaScriptRuntime:
         for _ in range(21):
             await limiter.is_allowed(identifier="ip:9.9.9.9", plan="free", endpoint="/api/v1/other")
         assert await fake_redis.zcard("ratelimit:burst:ip:9.9.9.9") == 20
+
+
+class TestCardinalityCaps:
+    """card 5025917d: ZSET keys/members must have bounded cardinality"""
+
+    async def test_path_junk_does_not_mint_redis_keys(self, limiter, fake_redis):
+        """Prefix-matched endpoint rule: every junk subpath shares the ONE
+        rule-pattern key instead of minting a key per unique path"""
+        for junk in ("aaa", "bbb", "ccc", "ddd", "eee"):
+            await limiter.is_allowed(
+                identifier="ip:1.2.3.4",
+                plan="free",
+                endpoint=f"/api/v1/executions/{junk}",
+            )
+        keys = [k async for k in fake_redis.scan_iter("ratelimit:endpoint:*")]
+        assert len(keys) == 1
+        assert keys[0].decode() == "ratelimit:endpoint:ip:1.2.3.4:/api/v1/executions"
+
+    async def test_member_cap_trims_oldest(self, fake_redis, monkeypatch):
+        """Hard per-bucket member cap: ZSET never exceeds max_bucket_members
+        (protects against misconfigured huge limits); oldest members evicted"""
+        import middleware.rate_limit as rl
+
+        limiter = rl.RateLimiter(redis_client=fake_redis, max_bucket_members=3)
+
+        # Rebind ONLY rl's time module: patching stdlib time.time globally
+        # would also tick for fakeredis's own EXPIRE bookkeeping.
+        class _Clock:
+            t = 1000.0
+
+            @staticmethod
+            def time():
+                _Clock.t += 1.0
+                return _Clock.t
+
+        monkeypatch.setattr(rl, "time", _Clock)
+        for _ in range(5):
+            await limiter.is_allowed(identifier="ip:7.7.7.7", plan="free", endpoint="/api/v1/other")
+
+        # free plan limits (20 burst / 100 hourly) never reached: only the
+        # hard cap trims. Burst and hourly keys both capped at 3 members.
+        assert await fake_redis.zcard("ratelimit:burst:ip:7.7.7.7") == 3
+        assert await fake_redis.zcard("ratelimit:hourly:ip:7.7.7.7") == 3
+
+        # the NEWEST three survive; the two oldest were evicted
+        members = await fake_redis.zrange("ratelimit:hourly:ip:7.7.7.7", 0, -1, withscores=True)
+        assert [score for _, score in members] == [1003.0, 1004.0, 1005.0]
