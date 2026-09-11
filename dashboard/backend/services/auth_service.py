@@ -234,7 +234,9 @@ async def login_for_access_token(auth_request: LoginRequest, db: AsyncSession) -
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token = create_access_token(data={"sub": user.username})
+    access_token = create_access_token(
+        data={"sub": user.username, "plan": user.subscription_plan or "free"}
+    )
     refresh_token = create_refresh_token(data={"sub": user.username})
     logger.info("Login successful - tokens generated", username=user.username, user_id=user.id)
 
@@ -385,7 +387,9 @@ async def refresh_access_token(
         # ROTATION complete: the consumed jti is denied until its own
         # expiry; mint a fresh pair (same family, new jti).
         new_refresh = create_refresh_token({"sub": user.username}, family_id=family_id)
-        access_token = create_access_token(data={"sub": user.username})
+        access_token = create_access_token(
+            data={"sub": user.username, "plan": user.subscription_plan or "free"}
+        )
         logger.info("Access token refreshed successfully", username=username)
 
         return TokenResponse(

@@ -53,6 +53,11 @@ types-urllib3 = "1.26.25.14"
 mkdocs = "^1.5.0"
 mkdocs-material = "^9.5.0"
 mkdocstrings = {extras = ["python"], version = ">=0.24,<1.1"}
+# Runtime execution of the rate-limit Lua script in tests (card e8a6b3a7):
+# fakeredis[lua] embeds a Lua interpreter via lupa so the atomic
+# sliding-window script is covered without a live Redis.
+fakeredis = {version = "^2.21", extras = ["lua"]}
+lupa = ">=2.1"
 
 [build-system]
 requires = ["poetry-core"]
