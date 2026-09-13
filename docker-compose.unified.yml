@@ -44,19 +44,18 @@ services:
 
   # Frontend React
   frontend:
-    build:
-      context: ./dashboard/frontend
-      dockerfile: Dockerfile
+    # F-7 (card 75fd5fa6): estático en prod — vite build (dist/) servido por nginx.
+    # El dev server de vite (HMR/WS) es SOLO desarrollo local, nunca en prod.
+    # Build antes de recrear: docker exec -u root -e VITE_API_URL=/api/v1 qa-framework-frontend npm run build
+    # (requiere el contenedor dev levantado) — o npm ci && npm run build en local.
+    # Rollback: git checkout docker-compose.unified.yml && docker compose -f docker-compose.unified.yml up -d frontend
+    image: nginx:stable-alpine
     container_name: qa-framework-frontend
     ports:
-      - "127.0.0.1:3010:3000"
-    environment:
-      - VITE_API_URL=http://localhost:8000
-    depends_on:
-      - backend
+      - "127.0.0.1:3010:80"
     volumes:
-      - ./dashboard/frontend:/app
-      - /app/node_modules
+      - ./dashboard/frontend/dist:/usr/share/nginx/html:ro
+      - ./dashboard/frontend/nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       - qa-network
     restart: unless-stopped
