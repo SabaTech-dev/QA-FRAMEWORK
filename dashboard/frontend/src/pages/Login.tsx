@@ -168,7 +168,7 @@ export default function Login() {
 
           <Box sx={{ mt: 2, textAlign: "center" }}>
             <Typography variant="caption" color="textSecondary">
-              Demo: admin / admin123
+              Acceso por invitación
             </Typography>
           </Box>
         </CardContent>
