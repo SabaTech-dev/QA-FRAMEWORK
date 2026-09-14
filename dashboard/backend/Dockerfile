@@ -2,8 +2,9 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Install system dependencies; upgrade base packages first to pick up
+# security patches (perl-base CVE-2026-13221 / CVE-2026-42496 / CVE-2026-8376)
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
