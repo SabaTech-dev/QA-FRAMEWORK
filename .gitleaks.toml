@@ -1,7 +1,13 @@
 # Gitleaks configuration for QA-FRAMEWORK
 # Prevents secret leakage in git history
+#
+# Allowlist policy (GO Joker 2026-09-15, option B -- cards 54d36b5a / f7ed24ce):
+# each entry is scoped and documented. Real secrets are enforced by repo guards
+# (test_no_committed_secret_defaults, config-hardening tests), not by trusting
+# these allowlists. History purge (option A) may still run later in a
+# coordinated window -- entries below would then be retired with the history.
 
-[allowlist]
+[[allowlists]]
   description = "Global allow list"
   paths = [
     '''tests/security/test_owasp_top10_2025\.py$''',
@@ -11,14 +17,76 @@
     '''dashboard/backend/tests/unit/test_config_hardening\.py$''',
   ]
 
+# Docs & tests: example/placeholder credentials only (READMEs, guides, unit
+# tests with synthetic mock keys). Real literals in tracked files are rejected
+# by test_no_committed_secret_defaults.py.
+[[allowlists]]
+  description = "Documentation and test files: examples and synthetic mocks only"
+  paths = [
+    '''^docs/''',
+    '''^tests/''',
+    '''^dashboard/docs/''',
+    '''^RAILWAY_SETUP\.md$''',
+  ]
+
+# Env templates: CHANGE_ME placeholders by design (no real secrets allowed there).
+[[allowlists]]
+  description = "Env templates with CHANGE_ME placeholders"
+  paths = [
+    '''\.env\.production\.example$''',
+    '''\.env\.staging\.example$''',
+  ]
+
+# Docker Compose: ${VAR} / ${VAR:-default} interpolation -- values are injected
+# at runtime from the environment, never stored in the file.
+[[allowlists]]
+  description = "Compose env interpolation (runtime-injected values)"
+  paths = [
+    '''^docker-compose[^/]*\.yml$''',
+    '''^dashboard/docker-compose\.yml$''',
+  ]
+  regexes = ['''\$\{''']
+
+# CI workflows: ${{ secrets.X }} / ${{ vars.X }} expressions.
+[[allowlists]]
+  description = "GitHub Actions expressions"
+  paths = ['''\.github/workflows/[^/]*\.yml$''']
+  regexes = ['''\$\{''']
+
+# docs/RAILWAY_ENV_VARS.md: real Railway-era values were redacted at HEAD and
+# ROTATED by security in PR #147 / card 2972521c (2026-08-26). Findings live
+# only inside these historical commits/diffs. Scoped by commit+path so any
+# NEW secret committed to this file is still flagged.
+[[allowlists]]
+  description = "Railway-era env docs -- values redacted at HEAD (#147) and rotated"
+  paths = ['''^docs/RAILWAY_ENV_VARS\.md$''']
+  commits = [
+    "23547696bbf3dd5755810b09dc8077971af6f331",
+    "6961178d3adffc7f3cf65c7f4fe2144c0d867073",
+    "180cdc8b7e4563a50850eaa2610674f8bbf44be9",
+  ]
+
+# dashboard/backend/.env.production @ 09a524a (2026-06-29): the only REAL dead
+# secret (SECRET_KEY/JWT_SECRET_KEY, token_urlsafe). Verified dead 2026-09-15 by
+# Alfred: not in HEAD, not in qa-framework-backend, 0 fleet envs (66-container
+# sweep). Engram obs #3915 + wiki cve/gitleaks notes.
+[[allowlists]]
+  description = "Dead secret commit 09a524a (verified dead 2026-09-15, GO Joker option B)"
+  commits = ["09a524a39ea02f10f8d2e807dc34fb48d9acb0e8"]
+  paths = ['''^dashboard/backend/\.env\.production$''']
+
 [[rules]]
   id = "generic-api-key"
   description = "Generic API Key"
   regex = '''(?i)(?:api_key|apikey|api[-_]?token)\s*[:=]\s*['\"]?[a-zA-Z0-9_\-]{20,}'''
   tags = ["key", "API"]
+  # Placeholder-value filter (card 54d36b5a, GO Joker 2026-09-15)
+  stopwords = ["your", "changeme", "placeholder", "test", "redacted", "change_me"]
 
 [[rules]]
   id = "secret-key"
   description = "Secret Key"
   regex = '''(?i)(?:secret[-_]?key|secret)\s*[:=]\s*['\"]?[a-zA-Z0-9_\-]{20,}'''
   tags = ["key", "secret"]
+  # Placeholder-value filter (card 54d36b5a, GO Joker 2026-09-15)
+  stopwords = ["your", "changeme", "placeholder", "test", "redacted", "change_me"]
