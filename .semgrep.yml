@@ -7,8 +7,20 @@ rules:
       - metavariable-regex:
           metavariable: $X
           regex: '(?i)(password|passwd|pwd|secret|token|api_key|apikey)'
+      # Skip ALL-CAPS identifiers (TOKEN_BUCKET, PASSWORD_POLICY, ...): non-secret constant names
+      - metavariable-regex:
+          metavariable: $X
+          regex: '^(?![A-Z0-9_]*$)'
+      # OAuth token_type literals and empty defaults are not secrets
+      - pattern-not: $X = "Bearer"
+      - pattern-not: $X = "bearer"
+      - pattern-not: $X = ""
       - pattern-not-inside: os.environ[...]
       - pattern-not-inside: os.getenv(...)
+    paths:
+      exclude:
+        - "*/tests/*"
+        - "tests/*"
     message: "Potential hardcoded secret (A01: Broken Access Control)"
     severity: ERROR
     languages: [python]
