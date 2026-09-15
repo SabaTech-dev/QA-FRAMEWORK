@@ -29,6 +29,29 @@ Dashboard unificada para el framework de testing QA-FRAMEWORK, permitiendo gesti
 - Autenticación: JWT
 - UI: Material-UI
 
+## Dependencias del backend (lockfile determinista)
+
+`backend/requirements.txt` declara los rangos; `backend/requirements.lock` es el lockfile exacto
+(181 pines con hashes SHA-256) que garantiza resolución reproducible y cierra la ventana de
+supply-chain drift (fuente: gate security 2834cce9).
+
+Regenerar el lockfile tras editar `requirements.txt`:
+
+```bash
+cd dashboard/backend
+uv pip compile requirements.txt -o requirements.lock --python-version 3.11 --generate-hashes
+```
+
+El floor `starlette>=1.3.1` incluye el parche de CVE-2026-54283 (GHSA-82w8-qh3p-5jfq);
+verificado compatible con `fastapi==0.141.1`, que declara `starlette>=0.46.0` sin techo superior.
+
+Auditoría de vulnerabilidades sobre el lockfile (nice-to-have, sin integración en CI):
+
+```bash
+pipx run pip-audit -r dashboard/backend/requirements.lock --require-hashes
+```
+
+
 ## Integration Hub
 
 El QA-FRAMEWORK Dashboard incluye un Integration Hub modular que permite conectar con múltiples herramientas de gestión de pruebas:

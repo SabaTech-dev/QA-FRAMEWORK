@@ -1,5 +1,10 @@
+# Regenerate the lockfile after editing this file:
+#   uv pip compile requirements.txt -o requirements.lock --python-version 3.11 --generate-hashes
+# (run from dashboard/backend/; uv >= 0.12, no venv needed)
 fastapi==0.141.1
-starlette>=0.42
+# Floor includes CVE-2026-54283 patch (GHSA-82w8-qh3p-5jfq). fastapi 0.141.1
+# declares starlette>=0.46.0 (no upper bound) -> 1.3.1 is compatible.
+starlette>=1.3.1
 uvicorn[standard]==0.52.4
 sqlalchemy==2.0.52
 asyncpg==0.31.0

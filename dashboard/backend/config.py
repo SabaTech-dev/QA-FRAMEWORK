@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
 
+    # Reverse proxies allowed to derive client IP from X-Forwarded-For
+    # (comma-separated IPs/CIDRs). Empty (default) = XFF is NEVER trusted,
+    # which makes rate-limit bucket identity unspoofable. Card 5025917d.
+    trusted_proxies: str = os.getenv("TRUSTED_PROXIES", "")
+
     # QA Framework Integration
     qa_framework_api_url: str = os.getenv("QA_FRAMEWORK_API_URL", "http://localhost:8001")
 
