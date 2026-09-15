@@ -81,6 +81,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          # gitleaks-action fija 8.24.3, que ignora la sintaxis [[allowlists]] (requiere >=8.25).
+          # Pin == versión verificada localmente (8.30.1: 0 leaks en full-history con esta config).
+          GITLEAKS_VERSION: 8.30.1
 
   # ===========================================================================
   # OWASP Top 10:2025 Test Suite
