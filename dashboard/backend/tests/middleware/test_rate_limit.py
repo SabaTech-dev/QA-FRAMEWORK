@@ -3,20 +3,21 @@ Tests for Rate Limiting
 
 Covers:
 - Per-plan rate limiting
-- Endpoint-specific limits
+- Endpoint-specific limits (incl. prefix match)
 - Burst protection
-- Sliding window algorithm
-- Redis integration
+- Atomic Lua sliding window (single Redis round-trip)
+- Fail-closed for anonymous requests when Redis is down (card e8a6b3a7 F-3)
+- Per-user/plan identity from JWT inside the middleware (card e8a6b3a7 F-1)
 """
 
 import pytest
-pytest.importorskip('fastapi')
-pytest.importorskip('redis')
-pytest.importorskip('asyncpg')
+
+pytest.importorskip("fastapi")
+pytest.importorskip("redis")
+pytest.importorskip("asyncpg")
 from unittest.mock import Mock, AsyncMock, MagicMock, patch
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
-import time
 
 from middleware.rate_limit import RateLimiter, RateLimitMiddleware
 from core.rate_limit_config import (
@@ -25,276 +26,332 @@ from core.rate_limit_config import (
     get_endpoint_limit,
     PlanType,
     RATE_LIMITS,
-    BURST_LIMITS
+    BURST_LIMITS,
 )
+from services.auth_service import create_access_token
+
+
+def _eval_result(denied=0, limit=100, remaining=99, reset=9999999):
+    """Simulated Lua script reply: [denied_index, limit, remaining, reset]"""
+    return [denied, limit, remaining, reset]
 
 
 @pytest.fixture
 def mock_redis():
-    """Create mock Redis client"""
+    """Mock Redis client whose eval() always allows"""
     redis = AsyncMock()
-    redis.zremrangebyscore = AsyncMock(return_value=0)
-    redis.zcard = AsyncMock(return_value=0)
-    redis.zadd = AsyncMock(return_value=1)
-    redis.expire = AsyncMock(return_value=True)
+    redis.eval = AsyncMock(return_value=_eval_result())
     return redis
 
 
 @pytest.fixture
 def rate_limiter(mock_redis):
-    """Create rate limiter with mock Redis"""
     return RateLimiter(redis_client=mock_redis)
 
 
 @pytest.fixture
-def app():
-    """Create test FastAPI app with rate limiting"""
+def app(mock_redis):
+    """Test FastAPI app with rate limiting (limiter injected, no real Redis)"""
     app = FastAPI()
-    app.add_middleware(RateLimitMiddleware)
-    
+    limiter = RateLimiter(redis_client=mock_redis)
+    app.add_middleware(RateLimitMiddleware, rate_limiter=limiter)
+
     @app.get("/test")
     async def test_endpoint():
         return {"status": "ok"}
-    
+
     @app.get("/api/v1/auth/login")
     async def login():
         return {"token": "test"}
-    
+
     @app.get("/health")
     async def health():
         return {"status": "ok"}
-    
+
     return app
 
 
 @pytest.fixture
 def client(app):
-    """Create test client"""
     return TestClient(app)
 
 
 class TestRateLimitConfig:
-    """Tests for rate limit configuration"""
-    
     def test_get_rate_limit_free(self):
-        """Should return free plan limit"""
-        limit = get_rate_limit("free")
-        assert limit == RATE_LIMITS[PlanType.FREE]
-    
+        assert get_rate_limit("free") == RATE_LIMITS[PlanType.FREE]
+
     def test_get_rate_limit_pro(self):
-        """Should return pro plan limit"""
-        limit = get_rate_limit("pro")
-        assert limit == RATE_LIMITS[PlanType.PRO]
-    
-    def test_get_rate_limit_enterprise(self):
-        """Should return enterprise plan limit"""
-        limit = get_rate_limit("enterprise")
-        assert limit == RATE_LIMITS[PlanType.ENTERPRISE]
-    
+        assert get_rate_limit("pro") == RATE_LIMITS[PlanType.PRO]
+
     def test_get_rate_limit_invalid(self):
-        """Should return free limit for invalid plan"""
-        limit = get_rate_limit("invalid")
-        assert limit == RATE_LIMITS[PlanType.FREE]
-    
+        assert get_rate_limit("invalid") == RATE_LIMITS[PlanType.FREE]
+
     def test_get_burst_limit(self):
-        """Should return burst limit"""
-        limit = get_burst_limit("pro")
-        assert limit == BURST_LIMITS[PlanType.PRO]
-    
-    def test_get_endpoint_limit_login(self):
-        """Should return login endpoint limit"""
-        limit = get_endpoint_limit("/api/v1/auth/login")
-        assert limit == 20
-    
-    def test_get_endpoint_limit_executions(self):
-        """Should return executions endpoint limit"""
-        limit = get_endpoint_limit("/api/v1/executions")
-        assert limit == 60
-    
-    def test_get_endpoint_limit_unlimited(self):
-        """Should return None for unlimited endpoint"""
-        limit = get_endpoint_limit("/api/v1/suites")
-        assert limit is None
+        assert get_burst_limit("pro") == BURST_LIMITS[PlanType.PRO]
+
+    def test_get_endpoint_limit_exact(self):
+        assert get_endpoint_limit("/api/v1/auth/login") == 20
+
+    def test_get_endpoint_limit_prefix_match(self):
+        """Subpaths of a limited endpoint inherit its limit (prefix match)"""
+        assert get_endpoint_limit("/api/v1/executions/123") == 60
+        assert get_endpoint_limit("/api/v1/auth/login") == 20
+
+    def test_get_endpoint_limit_unmatched(self):
+        assert get_endpoint_limit("/api/v1/suites") is None
+        assert get_endpoint_limit("/api/v1/auth/logout") is None
 
 
 class TestRateLimiter:
-    """Tests for RateLimiter"""
-    
     @pytest.mark.asyncio
     async def test_is_allowed_under_limit(self, rate_limiter, mock_redis):
-        """Should allow request under limit"""
-        mock_redis.zcard = AsyncMock(return_value=5)
-        
+        mock_redis.eval = AsyncMock(return_value=_eval_result(0, 1000, 995))
+
         is_allowed, info = await rate_limiter.is_allowed(
-            identifier="user:123",
-            plan="pro",
-            endpoint="/api/v1/test"
+            identifier="user:123", plan="pro", endpoint="/api/v1/test"
         )
-        
+
         assert is_allowed is True
-        assert info["remaining"] > 0
-    
+        assert info["remaining"] == 995
+
     @pytest.mark.asyncio
     async def test_is_allowed_at_limit(self, rate_limiter, mock_redis):
-        """Should deny request at limit"""
-        # Set count to limit
-        mock_redis.zcard = AsyncMock(return_value=1000)
-        
+        # denied at hourly check (index 2: burst=1, hourly=2)
+        mock_redis.eval = AsyncMock(return_value=_eval_result(2, 1000, 0))
+
         is_allowed, info = await rate_limiter.is_allowed(
-            identifier="user:123",
-            plan="pro",
-            endpoint="/api/v1/test"
+            identifier="user:123", plan="pro", endpoint="/api/v1/test"
         )
-        
+
         assert is_allowed is False
         assert info["remaining"] == 0
-    
+
     @pytest.mark.asyncio
-    async def test_is_allowed_endpoint_limit(self, rate_limiter, mock_redis):
-        """Should enforce endpoint-specific limit"""
-        # Set count to 15 (under pro limit but over login limit)
-        mock_redis.zcard = AsyncMock(return_value=15)
-        
+    async def test_is_allowed_endpoint_limit_denied(self, rate_limiter, mock_redis):
+        # denied at endpoint check (index 1)
+        mock_redis.eval = AsyncMock(return_value=_eval_result(1, 20, 0))
+
         is_allowed, info = await rate_limiter.is_allowed(
-            identifier="user:123",
-            plan="pro",
-            endpoint="/api/v1/auth/login"
+            identifier="user:123", plan="pro", endpoint="/api/v1/auth/login"
         )
-        
-        # Login limit is 20, so 15 should be allowed
-        assert is_allowed is True
-    
-    @pytest.mark.asyncio
-    async def test_is_allowed_burst_limit(self, rate_limiter, mock_redis):
-        """Should enforce burst limit"""
-        # Set count to 150 (over pro burst limit of 100)
-        mock_redis.zcard = AsyncMock(return_value=150)
-        
-        is_allowed, info = await rate_limiter.is_allowed(
-            identifier="user:123",
-            plan="pro",
-            endpoint="/api/v1/test"
-        )
-        
+
         assert is_allowed is False
-    
+        assert info["limit"] == 20
+
     @pytest.mark.asyncio
-    async def test_redis_failure_fails_open(self, rate_limiter, mock_redis):
-        """Should allow request if Redis fails"""
-        mock_redis.zcard = AsyncMock(side_effect=Exception("Redis error"))
-        
+    async def test_single_atomic_redis_call(self, rate_limiter, mock_redis):
+        """F-3: all tier checks run in ONE atomic Lua eval, not N round-trips"""
+        await rate_limiter.is_allowed(
+            identifier="user:123", plan="pro", endpoint="/api/v1/auth/login"
+        )
+
+        mock_redis.eval.assert_awaited_once()
+        args = mock_redis.eval.await_args.args
+        numkeys = args[1]
+        keys = args[2 : 2 + numkeys]
+        # endpoint + burst + hourly = 3 keys in one script invocation
+        assert numkeys == 3
+        assert any("endpoint:" in k for k in keys)
+        assert any("burst:" in k for k in keys)
+        assert any("hourly:" in k for k in keys)
+
+    @pytest.mark.asyncio
+    async def test_redis_failure_fails_open_for_authenticated(self, rate_limiter, mock_redis):
+        """F-3: authenticated users degrade to fail-open when Redis dies"""
+        mock_redis.eval = AsyncMock(side_effect=Exception("Redis error"))
+
         is_allowed, info = await rate_limiter.is_allowed(
             identifier="user:123",
-            plan="free",
-            endpoint="/api/v1/test"
+            plan="pro",
+            endpoint="/api/v1/test",
+            authenticated=True,
         )
-        
+
         assert is_allowed is True
         assert "error" in info
 
+    @pytest.mark.asyncio
+    async def test_redis_failure_fails_closed_for_anonymous(self, rate_limiter, mock_redis):
+        """F-3: anonymous requests fail CLOSED when Redis dies (DDoS protection)"""
+        mock_redis.eval = AsyncMock(side_effect=Exception("Redis error"))
+
+        is_allowed, info = await rate_limiter.is_allowed(
+            identifier="ip:1.2.3.4",
+            plan="free",
+            endpoint="/api/v1/test",
+            authenticated=False,
+        )
+
+        assert is_allowed is False
+
+
+class TestRateLimitMiddlewareIdentity:
+    """F-1: middleware runs PRE-auth, so it must decode the JWT itself"""
+
+    def _capturing_limiter(self):
+        limiter = Mock()
+        limiter.is_allowed = AsyncMock(
+            return_value=(True, {"limit": 100, "remaining": 99, "reset": 0})
+        )
+        return limiter
+
+    def test_valid_jwt_uses_user_identity_and_plan(self, app):
+        limiter = self._capturing_limiter()
+        app.add_middleware(RateLimitMiddleware, rate_limiter=limiter)
+        token = create_access_token({"sub": "alice", "plan": "pro"})
+        client = TestClient(app)
+
+        client.get("/test", headers={"Authorization": f"Bearer {token}"})
+
+        limiter.is_allowed.assert_awaited_once()
+        kwargs = limiter.is_allowed.await_args.kwargs
+        assert kwargs["identifier"] == "user:alice"
+        assert kwargs["plan"] == "pro"
+        assert kwargs["authenticated"] is True
+
+    def test_jwt_without_plan_defaults_to_free(self, app):
+        limiter = self._capturing_limiter()
+        app.add_middleware(RateLimitMiddleware, rate_limiter=limiter)
+        token = create_access_token({"sub": "bob"})
+        client = TestClient(app)
+
+        client.get("/test", headers={"Authorization": f"Bearer {token}"})
+
+        kwargs = limiter.is_allowed.await_args.kwargs
+        assert kwargs["identifier"] == "user:bob"
+        assert kwargs["plan"] == "free"
+
+    def test_invalid_jwt_falls_back_to_ip(self, app):
+        limiter = self._capturing_limiter()
+        app.add_middleware(RateLimitMiddleware, rate_limiter=limiter)
+        client = TestClient(app)
+
+        client.get("/test", headers={"Authorization": "Bearer not-a-jwt"})
+
+        kwargs = limiter.is_allowed.await_args.kwargs
+        assert kwargs["identifier"].startswith("ip:")
+        assert kwargs["plan"] == "free"
+        assert kwargs["authenticated"] is False
+
+    def test_no_jwt_uses_ip(self, app):
+        limiter = self._capturing_limiter()
+        app.add_middleware(RateLimitMiddleware, rate_limiter=limiter)
+        client = TestClient(app)
+
+        client.get("/test")
+
+        kwargs = limiter.is_allowed.await_args.kwargs
+        assert kwargs["identifier"].startswith("ip:")
+        assert kwargs["authenticated"] is False
+
+    def test_refresh_token_not_treated_as_authenticated(self, app):
+        """A refresh token must not unlock authenticated rate-limit identity"""
+        from services.auth_service import create_refresh_token
+
+        limiter = self._capturing_limiter()
+        app.add_middleware(RateLimitMiddleware, rate_limiter=limiter)
+        token = create_refresh_token({"sub": "alice"})
+        client = TestClient(app)
+
+        client.get("/test", headers={"Authorization": f"Bearer {token}"})
+
+        kwargs = limiter.is_allowed.await_args.kwargs
+        assert kwargs["identifier"].startswith("ip:")
+        assert kwargs["authenticated"] is False
+
 
 class TestRateLimitMiddleware:
-    """Tests for RateLimitMiddleware"""
-    
     def test_skip_paths(self, client):
-        """Should skip rate limiting for certain paths"""
-        # These should not have rate limit headers
         response = client.get("/health")
         assert response.status_code == 200
         assert "X-RateLimit-Limit" not in response.headers
-    
-    def test_rate_limit_headers(self, client):
-        """Should add rate limit headers"""
+
+    def test_rate_limit_headers_added(self, client):
         response = client.get("/test")
         assert response.status_code == 200
-        # Note: Would check headers in real test with proper middleware setup
-    
-    def test_rate_limit_exceeded(self, mock_redis):
-        """Should return 429 when rate limit exceeded via direct limiter check"""
-        mock_redis.zcard = AsyncMock(return_value=10000)
-        
-        limiter = RateLimiter(redis_client=mock_redis)
-        
-        # Use direct limiter check (middleware integration requires async ASGI)
-        import asyncio
-        is_allowed, info = asyncio.run(
-            limiter.is_allowed("user:123", "free", "/api/v1/test")
+        assert "X-RateLimit-Limit" in response.headers
+
+    def test_rate_limit_exceeded_returns_429(self, app, mock_redis):
+        mock_redis.eval = AsyncMock(return_value=_eval_result(2, 100, 0))
+        client = TestClient(app)
+
+        response = client.get("/test")
+
+        assert response.status_code == 429
+        assert response.headers["X-RateLimit-Remaining"] == "0"
+
+    def test_429_includes_retry_after(self, app, mock_redis):
+        """A real limit hit must tell the client when to retry (>= 1s)"""
+        reset = int(__import__("time").time()) + 120
+        mock_redis.eval = AsyncMock(return_value=_eval_result(2, 100, 0, reset))
+        client = TestClient(app)
+
+        response = client.get("/test")
+
+        assert response.status_code == 429
+        retry_after = int(response.headers["Retry-After"])
+        assert 1 <= retry_after <= 120
+
+    def test_redis_outage_anonymous_returns_503_not_429(self, app, mock_redis):
+        """Redis down + anonymous: honest 503 with generic body, no
+        'rate limit exceeded' lie and no limit=0 leak"""
+        mock_redis.eval = AsyncMock(side_effect=Exception("Redis error"))
+        client = TestClient(app)
+
+        response = client.get("/test")
+
+        assert response.status_code == 503
+        assert response.headers["Retry-After"] == "30"
+        assert "unavailable" in response.json()["detail"].lower()
+        assert "Redis error" not in response.text
+        assert "X-RateLimit-Limit" not in response.headers
+
+    def test_redis_outage_authenticated_still_allowed(self, app, mock_redis):
+        mock_redis.eval = AsyncMock(side_effect=Exception("Redis error"))
+        token = create_access_token({"sub": "alice", "plan": "pro"})
+        client = TestClient(app)
+
+        response = client.get("/test", headers={"Authorization": f"Bearer {token}"})
+
+        assert response.status_code == 200
+
+    def test_options_preflight_skips_limiter(self, app):
+        """CORS preflight must not consume rate-limit budget"""
+        limiter = Mock()
+        limiter.is_allowed = AsyncMock(
+            return_value=(True, {"limit": 100, "remaining": 99, "reset": 0})
         )
-        
-        assert is_allowed is False
-        assert info["remaining"] == 0
+        app.add_middleware(RateLimitMiddleware, rate_limiter=limiter)
+        client = TestClient(app)
 
+        response = client.options("/test")
 
-class TestSlidingWindow:
-    """Tests for sliding window algorithm"""
-    
-    @pytest.mark.asyncio
-    async def test_sliding_window_expiry(self, rate_limiter, mock_redis):
-        """Should expire old entries"""
-        await rate_limiter._check_limit("test_key", 100, window=60)
-        
-        # Should call zremrangebyscore to remove old entries
-        mock_redis.zremrangebyscore.assert_called_once()
-    
-    @pytest.mark.asyncio
-    async def test_sliding_window_adds_entry(self, rate_limiter, mock_redis):
-        """Should add current request to sorted set"""
-        await rate_limiter._check_limit("test_key", 100, window=60)
-        
-        # Should call zadd to add current request
-        mock_redis.zadd.assert_called_once()
-    
-    @pytest.mark.asyncio
-    async def test_sliding_window_sets_expiry(self, rate_limiter, mock_redis):
-        """Should set expiry on key"""
-        await rate_limiter._check_limit("test_key", 100, window=60)
-        
-        # Should call expire to set TTL
-        mock_redis.expire.assert_called_once()
-
-
-class TestIntegration:
-    """Integration tests"""
-    
-    @pytest.mark.asyncio
-    async def test_full_rate_limiting_flow(self, mock_redis):
-        """Test complete rate limiting flow"""
-        limiter = RateLimiter(redis_client=mock_redis)
-        
-        # Simulate 5 requests
-        for i in range(5):
-            is_allowed, info = await limiter.is_allowed(
-                identifier="user:123",
-                plan="free",
-                endpoint="/api/v1/test"
-            )
-            
-            if i < 100:  # Free limit is 100/hour
-                assert is_allowed is True
-            else:
-                assert is_allowed is False
+        assert response.status_code in (200, 405)  # routed by CORS/app, not 429
+        limiter.is_allowed.assert_not_called()
 
 
 class TestSkipPathTrailingSlash:
-    """card f90a8079: FastAPI redirect_slashes 307-redirects /metrics -> /metrics/,
-    so the middleware sees the TRAILING-SLASH variant. The skip check must
-    tolerate trailing slashes on both sides (comparison-only; the request path
-    is never mutated)."""
+    """card f90a8079: trailing-slash tolerant skip paths"""
 
     @staticmethod
     def _make_middleware(rate_limiter=None):
-        # rate_limiter injection avoids any Redis dependency in these tests
         return RateLimitMiddleware(app=Mock(), rate_limiter=rate_limiter or Mock())
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("path", [
-        "/metrics", "/metrics/",
-        "/health", "/health/",
-        "/docs", "/docs/",
-        "/openapi.json", "/openapi.json/",
-    ])
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/metrics",
+            "/metrics/",
+            "/health",
+            "/health/",
+            "/docs",
+            "/docs/",
+            "/openapi.json",
+            "/openapi.json/",
+        ],
+    )
     async def test_dispatch_skips_without_ratelimit_call(self, path):
-        """Skipped paths (with/without trailing slash) bypass the limiter entirely"""
         mw = self._make_middleware()
         request = Mock()
         request.url.path = path
@@ -309,11 +366,10 @@ class TestSkipPathTrailingSlash:
 
     @pytest.mark.asyncio
     async def test_dispatch_non_skip_path_calls_limiter(self):
-        """Control: non-skipped paths still go through the limiter"""
         limiter = Mock()
-        limiter.is_allowed = AsyncMock(return_value=(
-            True, {"limit": 100, "remaining": 99, "reset": 0}
-        ))
+        limiter.is_allowed = AsyncMock(
+            return_value=(True, {"limit": 100, "remaining": 99, "reset": 0})
+        )
         mw = self._make_middleware(rate_limiter=limiter)
         request = MagicMock()
         request.url.path = "/api/v1/test"
@@ -327,11 +383,10 @@ class TestSkipPathTrailingSlash:
 
     @pytest.mark.asyncio
     async def test_dispatch_lookalike_paths_not_skipped(self):
-        """Lookalike paths must NOT be skipped (normalization must not over-match)"""
         limiter = Mock()
-        limiter.is_allowed = AsyncMock(return_value=(
-            True, {"limit": 100, "remaining": 99, "reset": 0}
-        ))
+        limiter.is_allowed = AsyncMock(
+            return_value=(True, {"limit": 100, "remaining": 99, "reset": 0})
+        )
         mw = self._make_middleware(rate_limiter=limiter)
         for path in ("/api/v1/metrics", "/metricsx", "/v1/health"):
             request = MagicMock()
@@ -342,6 +397,5 @@ class TestSkipPathTrailingSlash:
         assert limiter.is_allowed.await_count == 3
 
 
-# Run tests
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
