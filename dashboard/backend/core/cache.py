@@ -115,7 +115,7 @@ class CacheManager:
 
     def _deserialize(self, value: bytes) -> Any:
         """Deserialize bytes to value"""
-        return pickle.loads(value)
+        return pickle.loads(value)  # nosec B301 — payload produced only by _serialize() in this cache; no untrusted input reaches pickle.loads
 
     def _build_key(self, prefix: str, identifier: Union[str, int]) -> str:
         """Build cache key with prefix"""
@@ -403,7 +403,9 @@ def cached(
                 prefix = key_prefix or func.__name__
                 # Create hash from args and kwargs
                 key_data = f"{args}:{kwargs}"
-                key_hash = hashlib.md5(key_data.encode()).hexdigest()  # nosemgrep: no-md5-hash — non-cryptographic use (cache/args hashing), verified by security
+                key_hash = hashlib.blake2b(
+                    key_data.encode(), usedforsecurity=False
+                ).hexdigest()
                 cache_key = f"{prefix}:{key_hash}"
 
             # Try to get from cache
@@ -424,7 +426,9 @@ def cached(
             else:
                 prefix = key_prefix or func.__name__
                 key_data = f"{args}:{kwargs}"
-                key_hash = hashlib.md5(key_data.encode()).hexdigest()  # nosemgrep: no-md5-hash — non-cryptographic use (cache/args hashing), verified by security
+                key_hash = hashlib.blake2b(
+                    key_data.encode(), usedforsecurity=False
+                ).hexdigest()
                 cache_key = f"{prefix}:{key_hash}"
 
             # Try to get from cache

@@ -317,7 +317,7 @@ class TestAllureReportGeneration:
             # Verify it's valid XML
             import xml.etree.ElementTree as ET
 
-            tree = ET.parse(report_path)
+            tree = ET.parse(report_path)  # nosec B314 — parses the Allure XML generated above in this example
             root = tree.getroot()
             assert root.tag == "testsuites"
 

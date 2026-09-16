@@ -15,7 +15,9 @@ repos:
     rev: 1.9.4
     hooks:
       - id: bandit
-        args: ['-f', 'screen']
+        # Policy (card 36c40504): B101 asserts are idiomatic in tests -> skipped.
+        # -ll gates on Medium+ only; remaining Lows stay auditable via manual `bandit -r` runs.
+        args: ['-f', 'screen', '--skip', 'B101', '-ll']
         files: '\.py$'
 
   - repo: https://github.com/pre-commit/pre-commit-hooks

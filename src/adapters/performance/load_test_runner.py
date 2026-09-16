@@ -9,6 +9,9 @@ from typing import Any
 
 from src.adapters.performance.metrics_collector import MetricsCollector
 
+# ponytail: single private temp dir for tool outputs; per-run mkdtemp if concurrent runs matter
+_RESULTS_DIR = tempfile.mkdtemp(prefix="loadtest-results-")
+
 
 class LoadTestRunner(ABC):
     """
@@ -101,7 +104,7 @@ class LocustAdapter(LoadTestRunner):
                 f"{duration}s",
                 "--headless",
                 "--csv",
-                "/tmp/locust_results",
+                os.path.join(_RESULTS_DIR, "locust_results"),
             ]
 
             if ramp_up > 0:
@@ -144,7 +147,7 @@ from locust import HttpUser, task, between
 
 class QuickstartUser(HttpUser):
     wait_time = between(1, 2)
-    
+
     @task
     def index_page(self):
         self.client.get("/")
@@ -219,7 +222,7 @@ class K6Adapter(LoadTestRunner):
                 "--duration",
                 f"{duration}s",
                 "--summary-export",
-                "/tmp/k6_summary.json",
+                os.path.join(_RESULTS_DIR, "k6_summary.json"),
             ]
 
             if ramp_up > 0:
@@ -280,7 +283,7 @@ export default function() {{
             import json
             from typing import cast
 
-            with open("/tmp/k6_summary.json", "r") as f:
+            with open(os.path.join(_RESULTS_DIR, "k6_summary.json"), "r") as f:
                 data = json.load(f)
                 return cast(dict[str, Any], data)
         except (FileNotFoundError, json.JSONDecodeError):
@@ -339,7 +342,7 @@ class ApacheBenchAdapter(LoadTestRunner):
             "-c",
             str(users),
             "-e",
-            "/tmp/ab_results.csv",
+            os.path.join(_RESULTS_DIR, "ab_results.csv"),
             target_url,
         ]
 

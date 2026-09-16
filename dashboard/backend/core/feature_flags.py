@@ -12,6 +12,7 @@ import json
 
 class FeatureFlagStrategy(str, Enum):
     """Feature flag rollout strategies."""
+
     PERCENTAGE = "percentage"  # Rollout to X% of users
     USER_LIST = "user_list"  # Rollout to specific users
     USER_SEGMENT = "user_segment"  # Rollout to user segments
@@ -41,7 +42,7 @@ class FeatureFlag:
         config: Optional[Dict[str, Any]] = None,
         description: str = "",
         created_at: Optional[datetime] = None,
-        updated_at: Optional[datetime] = None
+        updated_at: Optional[datetime] = None,
     ):
         self.name = name
         self.enabled = enabled
@@ -87,7 +88,7 @@ class FeatureFlag:
         percentage = self.config.get("percentage", 0)
 
         # Hash user ID to get consistent result
-        hash_value = int(hashlib.md5(f"{self.name}:{user_id}".encode()).hexdigest(), 16)  # nosemgrep: no-md5-hash — non-cryptographic use (cache/args hashing), verified by security
+        hash_value = int(hashlib.blake2b(f"{self.name}:{user_id}".encode()).hexdigest(), 16)
         user_bucket = hash_value % 100
 
         return user_bucket < percentage
@@ -136,7 +137,7 @@ class FeatureFlag:
         current_percentage = start_percentage + (end_percentage - start_percentage) * progress
 
         # Use a fixed bucket for gradual (not user-specific)
-        current_bucket = int(hashlib.md5(self.name.encode()).hexdigest(), 16) % 100  # nosemgrep: no-md5-hash — non-cryptographic use (cache/args hashing), verified by security
+        current_bucket = int(hashlib.blake2b(self.name.encode()).hexdigest(), 16) % 100
 
         return current_bucket < current_percentage
 
@@ -146,7 +147,7 @@ class FeatureFlag:
         weights = self.config.get("weights", [50, 50])
 
         # Hash user ID to get consistent variant
-        hash_value = int(hashlib.md5(f"{self.name}:{user_id}".encode()).hexdigest(), 16)  # nosemgrep: no-md5-hash — non-cryptographic use (cache/args hashing), verified by security
+        hash_value = int(hashlib.blake2b(f"{self.name}:{user_id}".encode()).hexdigest(), 16)
         bucket = hash_value % 100
 
         # Determine variant based on weights
@@ -168,7 +169,7 @@ class FeatureFlag:
             "config": self.config,
             "description": self.description,
             "created_at": self.created_at.isoformat(),
-            "updated_at": self.updated_at.isoformat()
+            "updated_at": self.updated_at.isoformat(),
         }
 
     @classmethod
@@ -181,7 +182,7 @@ class FeatureFlag:
             config=data.get("config", {}),
             description=data.get("description", ""),
             created_at=datetime.fromisoformat(data["created_at"]) if "created_at" in data else None,
-            updated_at=datetime.fromisoformat(data["updated_at"]) if "updated_at" in data else None
+            updated_at=datetime.fromisoformat(data["updated_at"]) if "updated_at" in data else None,
         )
 
 
@@ -247,7 +248,7 @@ class FeatureFlagManager:
         return {
             "total_flags": len(self.flags),
             "enabled_flags": sum(1 for f in self.flags.values() if f.enabled),
-            "evaluations": dict(self.evaluation_count)
+            "evaluations": dict(self.evaluation_count),
         }
 
     def export_flags(self) -> str:
@@ -292,15 +293,11 @@ def register_feature_flag(
     enabled: bool = True,
     strategy: FeatureFlagStrategy = FeatureFlagStrategy.PERCENTAGE,
     config: Optional[Dict[str, Any]] = None,
-    description: str = ""
+    description: str = "",
 ) -> FeatureFlag:
     """Register a new feature flag."""
     flag = FeatureFlag(
-        name=name,
-        enabled=enabled,
-        strategy=strategy,
-        config=config,
-        description=description
+        name=name, enabled=enabled, strategy=strategy, config=config, description=description
     )
     flag_manager.register_flag(flag)
     return flag

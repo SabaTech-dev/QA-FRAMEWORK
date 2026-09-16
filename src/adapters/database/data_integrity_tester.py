@@ -1,8 +1,18 @@
 """Data integrity testing module"""
 
+import re
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
+
+_IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _ident(name: str) -> str:
+    """Validate a plain SQL identifier (defends against B608 interpolation)."""
+    if not _IDENT_RE.match(name or ""):
+        raise ValueError(f"Invalid SQL identifier: {name!r}")
+    return name
 
 
 class ConstraintType(Enum):
@@ -190,12 +200,13 @@ class DataIntegrityTester:
         self, table: str, constraint: IntegrityConstraint
     ) -> IntegrityTestResult:
         """Test primary key constraint."""
+        table, col = _ident(table), _ident(constraint.column)
         query = f"""
-            SELECT {constraint.column}, COUNT(*) as count
+            SELECT {col}, COUNT(*) as count
             FROM {table}
-            GROUP BY {constraint.column}
-            HAVING COUNT(*) > 1 OR {constraint.column} IS NULL
-        """
+            GROUP BY {col}
+            HAVING COUNT(*) > 1 OR {col} IS NULL
+        """  # nosec B608 — identifiers validated by _ident()
 
         try:
             violations = await self.db.execute_query(query)
@@ -232,14 +243,16 @@ class DataIntegrityTester:
                 total_records=0,
             )
 
+        table, col = _ident(table), _ident(constraint.column)
+        ref_table, ref_col = _ident(constraint.reference_table), _ident(constraint.reference_column)
         query = f"""
-            SELECT t.{constraint.column}
+            SELECT t.{col}
             FROM {table} t
-            LEFT JOIN {constraint.reference_table} r
-                ON t.{constraint.column} = r.{constraint.reference_column}
-            WHERE t.{constraint.column} IS NOT NULL
-                AND r.{constraint.reference_column} IS NULL
-        """
+            LEFT JOIN {ref_table} r
+                ON t.{col} = r.{ref_col}
+            WHERE t.{col} IS NOT NULL
+                AND r.{ref_col} IS NULL
+        """  # nosec B608 — identifiers validated by _ident()
 
         try:
             violations = await self.db.execute_query(query)
@@ -265,12 +278,13 @@ class DataIntegrityTester:
         self, table: str, constraint: IntegrityConstraint
     ) -> IntegrityTestResult:
         """Test unique constraint."""
+        table, col = _ident(table), _ident(constraint.column)
         query = f"""
-            SELECT {constraint.column}, COUNT(*) as count
+            SELECT {col}, COUNT(*) as count
             FROM {table}
-            GROUP BY {constraint.column}
+            GROUP BY {col}
             HAVING COUNT(*) > 1
-        """
+        """  # nosec B608 — identifiers validated by _ident()
 
         try:
             violations = await self.db.execute_query(query)
@@ -296,11 +310,12 @@ class DataIntegrityTester:
         self, table: str, constraint: IntegrityConstraint
     ) -> IntegrityTestResult:
         """Test not null constraint."""
+        table, col = _ident(table), _ident(constraint.column)
         query = f"""
             SELECT *
             FROM {table}
-            WHERE {constraint.column} IS NULL
-        """
+            WHERE {col} IS NULL
+        """  # nosec B608 — identifiers validated by _ident()
 
         try:
             violations = await self.db.execute_query(query)
@@ -333,11 +348,12 @@ class DataIntegrityTester:
                 total_records=0,
             )
 
+        table = _ident(table)
         query = f"""
             SELECT *
             FROM {table}
             WHERE NOT ({constraint.condition})
-        """
+        """  # nosec B608 — table validated by _ident(); condition authored in constraint definition
 
         try:
             violations = await self.db.execute_query(query)
@@ -365,11 +381,12 @@ class DataIntegrityTester:
         """Test default value constraint."""
         # Default constraints are typically applied on insert,
         # so we just verify the column exists
+        table, col = _ident(table), _ident(constraint.column)
         query = f"""
             SELECT COUNT(*) as count
             FROM {table}
-            WHERE {constraint.column} IS NULL
-        """
+            WHERE {col} IS NULL
+        """  # nosec B608 — identifiers validated by _ident()
 
         try:
             result = await self.db.execute_query(query)
@@ -397,7 +414,7 @@ class DataIntegrityTester:
     async def _get_table_count(self, table: str) -> int:
         """Get total record count for a table."""
         try:
-            result = await self.db.execute_query(f"SELECT COUNT(*) FROM {table}")
+            result = await self.db.execute_query(f"SELECT COUNT(*) FROM {_ident(table)}")  # nosec B608 — identifier validated
             if result:
                 row = next(iter(result))
                 return int(row[0]) if isinstance(row, (list, tuple)) else int(row.get("count", 0))
@@ -461,14 +478,16 @@ class DataIntegrityTester:
         Returns:
             Dictionary with orphan record analysis
         """
+        table, col = _ident(table), _ident(column)
+        ref_table, ref_col = _ident(reference_table), _ident(reference_column)
         query = f"""
             SELECT t.*
             FROM {table} t
-            LEFT JOIN {reference_table} r
-                ON t.{column} = r.{reference_column}
-            WHERE t.{column} IS NOT NULL
-                AND r.{reference_column} IS NULL
-        """
+            LEFT JOIN {ref_table} r
+                ON t.{col} = r.{ref_col}
+            WHERE t.{col} IS NOT NULL
+                AND r.{ref_col} IS NULL
+        """  # nosec B608 — identifiers validated by _ident()
 
         try:
             orphans = await self.db.execute_query(query)

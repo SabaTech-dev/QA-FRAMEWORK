@@ -29,7 +29,7 @@ class TestDefaultAllowlistIsFailClosed:
 
     @pytest.mark.parametrize(
         "host",
-        ["localhost", "127.0.0.1", "0.0.0.0", "::1"],
+        ["localhost", "127.0.0.1", "0.0.0.0", "::1"],  # nosec B104 — test data asserting loopback is NOT allowed
     )
     def test_default_allowlist_excludes_loopback_hosts(self, host: str):
         assert host not in DEFAULT_ALLOWED_DOMAINS

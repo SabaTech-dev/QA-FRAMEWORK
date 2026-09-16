@@ -182,7 +182,7 @@ def framework_config():
         "test": {"timeout": 300, "retry_count": 1, "parallel_workers": 2},
         "reporting": {
             "enabled": True,
-            "output_dir": "/tmp/test_reports",
+            "output_dir": "/tmp/test_reports",  # nosec B108 — test fixture value, no file I/O on it here
             "formats": ["json", "html", "allure"],
         },
         "adapters": {

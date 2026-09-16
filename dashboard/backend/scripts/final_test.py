@@ -28,19 +28,15 @@ async def test_models():
             name="test-job",
             schedule="*/5 * * * *",
             description="Test job",
-            script_path="/tmp/test.sh",
-            status="active"
+            script_path="/tmp/test.sh",  # nosec B108 — inert string fixture, never created/read
+            status="active",
         )
         assert job.name == "test-job"
         assert job.status == "active"
         print("   ✅ CronJob model works")
 
         # Test CronExecution model
-        execution = CronExecution(
-            job_id=1,
-            status="success",
-            started_at=datetime.utcnow()
-        )
+        execution = CronExecution(job_id=1, status="success", started_at=datetime.utcnow())
         assert execution.status == "success"
         print("   ✅ CronExecution model works")
 
@@ -66,10 +62,10 @@ async def test_seed_data():
         result = await db.execute(select(CronJob))
         jobs = result.scalars().all()
         for job in jobs:
-            assert hasattr(job, 'name')
-            assert hasattr(job, 'schedule')
-            assert hasattr(job, 'status')
-            assert hasattr(job, 'is_active')
+            assert hasattr(job, "name")
+            assert hasattr(job, "schedule")
+            assert hasattr(job, "status")
+            assert hasattr(job, "is_active")
             print(f"   ✅ Job: {job.name} ({job.schedule})")
 
 
@@ -102,18 +98,20 @@ async def test_service_methods():
 
         # Test get_stats
         stats = await service.get_stats()
-        assert hasattr(stats, 'total_jobs')
-        assert hasattr(stats, 'active_jobs')
-        assert hasattr(stats, 'total_executions_today')
+        assert hasattr(stats, "total_jobs")
+        assert hasattr(stats, "active_jobs")
+        assert hasattr(stats, "total_executions_today")
         assert stats.total_jobs > 0
-        print(f"   ✅ get_stats() returned stats: {stats.total_jobs} jobs, {stats.total_executions_today} executions today")
+        print(
+            f"   ✅ get_stats() returned stats: {stats.total_jobs} jobs, {stats.total_executions_today} executions today"
+        )
 
         # Test run_job
         if jobs:
             result = await service.run_job(jobs[0].id)
-            assert 'status' in result
-            assert 'execution_id' in result
-            assert result['status'] == 'started'
+            assert "status" in result
+            assert "execution_id" in result
+            assert result["status"] == "started"
             print(f"   ✅ run_job() returned: {result}")
 
 
@@ -135,9 +133,7 @@ async def test_statistics():
 
         # Calculate expected success rate manually
         result = await db.execute(
-            select(func.count(CronExecution.id)).where(
-                CronExecution.status == "success"
-            )
+            select(func.count(CronExecution.id)).where(CronExecution.status == "success")
         )
         success_count = result.scalar()
 
@@ -173,8 +169,8 @@ async def test_foreign_keys():
             if execs:
                 exec = execs[0]
                 assert exec.job_id == job.id
-                assert hasattr(exec, 'status')
-                assert hasattr(exec, 'started_at')
+                assert hasattr(exec, "status")
+                assert hasattr(exec, "started_at")
                 print(f"   ✅ Foreign key relationship works: Job {job.id} -> Execution {exec.id}")
 
 
@@ -202,6 +198,7 @@ async def main():
     except Exception as e:
         print(f"\n❌ UNEXPECTED ERROR: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

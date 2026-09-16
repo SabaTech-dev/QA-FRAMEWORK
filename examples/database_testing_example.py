@@ -43,7 +43,7 @@ async def example_sql_validation():
         # Query with potential performance issues
         "SELECT * FROM users WHERE name LIKE '%john%'",
         # Query with security issues
-        "SELECT * FROM users WHERE id = " + "1 OR 1=1",
+        "SELECT * FROM users WHERE id = " + "1 OR 1=1",  # nosec B608 — deliberate injection demo, never executed
         # Query with syntax error (unclosed quote)
         "SELECT * FROM users WHERE name = 'john",
     ]

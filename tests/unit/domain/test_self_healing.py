@@ -92,7 +92,7 @@ class TestHealingContext:
         context = HealingContext(
             page_url="https://example.com/page",
             page_title="Test Page",
-            screenshot_path="/tmp/screenshot.png",
+            screenshot_path="/tmp/screenshot.png",  # nosec B108 — inert test fixture, no file I/O
             html_snapshot="<html>...</html>",
             surrounding_text="Click here",
             element_attributes={"id": "btn", "class": "button"},
