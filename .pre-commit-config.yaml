@@ -12,10 +12,11 @@ repos:
         args: ['--config', '.semgrep.yml', '--error']
 
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.6
+    rev: 1.9.4
     hooks:
       - id: bandit
-        args: ['-r', 'src', '-f', 'json']
+        args: ['-f', 'screen']
+        files: '\.py$'
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
