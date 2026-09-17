@@ -448,13 +448,13 @@ jobs:
   # maps one, container IP otherwise (runner shares the docker host).
   # ========================================
   e2e-preview:
-    name: E2E Preview Smoke
+    name: E2E Preview (full suite)
     needs: [deploy-backend-preview, deploy-frontend-preview]
     runs-on: [self-hosted, coolify-deploy]
     permissions:
       contents: read
     if: github.event_name == 'pull_request' && github.event.action != 'closed' && vars.COOLIFY_CONFIGURED == 'true'
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -497,10 +497,10 @@ jobs:
         working-directory: dashboard/frontend
         run: npx playwright install chromium
 
-      - name: Run smoke regression suite against preview
+      - name: Run full regression suite against preview
         working-directory: dashboard/frontend
         # Confluence: playwright.config usa E2E_BASE_URL (sin webServer local)
-        run: npx playwright test e2e/smoke.spec.ts --reporter=html
+        run: npx playwright test --reporter=html
         env:
           CI: true
 
@@ -513,6 +513,76 @@ jobs:
             dashboard/frontend/playwright-report/
             dashboard/frontend/test-results/
           retention-days: 7
+
+  # ========================================
+  # Política "single-latest preview" (instrucción Joker, 17-sep): cuando se
+  # redeploya una preview se corre el testing COMPLETO contra ella y solo si
+  # todo pasa se borra la anterior. Este job necesita deploy backend+frontend
+  # y e2e-preview (suite completa) en verde: si algo falla, se salta y las
+  # previews anteriores siguen vivas. Deja una sola preview: la de este PR.
+  # ========================================
+  cleanup-previous-previews:
+    name: Cleanup Previous Previews (single-latest policy)
+    needs: [deploy-backend-preview, deploy-frontend-preview, e2e-preview]
+    runs-on: [self-hosted, coolify-deploy]
+    permissions:
+      contents: read
+      pull-requests: write
+    if: github.event_name == 'pull_request' && github.event.action != 'closed' && vars.COOLIFY_CONFIGURED == 'true'
+    steps:
+      - name: Delete every previous preview app + image (keep this PR only)
+        env:
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          TOK: ${{ secrets.COOLIFY_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          HDR="${PWD}/.coolify_hdr"
+          umask 077
+          printf 'Authorization: Bearer %s\n' "${TOK}" > "${HDR}"
+          api() { curl -sS -H "@${HDR}" -H 'Content-Type: application/json' "$@"; }
+          api "${COOLIFY_URL}/api/v1/applications" |
+            jq -r '.[] | select(.name | test("^qa-framework-(backend|frontend)-pr-[0-9]+$")) | .name + " " + .uuid' |
+          while read -r NAME UUID; do
+            case "${NAME}" in
+              *-pr-"${PR_NUMBER}") echo "KEEP ${NAME} (preview actual)"; continue ;;
+            esac
+            echo "POLICY single-latest: borrando preview anterior ${NAME} (${UUID})..."
+            CODE=$(curl -sS -o /dev/null -w '%{http_code}' -H "@${HDR}" -X DELETE "${COOLIFY_URL}/api/v1/applications/${UUID}?delete_volumes=false&delete_connected_networks=false&delete_configurations=true&docker_cleanup=false")
+            if [ "${CODE}" != "200" ]; then echo "ERROR delete ${NAME}: HTTP ${CODE}"; exit 1; fi
+            STILL="1"
+            for i in $(seq 1 24); do
+              STILL=$(api "${COOLIFY_URL}/api/v1/applications" | jq -r --arg n "${NAME}" '[.[] | select(.name==$n)] | length')
+              if [ "${STILL}" = "0" ]; then break; fi
+              sleep 5
+            done
+            if [ "${STILL}" != "0" ]; then echo "ERROR: ${NAME} sigue presente tras 120s"; exit 1; fi
+            echo "REMOVED ${NAME}"
+          done
+          rm -f "${HDR}"
+          for REPO in $(docker images --format '{{.Repository}}' | grep -E "^${REGISTRY}/qa-framework-(backend|frontend)-pr-[0-9]+$" | sort -u); do
+            case "${REPO}" in
+              *-pr-"${PR_NUMBER}") continue ;;
+            esac
+            echo "rmi imágenes de ${REPO}..."
+            docker images --format '{{.Repository}}:{{.Tag}}' | grep "^${REPO}:" | xargs -r docker rmi >/dev/null 2>&1 || true
+          done
+          echo "Política single-latest aplicada: solo vive la preview de PR#${PR_NUMBER}"
+
+      - name: Comment PR with single-latest policy result
+        if: always()
+        continue-on-error: true
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const pr = context.issue.number;
+            const message = `## 🧹 Single-latest preview policy\n\nTesting completo en verde sobre la preview de PR #${pr} → previews anteriores eliminadas (apps Coolify + imágenes del registry local). Solo queda viva la más nueva.`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr,
+              body: message
+            });
 
   # Cleanup Preview Deployments on PR Close — fail loud (sin continue-on-error).
   cleanup-previews:
