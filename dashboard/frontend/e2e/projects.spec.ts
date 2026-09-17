@@ -8,7 +8,7 @@ test.describe('Project Management Flow', () => {
     await inputs.nth(0).fill('Joker');
     await inputs.nth(1).fill('Joker123!');
     await page.click('button:has-text("Login")');
-    await page.waitForTimeout(3000);
+    await page.waitForURL(/\/(dashboard|onboarding)/, { timeout: 15000 });
   });
 
   test('Navigate to Test Suites page', async ({ page }) => {
@@ -20,12 +20,12 @@ test.describe('Project Management Flow', () => {
   test('Create new test suite', { lock: 'suites' }, async ({ page }) => {
     await page.click('text=Test Suites');
     await page.waitForURL('**/suites');
-    
+
     // Click create button
     const createBtn = page.locator('button:has-text("Create"), button:has-text("New Suite")');
     if (await createBtn.isVisible({ timeout: 2000 })) {
       await createBtn.click();
-      
+
       // Fill form
       const nameInput = page.locator('input[name="name"], input[placeholder*="name"]');
       if (await nameInput.isVisible({ timeout: 2000 })) {
@@ -39,13 +39,13 @@ test.describe('Project Management Flow', () => {
   test('Create test case in suite', { lock: 'suites' }, async ({ page }) => {
     await page.click('text=Test Suites');
     await page.waitForURL('**/suites');
-    
+
     // Click on a suite
     const suiteCard = page.locator('[data-testid=suite-card], .suite-card').first();
     if (await suiteCard.isVisible({ timeout: 2000 })) {
       await suiteCard.click();
       await page.waitForTimeout(1000);
-      
+
       // Create test case
       const addTestBtn = page.locator('button:has-text("Add Test"), button:has-text("New Test")');
       if (await addTestBtn.isVisible({ timeout: 2000 })) {

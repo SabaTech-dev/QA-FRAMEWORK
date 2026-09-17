@@ -1,7 +1,11 @@
 import axios, { type AxiosResponse } from 'axios'
 import useAuthStore from '../stores/authStore'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
+// Relative by default: same-origin requests go through the dev/preview
+// server proxy (vite.config server.proxy), so deployments (Coolify previews)
+// only need BACKEND_URL on the frontend container — no CORS, no hardcoded
+// absolute URL baked into the browser bundle.
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1'
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -43,7 +47,7 @@ export default apiClient
 export const authAPI = {
   login: (username: string, password: string) =>
     apiClient.post('/auth/login', { username, password }),
-  
+
   register: (data: {
     username: string
     email: string
@@ -51,73 +55,73 @@ export const authAPI = {
     firstName?: string
     lastName?: string
   }) => apiClient.post('/users', data),
-  
+
   getMe: () => apiClient.get('/me'),
-  
+
   forgotPassword: (email: string) =>
     apiClient.post('/auth/forgot-password', { email }),
-  
+
   resetPassword: (token: string, password: string) =>
     apiClient.post('/auth/reset-password', { token, password }),
-  
+
   verifyEmail: (email: string, code: string) =>
     apiClient.post('/auth/verify-email', { email, code }),
-  
+
   updateProfile: (data: any) =>
     apiClient.put('/me', data),
-  
+
   changePassword: (oldPassword: string, newPassword: string) =>
     apiClient.post('/auth/change-password', { oldPassword, newPassword }),
 }
 
 export const suitesAPI = {
-  getAll: (skip = 0, limit = 100) => 
+  getAll: (skip = 0, limit = 100) =>
     apiClient.get('/suites', { params: { skip, limit } }),
-  
-  getById: (id: number) => 
+
+  getById: (id: number) =>
     apiClient.get(`/suites/${id}`),
-  
-  create: (data: any) => 
+
+  create: (data: any) =>
     apiClient.post('/suites', data),
-  
-  update: (id: number, data: any) => 
+
+  update: (id: number, data: any) =>
     apiClient.put(`/suites/${id}`, data),
-  
-  delete: (id: number) => 
+
+  delete: (id: number) =>
     apiClient.delete(`/suites/${id}`),
 }
 
 export const casesAPI = {
-  getAll: (suiteId?: number, skip = 0, limit = 100) => 
+  getAll: (suiteId?: number, skip = 0, limit = 100) =>
     apiClient.get('/cases', { params: { suite_id: suiteId, skip, limit } }),
-  
-  getById: (id: number) => 
+
+  getById: (id: number) =>
     apiClient.get(`/cases/${id}`),
-  
-  create: (data: any) => 
+
+  create: (data: any) =>
     apiClient.post('/cases', data),
-  
-  update: (id: number, data: any) => 
+
+  update: (id: number, data: any) =>
     apiClient.put(`/cases/${id}`, data),
-  
-  delete: (id: number) => 
+
+  delete: (id: number) =>
     apiClient.delete(`/cases/${id}`),
 }
 
 export const executionsAPI = {
-  getAll: (suiteId?: number, status?: string, skip = 0, limit = 100) => 
+  getAll: (suiteId?: number, status?: string, skip = 0, limit = 100) =>
     apiClient.get('/executions', { params: { suite_id: suiteId, status, skip, limit } }),
-  
-  getById: (id: number) => 
+
+  getById: (id: number) =>
     apiClient.get(`/executions/${id}`),
-  
-  create: (data: any) => 
+
+  create: (data: any) =>
     apiClient.post('/executions', data),
-  
-  start: (id: number) => 
+
+  start: (id: number) =>
     apiClient.post(`/executions/${id}/start`),
-  
-  stop: (id: number) => 
+
+  stop: (id: number) =>
     apiClient.post(`/executions/${id}/stop`),
 }
 

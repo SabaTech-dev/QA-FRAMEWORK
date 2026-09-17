@@ -346,6 +346,14 @@ jobs:
           SERVER_UUID=$(api "${COOLIFY_URL}/api/v1/servers" | jq -r '.[0].uuid')
           PROJECT_UUID=$(api "${COOLIFY_URL}/api/v1/projects" | jq -r '.[0].uuid')
           APP_UUID=$(api "${COOLIFY_URL}/api/v1/applications" | jq -r --arg n "${APP}" '.[] | select(.name==$n) | .uuid' | head -1)
+          # URL del backend preview de ESTE run: el browser habla same-origin
+          # /api -> vite proxy -> BACKEND_URL (env runtime del contenedor FE).
+          BE_CID=$(docker ps -q --filter "ancestor=${REGISTRY}/qa-framework-backend-pr-${PR_NUMBER}:${IMG_TAG}" | head -1)
+          [ -n "${BE_CID}" ] || { echo "ERROR: contenedor backend preview no encontrado"; exit 1; }
+          BACKEND_URL="http://$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${BE_CID}"):8000"
+          BE_PORT=$(docker port "${BE_CID}" 8000/tcp 2>/dev/null | head -1 | awk -F: '{print $NF}' || true)
+          if [ -n "${BE_PORT}" ]; then BACKEND_URL="http://127.0.0.1:${BE_PORT}"; fi
+          echo "BACKEND_URL=${BACKEND_URL}"
           if [ -z "${APP_UUID}" ]; then
             echo "Creando app ${APP} en Coolify..."
             RESP=$(api -X POST "${COOLIFY_URL}/api/v1/applications/dockerimage" -d "{\"project_uuid\":\"${PROJECT_UUID}\",\"server_uuid\":\"${SERVER_UUID}\",\"environment_name\":\"production\",\"name\":\"${APP}\",\"docker_registry_image_name\":\"${IMG}\",\"docker_registry_image_tag\":\"${IMG_TAG}\",\"ports_exposes\":\"3000\"}")
@@ -354,6 +362,12 @@ jobs:
           else
             echo "App ${APP} ya existe (${APP_UUID}); actualizando tag a ${IMG_TAG}..."
             api -X PATCH "${COOLIFY_URL}/api/v1/applications/${APP_UUID}" -d "{\"docker_registry_image_tag\":\"${IMG_TAG}\"}" >/dev/null
+          fi
+          # Inyectar/actualizar BACKEND_URL en la app FE (vite proxy la lee en runtime)
+          ENVCODE=$(curl -sS -o /tmp/fe_env_resp.json -w '%{http_code}' -H "@${HDR}" -X POST "${COOLIFY_URL}/api/v1/applications/${APP_UUID}/envs" -H 'Content-Type: application/json' -d "{\"key\":\"BACKEND_URL\",\"value\":\"${BACKEND_URL}\"}")
+          if [ "${ENVCODE}" != "200" ] && [ "${ENVCODE}" != "201" ]; then
+            echo "POST env -> HTTP ${ENVCODE} (ya existe? actualizando via bulk PATCH...)"
+            api -X PATCH "${COOLIFY_URL}/api/v1/applications/${APP_UUID}/envs/bulk" -d "{\"data\":[{\"key\":\"BACKEND_URL\",\"value\":\"${BACKEND_URL}\"}]}" >/dev/null
           fi
           echo "Iniciando deploy (POST /start)..."
           api -X POST "${COOLIFY_URL}/api/v1/applications/${APP_UUID}/start" | jq -r '.message // "start enviado"' || true
@@ -487,6 +501,37 @@ jobs:
 
       - name: Backend /health probe (preview, from runner host)
         run: curl -fsS --retry 5 --retry-delay 3 --max-time 10 "$E2E_API_URL/health"
+
+      - name: Seed preview user for E2E (fresh DB has no accounts)
+        # La preview arranca con DB fresca sin usuarios: auth.spec /
+        # execution.spec hacen login real (Joker/Joker123!). Registro
+        # idempotente via API — 409/400 = ya existe.
+        run: |
+          set -euo pipefail
+          CODE=$(curl -sS -o /tmp/register.json -w '%{http_code}' -X POST "$E2E_API_URL/api/v1/auth/register" \
+            -H 'Content-Type: application/json' \
+            -d '{"username":"Joker","email":"joker@example.com","password":"Joker123!"}')
+          echo "register Joker -> HTTP ${CODE}: $(cat /tmp/register.json)"
+          case "${CODE}" in
+            200|201) echo "usuario seed creado" ;;
+            409|400) echo "usuario seed ya existe (idempotente, ok)" ;;
+            *) echo "::error::seed del usuario E2E fallo (HTTP ${CODE})"; exit 1 ;;
+          esac
+          # Completar onboarding: sin esto, el wizard bloquea el sidebar y
+          # los specs de navegación (executions/projects/export) no encuentran
+          # los links. Login via API + POST /onboarding/skip (idempotente).
+          TOKEN=$(curl -sS -X POST "$E2E_API_URL/api/v1/auth/login" \
+            -H 'Content-Type: application/json' \
+            -d '{"username":"Joker","password":"Joker123!"}' | jq -r '.access_token // empty')
+          [ -n "${TOKEN}" ] || { echo "::error::login del usuario seed fallo"; exit 1; }
+          SKIP=$(curl -sS -o /tmp/onboarding.json -w '%{http_code}' -X POST "$E2E_API_URL/api/v1/onboarding/skip" \
+            -H "Authorization: Bearer ${TOKEN}" -H 'Content-Type: application/json' -d '{}')
+          echo "onboarding/skip -> HTTP ${SKIP}: $(cat /tmp/onboarding.json)"
+          case "${SKIP}" in
+            200|201) echo "onboarding completado (skip)" ;;
+            409|400) echo "onboarding ya completado (idempotente, ok)" ;;
+            *) echo "::error::skip de onboarding fallo (HTTP ${SKIP})"; exit 1 ;;
+          esac
 
       - name: Install dependencies
         working-directory: dashboard/frontend
