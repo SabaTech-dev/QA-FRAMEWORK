@@ -303,7 +303,10 @@ jobs:
 
   deploy-frontend-preview:
     name: Deploy Frontend Preview
-    needs: security-gate
+    # Serializado tras el backend: este job inyecta BACKEND_URL apuntando al
+    # contenedor backend de ESTE run (filtro por IMG_TAG) — en paralelo el
+    # backend aun corre la imagen del run anterior y el filtro no matchea.
+    needs: deploy-backend-preview
     runs-on: [self-hosted, coolify-deploy]
     permissions:
       contents: read
