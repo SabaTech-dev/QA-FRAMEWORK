@@ -16,7 +16,9 @@ export default defineConfig({
     allowedHosts: ['qa.sabatech.dev', 'qa-framework.sabatech.dev', 'api.qa.sabatech.dev', 'localhost'],
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        // BACKEND_URL: injected at runtime by preview deployments (Coolify
+        // env on the frontend container) to reach the paired backend preview.
+        target: process.env.BACKEND_URL || 'http://localhost:8000',
         changeOrigin: true,
       },
     },

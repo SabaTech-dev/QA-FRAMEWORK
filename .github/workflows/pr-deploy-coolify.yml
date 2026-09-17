@@ -303,7 +303,10 @@ jobs:
 
   deploy-frontend-preview:
     name: Deploy Frontend Preview
-    needs: security-gate
+    # Serializado tras el backend: este job inyecta BACKEND_URL apuntando al
+    # contenedor backend de ESTE run (filtro por IMG_TAG) — en paralelo el
+    # backend aun corre la imagen del run anterior y el filtro no matchea.
+    needs: deploy-backend-preview
     runs-on: [self-hosted, coolify-deploy]
     permissions:
       contents: read
@@ -346,6 +349,14 @@ jobs:
           SERVER_UUID=$(api "${COOLIFY_URL}/api/v1/servers" | jq -r '.[0].uuid')
           PROJECT_UUID=$(api "${COOLIFY_URL}/api/v1/projects" | jq -r '.[0].uuid')
           APP_UUID=$(api "${COOLIFY_URL}/api/v1/applications" | jq -r --arg n "${APP}" '.[] | select(.name==$n) | .uuid' | head -1)
+          # URL del backend preview de ESTE run: el browser habla same-origin
+          # /api -> vite proxy -> BACKEND_URL (env runtime del contenedor FE).
+          BE_CID=$(docker ps -q --filter "ancestor=${REGISTRY}/qa-framework-backend-pr-${PR_NUMBER}:${IMG_TAG}" | head -1)
+          [ -n "${BE_CID}" ] || { echo "ERROR: contenedor backend preview no encontrado"; exit 1; }
+          BACKEND_URL="http://$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${BE_CID}"):8000"
+          BE_PORT=$(docker port "${BE_CID}" 8000/tcp 2>/dev/null | head -1 | awk -F: '{print $NF}' || true)
+          if [ -n "${BE_PORT}" ]; then BACKEND_URL="http://127.0.0.1:${BE_PORT}"; fi
+          echo "BACKEND_URL=${BACKEND_URL}"
           if [ -z "${APP_UUID}" ]; then
             echo "Creando app ${APP} en Coolify..."
             RESP=$(api -X POST "${COOLIFY_URL}/api/v1/applications/dockerimage" -d "{\"project_uuid\":\"${PROJECT_UUID}\",\"server_uuid\":\"${SERVER_UUID}\",\"environment_name\":\"production\",\"name\":\"${APP}\",\"docker_registry_image_name\":\"${IMG}\",\"docker_registry_image_tag\":\"${IMG_TAG}\",\"ports_exposes\":\"3000\"}")
@@ -354,6 +365,12 @@ jobs:
           else
             echo "App ${APP} ya existe (${APP_UUID}); actualizando tag a ${IMG_TAG}..."
             api -X PATCH "${COOLIFY_URL}/api/v1/applications/${APP_UUID}" -d "{\"docker_registry_image_tag\":\"${IMG_TAG}\"}" >/dev/null
+          fi
+          # Inyectar/actualizar BACKEND_URL en la app FE (vite proxy la lee en runtime)
+          ENVCODE=$(curl -sS -o /tmp/fe_env_resp.json -w '%{http_code}' -H "@${HDR}" -X POST "${COOLIFY_URL}/api/v1/applications/${APP_UUID}/envs" -H 'Content-Type: application/json' -d "{\"key\":\"BACKEND_URL\",\"value\":\"${BACKEND_URL}\"}")
+          if [ "${ENVCODE}" != "200" ] && [ "${ENVCODE}" != "201" ]; then
+            echo "POST env -> HTTP ${ENVCODE} (ya existe? actualizando via bulk PATCH...)"
+            api -X PATCH "${COOLIFY_URL}/api/v1/applications/${APP_UUID}/envs/bulk" -d "{\"data\":[{\"key\":\"BACKEND_URL\",\"value\":\"${BACKEND_URL}\"}]}" >/dev/null
           fi
           echo "Iniciando deploy (POST /start)..."
           api -X POST "${COOLIFY_URL}/api/v1/applications/${APP_UUID}/start" | jq -r '.message // "start enviado"' || true
@@ -448,13 +465,13 @@ jobs:
   # maps one, container IP otherwise (runner shares the docker host).
   # ========================================
   e2e-preview:
-    name: E2E Preview Smoke
+    name: E2E Preview (full suite)
     needs: [deploy-backend-preview, deploy-frontend-preview]
     runs-on: [self-hosted, coolify-deploy]
     permissions:
       contents: read
     if: github.event_name == 'pull_request' && github.event.action != 'closed' && vars.COOLIFY_CONFIGURED == 'true'
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -488,6 +505,37 @@ jobs:
       - name: Backend /health probe (preview, from runner host)
         run: curl -fsS --retry 5 --retry-delay 3 --max-time 10 "$E2E_API_URL/health"
 
+      - name: Seed preview user for E2E (fresh DB has no accounts)
+        # La preview arranca con DB fresca sin usuarios: auth.spec /
+        # execution.spec hacen login real (Joker/Joker123!). Registro
+        # idempotente via API — 409/400 = ya existe.
+        run: |
+          set -euo pipefail
+          CODE=$(curl -sS -o /tmp/register.json -w '%{http_code}' -X POST "$E2E_API_URL/api/v1/auth/register" \
+            -H 'Content-Type: application/json' \
+            -d '{"username":"Joker","email":"joker@example.com","password":"Joker123!"}')
+          echo "register Joker -> HTTP ${CODE}: $(cat /tmp/register.json)"
+          case "${CODE}" in
+            200|201) echo "usuario seed creado" ;;
+            409|400) echo "usuario seed ya existe (idempotente, ok)" ;;
+            *) echo "::error::seed del usuario E2E fallo (HTTP ${CODE})"; exit 1 ;;
+          esac
+          # Completar onboarding: sin esto, el wizard bloquea el sidebar y
+          # los specs de navegación (executions/projects/export) no encuentran
+          # los links. Login via API + POST /onboarding/skip (idempotente).
+          TOKEN=$(curl -sS -X POST "$E2E_API_URL/api/v1/auth/login" \
+            -H 'Content-Type: application/json' \
+            -d '{"username":"Joker","password":"Joker123!"}' | jq -r '.access_token // empty')
+          [ -n "${TOKEN}" ] || { echo "::error::login del usuario seed fallo"; exit 1; }
+          SKIP=$(curl -sS -o /tmp/onboarding.json -w '%{http_code}' -X POST "$E2E_API_URL/api/v1/onboarding/skip" \
+            -H "Authorization: Bearer ${TOKEN}" -H 'Content-Type: application/json' -d '{}')
+          echo "onboarding/skip -> HTTP ${SKIP}: $(cat /tmp/onboarding.json)"
+          case "${SKIP}" in
+            200|201) echo "onboarding completado (skip)" ;;
+            409|400) echo "onboarding ya completado (idempotente, ok)" ;;
+            *) echo "::error::skip de onboarding fallo (HTTP ${SKIP})"; exit 1 ;;
+          esac
+
       - name: Install dependencies
         working-directory: dashboard/frontend
         # --legacy-peer-deps: TS7 vs typescript-eslint peers (mismo fix que Dockerfiles en 4c5db53)
@@ -497,10 +545,10 @@ jobs:
         working-directory: dashboard/frontend
         run: npx playwright install chromium
 
-      - name: Run smoke regression suite against preview
+      - name: Run full regression suite against preview
         working-directory: dashboard/frontend
         # Confluence: playwright.config usa E2E_BASE_URL (sin webServer local)
-        run: npx playwright test e2e/smoke.spec.ts --reporter=html
+        run: npx playwright test --reporter=html
         env:
           CI: true
 
@@ -513,6 +561,76 @@ jobs:
             dashboard/frontend/playwright-report/
             dashboard/frontend/test-results/
           retention-days: 7
+
+  # ========================================
+  # Política "single-latest preview" (instrucción Joker, 17-sep): cuando se
+  # redeploya una preview se corre el testing COMPLETO contra ella y solo si
+  # todo pasa se borra la anterior. Este job necesita deploy backend+frontend
+  # y e2e-preview (suite completa) en verde: si algo falla, se salta y las
+  # previews anteriores siguen vivas. Deja una sola preview: la de este PR.
+  # ========================================
+  cleanup-previous-previews:
+    name: Cleanup Previous Previews (single-latest policy)
+    needs: [deploy-backend-preview, deploy-frontend-preview, e2e-preview]
+    runs-on: [self-hosted, coolify-deploy]
+    permissions:
+      contents: read
+      pull-requests: write
+    if: github.event_name == 'pull_request' && github.event.action != 'closed' && vars.COOLIFY_CONFIGURED == 'true'
+    steps:
+      - name: Delete every previous preview app + image (keep this PR only)
+        env:
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          TOK: ${{ secrets.COOLIFY_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          HDR="${PWD}/.coolify_hdr"
+          umask 077
+          printf 'Authorization: Bearer %s\n' "${TOK}" > "${HDR}"
+          api() { curl -sS -H "@${HDR}" -H 'Content-Type: application/json' "$@"; }
+          api "${COOLIFY_URL}/api/v1/applications" |
+            jq -r '.[] | select(.name | test("^qa-framework-(backend|frontend)-pr-[0-9]+$")) | .name + " " + .uuid' |
+          while read -r NAME UUID; do
+            case "${NAME}" in
+              *-pr-"${PR_NUMBER}") echo "KEEP ${NAME} (preview actual)"; continue ;;
+            esac
+            echo "POLICY single-latest: borrando preview anterior ${NAME} (${UUID})..."
+            CODE=$(curl -sS -o /dev/null -w '%{http_code}' -H "@${HDR}" -X DELETE "${COOLIFY_URL}/api/v1/applications/${UUID}?delete_volumes=false&delete_connected_networks=false&delete_configurations=true&docker_cleanup=false")
+            if [ "${CODE}" != "200" ]; then echo "ERROR delete ${NAME}: HTTP ${CODE}"; exit 1; fi
+            STILL="1"
+            for i in $(seq 1 24); do
+              STILL=$(api "${COOLIFY_URL}/api/v1/applications" | jq -r --arg n "${NAME}" '[.[] | select(.name==$n)] | length')
+              if [ "${STILL}" = "0" ]; then break; fi
+              sleep 5
+            done
+            if [ "${STILL}" != "0" ]; then echo "ERROR: ${NAME} sigue presente tras 120s"; exit 1; fi
+            echo "REMOVED ${NAME}"
+          done
+          rm -f "${HDR}"
+          for REPO in $(docker images --format '{{.Repository}}' | grep -E "^${REGISTRY}/qa-framework-(backend|frontend)-pr-[0-9]+$" | sort -u); do
+            case "${REPO}" in
+              *-pr-"${PR_NUMBER}") continue ;;
+            esac
+            echo "rmi imágenes de ${REPO}..."
+            docker images --format '{{.Repository}}:{{.Tag}}' | grep "^${REPO}:" | xargs -r docker rmi >/dev/null 2>&1 || true
+          done
+          echo "Política single-latest aplicada: solo vive la preview de PR#${PR_NUMBER}"
+
+      - name: Comment PR with single-latest policy result
+        if: always()
+        continue-on-error: true
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const pr = context.issue.number;
+            const message = `## 🧹 Single-latest preview policy\n\nTesting completo en verde sobre la preview de PR #${pr} → previews anteriores eliminadas (apps Coolify + imágenes del registry local). Solo queda viva la más nueva.`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr,
+              body: message
+            });
 
   # Cleanup Preview Deployments on PR Close — fail loud (sin continue-on-error).
   cleanup-previews:
