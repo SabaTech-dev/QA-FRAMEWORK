@@ -3,7 +3,8 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Card 3a64f98b (17-sep): apt upgrade → deb13u1 — limpia perl CRIT CVE-2026-13221/42496/8376 (SBOM 16-sep)
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
@@ -28,3 +29,5 @@ EXPOSE 8000
 
 # Run the application
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Protected from Coolify DockerCleanupJob (incident run 105, 18-sep — GO Joker (a))
+LABEL coolify.managed=true

@@ -42,3 +42,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 # Run uvicorn - use shell form for $PORT expansion
 CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+
+# Protected from Coolify DockerCleanupJob (incident run 105, 18-sep — GO Joker (a))
+LABEL coolify.managed=true
