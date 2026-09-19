@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   # ==================== DASHBOARD SERVICES ====================
-  
+
   # Backend API
   backend:
     build:
@@ -132,7 +132,7 @@ services:
     restart: "no"
 
   # ==================== MONITORING SERVICES ====================
-  
+
   # Prometheus
   prometheus:
     image: prom/prometheus:v2.45.0
@@ -151,7 +151,7 @@ services:
 
   # Grafana
   grafana:
-    image: grafana/grafana:10.0.0
+    image: grafana/grafana:11.6.0
     container_name: qa-framework-grafana
     environment:
       - GF_SECURITY_ADMIN_USER=admin
