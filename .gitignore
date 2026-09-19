@@ -77,3 +77,6 @@ site/
 
 # Vestigial npm lockfile (dashboard/ has no npm deps — real one lives in dashboard/frontend/)
 /dashboard/package-lock.json
+
+# Agent tooling cache (skill-registry) — benigno, nunca commit
+.atl/
