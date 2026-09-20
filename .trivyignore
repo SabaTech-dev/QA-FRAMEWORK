@@ -23,3 +23,5 @@ CVE-2024-24790 # esbuild binary (Go stdlib) in frontend image — build-time too
 CVE-2025-68121 # esbuild binary (Go stdlib) in frontend image — build-time tool, no runtime exposure. devops 2026-08-25
 # exp: 2026-11-23
 CVE-2025-47241 # browser_use 0.1.8 (backend image) — upgrade path tracked; 90d window. devops 2026-08-25
+# exp: 2026-12-20
+CVE-2026-63374 # anyio 4.12.1 (backend image) — fix ≥4.14.2 BLOQUEADO: browser-use 0.13.x (latest 0.13.10; TODAS las 0.13.*) clava anyio==4.12.1 exacto → override = ResolutionImpossible; browser-use es runtime (BrowserUseService, import real forzado en tests) y no existe release superior. Issue upstream + card de seguimiento; waiver 90d hasta browser-use con anyio≥4.14.2. devops 2026-09-21 (card be003c28)
