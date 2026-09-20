@@ -46,9 +46,7 @@ async def create_execution_service(
 
     if not suite:
         logger.error("Test suite not found", suite_id=execution_data.suite_id)
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Test suite not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test suite not found")
 
     # Create execution
     db_execution = TestExecution(
@@ -144,9 +142,7 @@ async def run_tests(execution_id: int, db: AsyncSession):
         skipped = 0
 
         for detail in execution.details:
-            test_case = await db.execute(
-                select(TestCase).where(TestCase.id == detail.test_case_id)
-            )
+            test_case = await db.execute(select(TestCase).where(TestCase.id == detail.test_case_id))
             test = test_case.scalar_one()
 
             logger.info(
@@ -200,12 +196,48 @@ async def run_tests(execution_id: int, db: AsyncSession):
 
             await db.commit()
 
+        # Anti false-green meta-check: "never ran" is a failure, not a pass.
+        # A suite that executed 0 assertions (empty suite, all tests inactive,
+        # or everything skipped) must fail explicitly instead of reporting a
+        # green completion (card a34a1b5c, Anthropic 0/0-parser postmortem class).
+        executed = passed + failed
+        if executed == 0:
+            execution.status = "failed"
+            execution.ended_at = datetime.utcnow()
+            execution.duration = int((execution.ended_at - execution.started_at).total_seconds())
+            execution.passed_tests = passed
+            execution.failed_tests = failed
+            execution.skipped_tests = skipped
+            execution.results_summary = {
+                "total": execution.total_tests,
+                "passed": passed,
+                "failed": failed,
+                "skipped": skipped,
+                "error": (
+                    "QA meta-check failed: 0 assertions executed "
+                    f"(passed={passed}, failed={failed}, skipped={skipped}, "
+                    f"total={execution.total_tests}). "
+                    "Suite never ran — this is NOT a pass."
+                ),
+            }
+
+            await db.commit()
+
+            await cache_manager.invalidate_execution_cache(execution_id)
+            await cache_manager.invalidate_dashboard_cache()
+
+            logger.error(
+                "Test execution rejected: 0 assertions executed",
+                execution_id=execution_id,
+                total_tests=execution.total_tests,
+                skipped=skipped,
+            )
+            return
+
         # Update execution summary
         execution.status = "completed"
         execution.ended_at = datetime.utcnow()
-        execution.duration = int(
-            (execution.ended_at - execution.started_at).total_seconds()
-        )
+        execution.duration = int((execution.ended_at - execution.started_at).total_seconds())
         execution.passed_tests = passed
         execution.failed_tests = failed
         execution.skipped_tests = skipped
@@ -260,9 +292,7 @@ async def stop_execution_service(execution_id: int, db: AsyncSession) -> dict:
 
     execution.status = "stopped"
     execution.ended_at = datetime.utcnow()
-    execution.duration = int(
-        (execution.ended_at - execution.started_at).total_seconds()
-    )
+    execution.duration = int((execution.ended_at - execution.started_at).total_seconds())
 
     await db.commit()
 
@@ -296,16 +326,12 @@ async def list_executions_service(
     )
 
     # Generate cache key
-    cache_key = cache_manager.get_execution_list_key(
-        suite_id, status_filter, skip, limit
-    )
+    cache_key = cache_manager.get_execution_list_key(suite_id, status_filter, skip, limit)
 
     # Try to get from cache
     cached_executions = await cache_manager.async_get(cache_key)
     if cached_executions is not None:
-        logger.info(
-            "Test executions retrieved from cache", count=len(cached_executions)
-        )
+        logger.info("Test executions retrieved from cache", count=len(cached_executions))
         return cached_executions
 
     # Fetch from database
