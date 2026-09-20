@@ -13,7 +13,7 @@ export default defineConfig({
   server: {
     host: true,
     port: 3000,
-    allowedHosts: ['qa.sabatech.dev', 'qa-framework.sabatech.dev', 'api.qa.sabatech.dev', 'localhost'],
+    allowedHosts: ['qa.sabatech.dev', 'qa-framework.sabatech.dev', 'localhost'],
     proxy: {
       '/api': {
         // BACKEND_URL: injected at runtime by preview deployments (Coolify
