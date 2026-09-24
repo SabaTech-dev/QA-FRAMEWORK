@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   # ==================== DASHBOARD SERVICES ====================
-  
+
   # Backend API
   backend:
     build:
@@ -129,7 +129,7 @@ services:
     restart: "no"
 
   # ==================== MONITORING SERVICES ====================
-  
+
   # Prometheus
   prometheus:
     image: prom/prometheus:v2.45.0
@@ -148,11 +148,15 @@ services:
 
   # Grafana
   grafana:
-    image: grafana/grafana:10.0.0
+    # 11.6.0: upgrade 18-sep (card e18d452e) se aplicó FUERA del compose → línea stale en 10.0.0
+    # revirtió el contenedor al recrear (24-sep, card 09322faf). Ahora compose = verdad operativa.
+    image: grafana/grafana:11.6.0
     container_name: qa-framework-grafana
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      # Creds en .env (card 09322faf): password fuerte aplicada por API al live 24-sep;
+      # el env cubre fresh-volumes. Grafana solo aplica admin env en primer arranque.
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - ./dashboard/monitoring/grafana/provisioning:/etc/grafana/provisioning
