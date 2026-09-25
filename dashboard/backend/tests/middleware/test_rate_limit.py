@@ -180,7 +180,7 @@ class TestRateLimiter:
     
     @pytest.mark.asyncio
     async def test_redis_failure_fails_open(self, rate_limiter, mock_redis):
-        """Should allow request if Redis fails"""
+        """Should allow request if Redis fails (default open mode), flagged degraded"""
         mock_redis.zcard = AsyncMock(side_effect=Exception("Redis error"))
         
         is_allowed, info = await rate_limiter.is_allowed(
@@ -190,7 +190,102 @@ class TestRateLimiter:
         )
         
         assert is_allowed is True
-        assert "error" in info
+        assert info.get("degraded") is True
+        # Error details must stay server-side (S-3 discipline: no leakage)
+        assert "error" not in info
+
+
+class TestFailModeBehavior:
+    """Behavior on backing-store failure (card 4f9fb443, audit OBS-1)"""
+    
+    @pytest.fixture
+    def failing_redis(self):
+        redis = AsyncMock()
+        redis.zremrangebyscore = AsyncMock(side_effect=Exception("Event loop is closed"))
+        return redis
+    
+    @pytest.mark.asyncio
+    async def test_fail_open_marks_degraded(self, failing_redis):
+        """Open mode: request allowed, degraded flag set"""
+        limiter = RateLimiter(redis_client=failing_redis, fail_mode="open")
+        is_allowed, info = await limiter.is_allowed("user:1", "free", "/api/v1/test")
+        assert is_allowed is True
+        assert info.get("degraded") is True
+    
+    @pytest.mark.asyncio
+    async def test_fail_closed_denies(self, failing_redis):
+        """Closed mode: request denied, degraded flag set"""
+        limiter = RateLimiter(redis_client=failing_redis, fail_mode="closed")
+        is_allowed, info = await limiter.is_allowed("user:1", "free", "/api/v1/test")
+        assert is_allowed is False
+        assert info.get("degraded") is True
+    
+    @pytest.mark.asyncio
+    async def test_backend_failure_short_circuits_single_event(self, failing_redis):
+        """One backing-store failure per request: first redis error short-circuits"""
+        limiter = RateLimiter(redis_client=failing_redis, fail_mode="open")
+        await limiter.is_allowed("user:1", "pro", "/api/v1/auth/login")
+        # Endpoint limit bucket is the first check → exactly 1 redis call, not 3
+        assert failing_redis.zremrangebyscore.await_count == 1
+    
+    @pytest.mark.asyncio
+    async def test_failure_metric_incremented(self, failing_redis):
+        """Every backing-store failure increments the Prometheus counter"""
+        from prometheus_client import REGISTRY
+        
+        def sample(mode):
+            return REGISTRY.get_sample_value(
+                "rate_limit_backend_failures_total", {"fail_mode": mode}
+            ) or 0
+        
+        before_open = sample("open")
+        before_closed = sample("closed")
+        
+        await RateLimiter(redis_client=failing_redis, fail_mode="open").is_allowed(
+            "user:1", "free", "/api/v1/test")
+        await RateLimiter(redis_client=failing_redis, fail_mode="closed").is_allowed(
+            "user:1", "free", "/api/v1/test")
+        
+        assert sample("open") == before_open + 1
+        assert sample("closed") == before_closed + 1
+    
+    def test_invalid_fail_mode_falls_back_open(self, failing_redis):
+        """Unknown RATE_LIMIT_FAIL_MODE value falls back to open"""
+        limiter = RateLimiter(redis_client=failing_redis, fail_mode="yolo")
+        assert limiter.fail_mode == "open"
+    
+    def test_middleware_open_mode_200_with_degraded_header(self, failing_redis):
+        """Middleware: open mode keeps serving but exposes X-RateLimit-Mode: degraded"""
+        app = FastAPI()
+        app.add_middleware(
+            RateLimitMiddleware,
+            rate_limiter=RateLimiter(redis_client=failing_redis, fail_mode="open"),
+        )
+        
+        @app.get("/test")
+        async def test_endpoint():
+            return {"status": "ok"}
+        
+        response = TestClient(app).get("/test")
+        assert response.status_code == 200
+        assert response.headers.get("X-RateLimit-Mode") == "degraded"
+    
+    def test_middleware_closed_mode_503_no_leak(self, failing_redis):
+        """Middleware: closed mode returns 503 + Retry-After, no backend error leaked"""
+        app = FastAPI()
+        app.add_middleware(
+            RateLimitMiddleware,
+            rate_limiter=RateLimiter(redis_client=failing_redis, fail_mode="closed"),
+        )
+        
+        @app.get("/test")
+        async def test_endpoint():
+            return {"status": "ok"}
+        
+        response = TestClient(app).get("/test")
+        assert response.status_code == 503
+        assert response.headers.get("Retry-After") == "30"
+        assert "Event loop is closed" not in response.text
 
 
 class TestRateLimitMiddleware:
