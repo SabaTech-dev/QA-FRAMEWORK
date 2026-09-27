@@ -26,6 +26,12 @@ environment = os.getenv("ENVIRONMENT", "development")
 configure_logging(log_level=log_level, environment=environment)
 logger = get_logger(__name__)
 
+# Fail fast on invalid config: a typo in RATE_LIMIT_FAIL_MODE must never
+# silently degrade rate limiting (security advisory L-A, PR #106 follow-up).
+from middleware.rate_limit import validate_rate_limit_fail_mode  # noqa: E402
+
+validate_rate_limit_fail_mode()
+
 app = FastAPI(
     title="QA-Framework Dashboard API",
     description="API para la dashboard unificada de QA-FRAMEWORK",
