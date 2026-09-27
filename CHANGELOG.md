@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Rate-limit follow-ups (PR #106)**: Prometheus alert
+  `RateLimitBackendFailures` (`rate_limit_backend_failures_total > 0`,
+  severity warning) in the dashboard monitoring rules, with rule-validation
+  tests (`dashboard/backend/tests/monitoring/test_alert_rules.py`); startup
+  fail-fast validation of `RATE_LIMIT_FAIL_MODE` (invalid value crashes boot
+  with a clear error instead of silently failing open), wired in
+  `dashboard/backend/main.py` and covered by a CI step in
+  `.github/workflows/pr-checks.yml`; tests for the `check_rate_limit`
+  dependency 503/allow paths.
+
 - **QA Visual dashboard wiring (Fase C)**: the dashboard backend mounts the
   qa-visual router behind JWT auth (`Depends(get_current_user)`) — all five
   endpoints require authentication — **gated behind `QA_VISUAL_ENABLED=1`
@@ -18,6 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `dashboard/backend/src/infrastructure/qa_visual/` (Docker build context only
   ships `dashboard/backend`), guarded by a vendor-parity test that fails on
   drift between the two copies.
+
+### Removed
+
+- Dead code (0 imports, confirmed by reviewer + security + grep):
+  `dashboard/backend/middleware/granular_rate_limiting.py` (188 lines) and
+  `dashboard/backend/middleware/rate_limiting.py` (33 lines).
 
 ### Security
 
