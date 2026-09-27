@@ -3,6 +3,48 @@
 **Card:** b37d29c8 (TS 7.0 prep)
 **Fecha:** 2026-08-25 | **Autor:** Build Agent
 **Status:** Phase 1 done (TS 6.0.3 shipped in `chore/ts7-prep`)
+**Update 2026-09-27 (card 44e48149):** TS 7.0.2 landed 2026-09-03 via PR #212 — path complete, see final section.
+
+## Update 2026-09-27 — card 44e48149: status, fleet inventory, verification
+
+The 6.x bridge shipped 2026-08-25 (6.0.3) was superseded 2026-09-03 by PR #212
+(`feat(frontend): upgrade MUI 5→9, router 6→7, zustand 4→5, TS 7`), which took
+`dashboard/frontend` straight to `typescript@^7.0.2`. This section records the
+final state, the `--stableTypeOrdering` note requested by the card AC, and a
+fresh full-suite verification.
+
+### `--stableTypeOrdering` (the 6→7 escape hatch, for the record)
+
+On TS 6.x, `"stableTypeOrdering": true` in `tsconfig.json` opts into TS 7's
+type-argument ordering early, surfacing ordering-dependent inference diffs
+before the jump. We never enabled it: the jump went 6.0.3 (green `tsc`) →
+7.0.2 directly and stayed green, so the flag is moot here (on 7 the ordering
+is the default and the flag no longer exists). Any *other* project still on
+6.x should flip it for one release cycle before bumping. It is not present in
+our tsconfig — nothing to remove.
+
+### Verification on TS 7.0.2 (2026-09-27, node 26.x, from clean install)
+
+| Step | Result |
+|------|--------|
+| `npm ci --legacy-peer-deps --strict-allow-scripts` | OK |
+| `npm run build` (vite) | OK — 12164 modules |
+| `npx tsc --noEmit` | 0 errors |
+| `npm test -- --run` (vitest) | 83/83 passed, 11 files |
+
+Known caveat: `typescript-eslint@8.70.1` (latest) still peers
+`typescript >=4.8.4 <6.1.0`, so every install needs `--legacy-peer-deps`
+(already standard: `ci-cd.yml`, `e2e.yml`, `pr-deploy-coolify.yml`, Dockerfiles
+since 4c5db53). Track typescript-eslint's TS 7 support and drop the flag when
+it ships.
+
+### Fleet TypeScript inventory (card AC #1)
+
+| Project | package.json | installed | Notes |
+|---------|--------------|-----------|-------|
+| QA-FRAMEWORK `dashboard/frontend` | `^7.0.2` | 7.0.2 (npm lock v3) | this doc |
+| Alfred-Mission-Control | `^7.0.2` | 7.0.2 (pnpm) | no typescript-eslint dep — no peer conflict |
+| sabatech.dev | — | — | Astro static site, no direct typescript dep |
 
 ## Current state (after this PR)
 
