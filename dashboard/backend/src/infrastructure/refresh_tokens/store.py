@@ -51,6 +51,9 @@ class RefreshTokenStore:
     def _fam_key(self, family_id: str) -> str:
         return f"{self.prefix}:fam:{family_id}"
 
+    def _user_fams_key(self, username: str) -> str:
+        return f"{self.prefix}:user:{username}:fams"
+
     async def deny_jti(self, jti: str, ttl_seconds: int) -> None:
         """Deny a refresh token by ``jti`` until its own expiry passes."""
         ttl = max(1, int(ttl_seconds))
@@ -99,6 +102,46 @@ class RefreshTokenStore:
             return bool(await self.client.exists(self._fam_key(family_id)))
         except RedisError as exc:
             raise TokenStoreUnavailableError(f"redis exists failed: {exc}") from exc
+
+    async def register_family(self, username: str, family_id: str, ttl_seconds: int) -> None:
+        """Index a freshly minted family under its owner (CWE-613, card 4920f947).
+
+        Login registers every new family here so a later password change
+        can revoke ALL of the user's outstanding refresh tokens, not just
+        the one presented in the request. The set expires with the longest
+        possible family member, so it self-cleans.
+        """
+        ttl = max(1, int(ttl_seconds))
+        try:
+            await self.client.sadd(self._user_fams_key(username), family_id)
+            await self.client.expire(self._user_fams_key(username), ttl)
+        except RedisError as exc:
+            raise TokenStoreUnavailableError(f"redis sadd failed: {exc}") from exc
+
+    async def revoke_families_for_user(self, username: str, ttl_seconds: int) -> int:
+        """Tombstone every family indexed for ``username``; return the count.
+
+        Used by /auth/change-password (CWE-613): after the new hash is
+        committed, all refresh tokens minted before the change must die.
+        The index entry is consumed so families minted afterwards (fresh
+        logins) stay alive.
+        """
+        ttl = max(1, int(ttl_seconds))
+        try:
+            families = await self.client.smembers(self._user_fams_key(username))
+        except RedisError as exc:
+            raise TokenStoreUnavailableError(f"redis smembers failed: {exc}") from exc
+        if not families:
+            return 0
+        for family_id in families:
+            if isinstance(family_id, bytes):
+                family_id = family_id.decode("utf-8", errors="replace")
+            await self.revoke_family(family_id, ttl_seconds=ttl)
+        try:
+            await self.client.delete(self._user_fams_key(username))
+        except RedisError as exc:
+            raise TokenStoreUnavailableError(f"redis delete failed: {exc}") from exc
+        return len(families)
 
     async def ping(self) -> bool:
         try:

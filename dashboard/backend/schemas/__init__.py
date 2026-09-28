@@ -1,7 +1,23 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from enum import Enum
+
+# bcrypt's input limit is 72 BYTES, but pydantic length constraints count
+# CHARS: a multibyte password ('🔐' * 20 = 20 chars, 80 bytes) passes
+# max_length=72 and explodes later as a 500. The schema is the trust
+# boundary, so the byte check lives here -> clean 422 (card 4920f947, L-1).
+PASSWORD_MAX_BYTES = 72
+
+
+def _validate_password_max_bytes(value: str) -> str:
+    encoded = value.encode("utf-8")
+    if len(encoded) > PASSWORD_MAX_BYTES:
+        raise ValueError(
+            f"password cannot exceed {PASSWORD_MAX_BYTES} bytes in UTF-8 "
+            f"(bcrypt limit); got {len(encoded)} bytes"
+        )
+    return value
 
 
 class UserType(str, Enum):
@@ -18,6 +34,11 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
     is_active: bool = True
+
+    @field_validator("password")
+    @classmethod
+    def password_within_bcrypt_byte_limit(cls, value: str) -> str:
+        return _validate_password_max_bytes(value)
 
 
 class UserUpdate(BaseModel):
@@ -302,9 +323,15 @@ class ChangePasswordRequest(BaseModel):
     old_password: str = Field(..., alias="oldPassword")
     new_password: str = Field(..., min_length=8, max_length=72, alias="newPassword")
 
+    @field_validator("new_password")
+    @classmethod
+    def new_password_within_bcrypt_byte_limit(cls, value: str) -> str:
+        return _validate_password_max_bytes(value)
+
 
 class TokenResponse(BaseModel):
     access_token: str
+    # nosemgrep: no-hardcoded-passwords -- OAuth2 token_type literal, not a secret
     token_type: str = "bearer"
     refresh_token: Optional[str] = None
 

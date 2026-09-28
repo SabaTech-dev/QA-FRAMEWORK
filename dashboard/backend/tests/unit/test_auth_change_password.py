@@ -27,10 +27,65 @@ from sqlalchemy.pool import StaticPool
 from api.v1 import auth_routes
 from database import get_db_session
 from models import Base, User
+from services import auth_service as auth_service_module
 from services.auth_service import get_current_user, hash_password
 
 OLD_PW = "OldPass123!"
 NEW_PW = "NewPass456!"
+
+
+class FakeRefreshTokenStore:
+    """In-memory stand-in for RefreshTokenStore (no Redis in CI).
+
+    Mirrors the store's contract: jti denylist, family tombstones and
+    the per-user family index used by password-change revocation.
+    """
+
+    def __init__(self) -> None:
+        self.denied_jtis: set[str] = set()
+        self.revoked_families: set[str] = set()
+        self.families_by_user: dict[str, set[str]] = {}
+
+    async def deny_jti(self, jti: str, ttl_seconds: int) -> None:
+        self.denied_jtis.add(jti)
+
+    async def try_consume_jti(self, jti: str, ttl_seconds: int) -> bool:
+        if jti in self.denied_jtis:
+            return False
+        self.denied_jtis.add(jti)
+        return True
+
+    async def is_denied(self, jti: str) -> bool:
+        return jti in self.denied_jtis
+
+    async def revoke_family(self, family_id: str, ttl_seconds: int) -> None:
+        self.revoked_families.add(family_id)
+
+    async def is_family_revoked(self, family_id: str) -> bool:
+        return family_id in self.revoked_families
+
+    async def register_family(self, username: str, family_id: str, ttl_seconds: int) -> None:
+        self.families_by_user.setdefault(username, set()).add(family_id)
+
+    async def revoke_families_for_user(self, username: str, ttl_seconds: int) -> int:
+        families = self.families_by_user.pop(username, set())
+        for family_id in families:
+            await self.revoke_family(family_id, ttl_seconds)
+        return len(families)
+
+
+@pytest.fixture(autouse=True)
+async def fake_token_store(monkeypatch):
+    """Route every store lookup in this module through the in-memory fake.
+
+    The production code resolves the shared store via
+    ``auth_service.get_refresh_token_store()``; patching the module
+    global keeps login/refresh/change-password hermetic (the conftest
+    Redis mock cannot answer store semantics).
+    """
+    store = FakeRefreshTokenStore()
+    monkeypatch.setattr(auth_service_module, "_refresh_token_store", store)
+    yield store
 
 
 @pytest.fixture
@@ -232,6 +287,99 @@ async def test_change_password_weak_new_password_rejected(db_factory, seeded_use
     async with db_factory() as session:
         user = (await session.execute(select(User).where(User.username == "alice"))).scalar_one()
         assert user.hashed_password == original_hash
+
+
+# ------------------------------------------- iteration 2: security gate fixes
+
+
+# M-1 (CWE-613, CVSS 6.8): after a successful password change every
+# refresh token minted BEFORE the change must be dead (401 on refresh).
+async def test_change_password_revokes_previous_refresh_tokens(
+    db_factory, seeded_user, fake_token_store
+):
+    async with client(build_app(db_factory)) as c:
+        login = await c.post("/auth/login", json={"username": "alice", "password": OLD_PW})
+    old_refresh = login.json()["refresh_token"]
+
+    async with client(build_app(db_factory)) as c:
+        resp = await c.post(
+            "/auth/change-password",
+            json={"oldPassword": OLD_PW, "newPassword": NEW_PW},
+        )
+
+    assert resp.status_code == 200, resp.text
+
+    async with client(build_app(db_factory)) as c:
+        refreshed = await c.post("/auth/refresh", json={"refresh_token": old_refresh})
+    assert refreshed.status_code == 401, (
+        "refresh token minted before the password change must be rejected "
+        f"(got {refreshed.status_code}: {refreshed.text})"
+    )
+
+
+# Control: revocation must be scoped to pre-change families — a fresh
+# login AFTER the change gets a refresh token that still works.
+async def test_new_login_after_password_change_still_refreshes(
+    db_factory, seeded_user, fake_token_store
+):
+    async with client(build_app(db_factory)) as c:
+        changed = await c.post(
+            "/auth/change-password",
+            json={"oldPassword": OLD_PW, "newPassword": NEW_PW},
+        )
+        assert changed.status_code == 200, changed.text
+
+        login = await c.post("/auth/login", json={"username": "alice", "password": NEW_PW})
+        assert login.status_code == 200, login.text
+        new_refresh = login.json()["refresh_token"]
+
+        refreshed = await c.post("/auth/refresh", json={"refresh_token": new_refresh})
+    assert refreshed.status_code == 200, refreshed.text
+
+
+# L-1: pydantic counts CHARS, bcrypt counts BYTES — '🔐' * 20 is 20
+# chars (passes max_length=72) but 80 UTF-8 bytes, past the bcrypt limit.
+async def test_change_password_multibyte_over_72_bytes_rejected_422(db_factory, seeded_user):
+    original_hash = seeded_user.hashed_password
+    multibyte_password = "🔐" * 20  # 80 bytes
+
+    async with client(build_app(db_factory)) as c:
+        resp = await c.post(
+            "/auth/change-password",
+            json={"oldPassword": OLD_PW, "newPassword": multibyte_password},
+        )
+
+    assert resp.status_code == 422, (
+        f"oversized (>72 bytes) newPassword must be a 422 schema error, "
+        f"got {resp.status_code}: {resp.text}"
+    )
+    async with db_factory() as session:
+        user = (await session.execute(select(User).where(User.username == "alice"))).scalar_one()
+        assert user.hashed_password == original_hash
+
+
+async def test_register_multibyte_over_72_bytes_rejected_422(db_factory):
+    resp = None
+    async with client(build_app(db_factory)) as c:
+        resp = await c.post(
+            "/auth/register",
+            json={
+                "username": "bob",
+                "email": "bob@test.local",
+                "password": "🔐" * 20,  # 80 bytes
+            },
+        )
+    assert resp.status_code == 422, (
+        f"oversized (>72 bytes) register password must be a 422 schema error, "
+        f"got {resp.status_code}: {resp.text}"
+    )
+    async with db_factory() as session:
+        users = (
+            (await session.execute(select(User).where(User.email == "bob@test.local")))
+            .scalars()
+            .all()
+        )
+        assert users == [], "rejected register must not insert"
 
 
 # ------------------------------------------------------- stub-router guard

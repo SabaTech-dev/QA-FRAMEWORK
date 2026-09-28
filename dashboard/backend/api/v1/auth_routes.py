@@ -14,6 +14,7 @@ from services.auth_service import (
     login_for_access_token,
     get_current_user,
     revoke_refresh_token,
+    revoke_user_refresh_tokens,
 )
 from schemas import (
     LoginRequest,
@@ -54,6 +55,10 @@ async def change_password(
     Verifies the current password, then re-hashes the new one with bcrypt
     (cost 12, via hash_password) and UPDATEs the row. A 200 response always
     means the hash changed in the database.
+
+    CWE-613 (card 4920f947, M-1): after the commit succeeds, every
+    refresh-token family minted before the change is revoked, so
+    outstanding refresh tokens die with the old password.
     """
     if not verify_password(request.old_password, current_user.hashed_password):
         logger.warning(
@@ -69,6 +74,9 @@ async def change_password(
     current_user.hashed_password = hash_password(request.new_password)
     db.add(current_user)
     await db.commit()
+
+    # Only after the new hash is persisted: kill pre-change sessions.
+    await revoke_user_refresh_tokens(current_user.username)
 
     logger.info(
         "Password changed successfully",
