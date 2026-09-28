@@ -32,7 +32,10 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    password: str = Field(..., min_length=8)
+    # max_length mirrors ChangePasswordRequest (P-1, card 4920f947): the
+    # char bound is the first gate; the byte validator below is the real
+    # bcrypt-limit check.
+    password: str = Field(..., min_length=8, max_length=72)
     is_active: bool = True
 
     @field_validator("password")

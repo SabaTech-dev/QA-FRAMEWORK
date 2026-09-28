@@ -28,12 +28,32 @@ apiClient.interceptors.request.use(
   }
 )
 
-// Response interceptor to handle errors
+// Response interceptor to handle errors.
+//
+// A 401 means "session expired" ONLY for regular API calls made with a
+// bearer token. On auth-flow endpoints a 401 is a business outcome the
+// caller renders inline (wrong credentials, invalid reset token...) —
+// auto-logging out there would kick users out for mistyping a password
+// (B1, card 4920f947: wrong current password on /auth/change-password).
+const AUTH_FLOW_PATHS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/change-password',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/auth/verify-email',
+]
+
+function isAuthFlowRequest(url: string | undefined): boolean {
+  if (!url) return false
+  return AUTH_FLOW_PATHS.some((path) => url.includes(path))
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Unauthorized - clear auth and redirect to login
+    if (error.response?.status === 401 && !isAuthFlowRequest(error.config?.url)) {
+      // Session expired - clear auth and redirect to login
       useAuthStore.getState().logout()
       window.location.href = '/login'
     }

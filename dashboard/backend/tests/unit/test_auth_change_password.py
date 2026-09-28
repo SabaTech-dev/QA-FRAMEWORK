@@ -247,7 +247,12 @@ async def test_change_password_accepts_snake_case_aliases(db_factory, seeded_use
 
 
 async def test_change_password_wrong_current_password_rejected(db_factory, seeded_user):
-    """Wrong current password: 401 and NO DB change (no silent success)."""
+    """Wrong current password: 400 (payload validation — B1) and NO DB change.
+
+    The principal is already authenticated; 401 is reserved for the JWT
+    layer. A 401 here used to trigger the frontend's session-expiry
+    interceptor and log out users who just mistyped their old password.
+    """
     original_hash = seeded_user.hashed_password
 
     async with client(build_app(db_factory)) as c:
@@ -256,7 +261,8 @@ async def test_change_password_wrong_current_password_rejected(db_factory, seede
             json={"oldPassword": "WrongPass9!", "newPassword": NEW_PW},
         )
 
-    assert resp.status_code == 401, resp.text
+    assert resp.status_code == 400, resp.text
+    assert resp.json()["detail"] == "Current password is incorrect"
     async with db_factory() as session:
         user = (await session.execute(select(User).where(User.username == "alice"))).scalar_one()
         assert user.hashed_password == original_hash, "rejected change must not touch DB"
@@ -380,6 +386,27 @@ async def test_register_multibyte_over_72_bytes_rejected_422(db_factory):
             .all()
         )
         assert users == [], "rejected register must not insert"
+
+
+# P-1 (card 4920f947): the plain-ASCII char bound is its own 422 gate
+# (max_length=72), even though 73 ASCII chars are also 73 bytes and would
+# trip the byte validator — the schema constraint is the first line and
+# must not be removed in favor of the validator alone.
+async def test_register_password_over_72_chars_rejected_422(db_factory):
+    resp = None
+    async with client(build_app(db_factory)) as c:
+        resp = await c.post(
+            "/auth/register",
+            json={
+                "username": "bob",
+                "email": "bob@test.local",
+                "password": "a" * 73,  # 73 chars, 73 ASCII bytes
+            },
+        )
+    assert resp.status_code == 422, (
+        f"register password over 72 chars must be a 422 schema error, "
+        f"got {resp.status_code}: {resp.text}"
+    )
 
 
 # ------------------------------------------------------- stub-router guard

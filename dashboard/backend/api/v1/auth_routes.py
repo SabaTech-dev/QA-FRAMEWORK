@@ -66,8 +66,13 @@ async def change_password(
             user_id=current_user.id,
             username=current_user.username,
         )
+        # B1 (card 4920f947): the principal is ALREADY authenticated here —
+        # a wrong current password is a payload validation error, not an
+        # auth failure. 401 made the frontend's session-expiry interceptor
+        # log out users who merely mistyped their old password. 401 stays
+        # reserved for missing/invalid credentials at the JWT layer.
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Current password is incorrect",
         )
 

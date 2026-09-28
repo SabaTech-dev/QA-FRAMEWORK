@@ -108,7 +108,10 @@ def hash_password(password: str) -> str:
     explicitly instead.
     """
     logger.debug("Hashing password")
-    hashed = bcrypt.hashpw(_validate_password_bytes(password), bcrypt.gensalt())
+    # Cost pinned explicitly (security gate, card 4920f947): relying on the
+    # library default would let a dependency bump silently change the KDF
+    # cost factor. Tests pin the $2b$12$ prefix.
+    hashed = bcrypt.hashpw(_validate_password_bytes(password), bcrypt.gensalt(rounds=12))
     logger.debug("Password hashed successfully")
     return hashed.decode("ascii")
 
