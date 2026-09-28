@@ -12,7 +12,7 @@ class UserType(str, Enum):
 
 class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
-    email: str = Field(..., pattern=r'^[\w\.-]+@[\w\.-]+\.\w+$')
+    email: str = Field(..., pattern=r"^[\w\.-]+@[\w\.-]+\.\w+$")
 
 
 class UserCreate(UserBase):
@@ -22,7 +22,7 @@ class UserCreate(UserBase):
 
 class UserUpdate(BaseModel):
     username: Optional[str] = Field(default=None, min_length=3, max_length=50)
-    email: Optional[str] = Field(default=None, pattern=r'^[\w\.-]+@[\w\.-]+\.\w+$')
+    email: Optional[str] = Field(default=None, pattern=r"^[\w\.-]+@[\w\.-]+\.\w+$")
     is_active: Optional[bool] = None
 
 
@@ -40,6 +40,7 @@ class UserResponse(UserBase):
 
 class OnboardingStateUpdate(BaseModel):
     """Schema for updating onboarding progress"""
+
     current_step: Optional[int] = None
     steps: Optional[Dict[str, bool]] = None
     completed: Optional[bool] = None
@@ -47,6 +48,7 @@ class OnboardingStateUpdate(BaseModel):
 
 class OnboardingStateResponse(BaseModel):
     """Schema for reading onboarding progress"""
+
     completed: bool
     current_step: int
     steps: Dict[str, bool]
@@ -249,7 +251,10 @@ class TestArtifactResponse(TestArtifactBase):
 class ScheduleBase(BaseModel):
     suite_id: int
     name: str = Field(..., min_length=1, max_length=100)
-    cron_expression: str = Field(..., pattern=r'^(\*|[0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9]|\*\/[0-9]+) (\*|[0-9]|1[0-9]|2[0-3]|\*\/[0-9]+) (\*|[1-9]|1[0-9]|2[0-9]|3[0-1]|\*\/[0-9]+) (\*|[1-9]|1[0-2]|\*\/[0-9]+) ([0-6]|\*|\*\/[0-9]+)$')
+    cron_expression: str = Field(
+        ...,
+        pattern=r"^(\*|[0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9]|\*\/[0-9]+) (\*|[0-9]|1[0-9]|2[0-3]|\*\/[0-9]+) (\*|[1-9]|1[0-9]|2[0-9]|3[0-1]|\*\/[0-9]+) (\*|[1-9]|1[0-2]|\*\/[0-9]+) ([0-6]|\*|\*\/[0-9]+)$",
+    )
     is_active: bool = True
 
 
@@ -259,7 +264,10 @@ class ScheduleCreate(ScheduleBase):
 
 class ScheduleUpdate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=100)
-    cron_expression: Optional[str] = Field(default=None, pattern=r'^(\*|[0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9]|\*\/[0-9]+) (\*|[0-9]|1[0-9]|2[0-3]|\*\/[0-9]+) (\*|[1-9]|1[0-9]|2[0-9]|3[0-1]|\*\/[0-9]+) (\*|[1-9]|1[0-2]|\*\/[0-9]+) ([0-6]|\*|\*\/[0-9]+)$')
+    cron_expression: Optional[str] = Field(
+        default=None,
+        pattern=r"^(\*|[0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9]|\*\/[0-9]+) (\*|[0-9]|1[0-9]|2[0-3]|\*\/[0-9]+) (\*|[1-9]|1[0-9]|2[0-9]|3[0-1]|\*\/[0-9]+) (\*|[1-9]|1[0-2]|\*\/[0-9]+) ([0-6]|\*|\*\/[0-9]+)$",
+    )
     is_active: Optional[bool] = None
     next_run: Optional[datetime] = None
 
@@ -279,6 +287,20 @@ class ScheduleResponse(ScheduleBase):
 class LoginRequest(BaseModel):
     username: str
     password: str
+
+
+class ChangePasswordRequest(BaseModel):
+    """Change-password payload.
+
+    The shipped frontend (src/api/client.ts) sends camelCase keys
+    (oldPassword/newPassword); snake_case aliases are accepted for API
+    consumers. Card 4920f947.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    old_password: str = Field(..., alias="oldPassword")
+    new_password: str = Field(..., min_length=8, max_length=72, alias="newPassword")
 
 
 class TokenResponse(BaseModel):
@@ -418,7 +440,7 @@ class BetaSignupStatus(str, Enum):
 
 
 class BetaSignupBase(BaseModel):
-    email: str = Field(..., pattern=r'^[\w\.-]+@[\w\.-]+\.\w+$')
+    email: str = Field(..., pattern=r"^[\w\.-]+@[\w\.-]+\.\w+$")
     company: Optional[str] = Field(default=None, max_length=200)
     use_case: Optional[str] = None
     team_size: Optional[TeamSize] = None
@@ -454,8 +476,10 @@ class BetaSignupListResponse(BaseModel):
     page: int
     page_size: int
 
+
 class DashboardStats(BaseModel):
     """Dashboard statistics response model."""
+
     total_suites: int
     total_cases: int
     total_executions: int
@@ -468,6 +492,7 @@ class DashboardStats(BaseModel):
 
 class TrendData(BaseModel):
     """Execution trend data for dashboard charts."""
+
     date: str
     executions: int
     passed: int
@@ -484,7 +509,7 @@ from schemas.cron import (
     CronExecutionBase,
     CronExecutionResponse,
     CronExecutionStatus,
-    CronStats
+    CronStats,
 )
 
 # Search Schemas
@@ -496,23 +521,26 @@ from schemas.search import (
     CaseSearchResult,
     ExecutionSearchResult,
     UserSearchResult,
-    SearchSuggestions
+    SearchSuggestions,
 )
 
 
 # Bulk Operation Schemas
 class BulkOperationBase(BaseModel):
     """Base schema for bulk operations."""
+
     suite_ids: List[int] = Field(..., min_items=1, max_items=100)
 
 
 class BulkDeleteRequest(BulkOperationBase):
     """Request schema for bulk delete operation."""
+
     pass
 
 
 class BulkExecuteRequest(BaseModel):
     """Request schema for bulk execute operation."""
+
     suite_ids: List[int] = Field(..., min_items=1, max_items=50)
     execution_type: str = Field(default="manual", pattern="^(manual|scheduled|ci)$")
     environment: str = Field(default="production", pattern="^(dev|staging|production)$")
@@ -520,11 +548,13 @@ class BulkExecuteRequest(BaseModel):
 
 class BulkArchiveRequest(BulkOperationBase):
     """Request schema for bulk archive operation."""
+
     pass
 
 
 class BulkOperationResult(BaseModel):
     """Response schema for bulk operations."""
+
     total_requested: int
     successful: List[Dict[str, Any]]
     failed: List[Dict[str, Any]]
@@ -533,16 +563,19 @@ class BulkOperationResult(BaseModel):
 
 class BulkDeleteResponse(BulkOperationResult):
     """Response schema for bulk delete operation."""
+
     pass
 
 
 class BulkExecuteResponse(BulkOperationResult):
     """Response schema for bulk execute operation."""
+
     pass
 
 
 class BulkArchiveResponse(BaseModel):
     """Response schema for bulk archive operation."""
+
     total_requested: int
     successful: List[Dict[str, Any]]
     failed: List[Dict[str, Any]]
