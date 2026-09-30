@@ -671,6 +671,19 @@ jobs:
             if [ "${STILL}" != "0" ]; then echo "ERROR: ${APP} sigue presente tras 120s"; exit 1; fi
           done
           docker rmi "${REGISTRY}/qa-framework-backend-pr-${PR_NUMBER}:latest" "${REGISTRY}/qa-framework-backend-pr-${PR_NUMBER}:${GITHUB_SHA}" "${REGISTRY}/qa-framework-frontend-pr-${PR_NUMBER}:latest" "${REGISTRY}/qa-framework-frontend-pr-${PR_NUMBER}:${GITHUB_SHA}" >/dev/null 2>&1 || true
+
+          # Card 681ec4e5: borrar manifiestos del registry :5000 (DELETE API enabled; blobs los reclama el GC semanal dom 04:30)
+          for REPO in "qa-framework-backend-pr-${PR_NUMBER}" "qa-framework-frontend-pr-${PR_NUMBER}"; do
+            for TAG in "latest" "${GITHUB_SHA}"; do
+              DIGEST=$(curl -sS -I -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' "${REGISTRY}/v2/${REPO}/manifests/${TAG}" 2>/dev/null | grep -i '^docker-content-digest' | awk '{print $2}' | tr -d '\r' || true)
+              if [ -n "${DIGEST}" ]; then
+                CODE=$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE "${REGISTRY}/v2/${REPO}/manifests/${DIGEST}" 2>/dev/null || echo "000")
+                echo "Registry: DELETE ${REPO}:${TAG} (${DIGEST}) -> HTTP ${CODE}"
+              else
+                echo "Registry: ${REPO}:${TAG} no presente (skip)"
+              fi
+            done
+          done
           rm -f "${HDR}"
           echo "Cleanup completo"
 
