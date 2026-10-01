@@ -25,7 +25,6 @@ from schemas import (
     TestExecutionUpdate,
     DashboardStats,
     TrendData,
-    UserCreate,
     UserResponse,
     UserUpdate,
     LoginRequest,
@@ -60,7 +59,6 @@ from services.execution_service import (
     stop_execution_service,
 )
 from services.user_service import (
-    create_user_service,
     list_users_service,
     get_user_by_id,
     update_user_service,
@@ -189,7 +187,7 @@ async def get_dashboard_stats(
 
 @router.get("/dashboard/trends")
 async def get_trends(
-    days: int = 30, 
+    days: int = 30,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
@@ -1117,57 +1115,12 @@ async def stop_execution(
 # ==================== User Routes ====================
 
 
-@router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def create_user(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
-    """
-    Create a new user account.
-
-    Creates a new user with the provided credentials. The username and email
-    must be unique. Passwords are securely hashed before storage.
-
-    Args:
-        user_data: UserCreate containing user registration details
-        db: Database session (injected)
-
-    Returns:
-        UserResponse with created user details (excluding password)
-
-    Raises:
-        HTTPException 400: Username or email already exists
-        HTTPException 422: Validation error in request data
-
-    Example:
-        POST /api/v1/users
-        {
-            "username": "john_doe",
-            "email": "john.doe@example.com",
-            "password": "SecurePass123!",
-            "is_active": true
-        }
-
-        Response (201 Created):
-        {
-            "id": 2,
-            "username": "john_doe",
-            "email": "john.doe@example.com",
-            "is_active": true,
-            "is_superuser": false,
-            "created_at": "2024-01-15T10:50:00.123456Z",
-            "updated_at": "2024-01-15T10:50:00.123456Z"
-        }
-    """
-    logger.info(
-        "Creating user via API", username=user_data.username, email=user_data.email
-    )
-    try:
-        user = await create_user_service(user_data, db)
-        logger.info(
-            "User created successfully via API", user_id=user.id, username=user.username
-        )
-        return user
-    except HTTPException as e:
-        logger.error("Failed to create user", error=e.detail, status_code=e.status_code)
-        raise
+#
+# SECURITY (F-4, card 3fb18833): POST /users was removed. It created
+# accounts with NO auth dependency and NO ENDPOINT_LIMITS entry, outside
+# the hardened register flow. Account creation lives ONLY at
+# POST /auth/register (card 4920f947). Consumers were migrated; the
+# auth-protected list/get/update/delete routes below remain.
 
 
 @router.get("/users", response_model=List[UserResponse])

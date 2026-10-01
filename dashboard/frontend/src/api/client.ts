@@ -68,13 +68,13 @@ export const authAPI = {
   login: (username: string, password: string) =>
     apiClient.post('/auth/login', { username, password }),
 
+  // F-4 (card 3fb18833): account creation only via the hardened
+  // /auth/register flow — the unauthenticated POST /users route was removed.
   register: (data: {
     username: string
     email: string
     password: string
-    firstName?: string
-    lastName?: string
-  }) => apiClient.post('/users', data),
+  }) => apiClient.post('/auth/register', data),
 
   getMe: () => apiClient.get('/me'),
 

@@ -194,7 +194,7 @@ ENDPOINTS = {
     "execution_stop": "/executions/{id}/stop",
     # Users
     "users_list": "/users",
-    "user_create": "/users",
+    "user_create": "/auth/register",
     "user_get": "/users/{id}",
 }
 
