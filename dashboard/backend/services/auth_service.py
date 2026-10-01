@@ -15,7 +15,7 @@ from typing import Optional
 from uuid import uuid4
 
 import bcrypt
-from database import get_db_session
+from database import AsyncSessionFactory, get_db_session
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
@@ -221,6 +221,42 @@ async def get_current_user(
         )
 
     logger.debug("JWT token validated successfully", username=username, user_id=user.id)
+    return user
+
+
+async def verify_token(token: Optional[str]) -> Optional[User]:
+    """Verify a JWT access token outside HTTP dependency injection (WebSocket).
+
+    F-3: backs the /ws/notifications handshake auth. Applies the same
+    guards as ``get_current_user`` (token type, active user) but returns
+    None instead of raising so the caller can close the socket with 4401.
+    """
+    if not token or not isinstance(token, str):
+        return None
+
+    try:
+        payload = jwt.decode(
+            token,
+            settings.secret_key.get_secret_value(),
+            algorithms=[settings.algorithm],
+        )
+    except JWTError:
+        logger.warning("JWT validation failed")
+        return None
+
+    username = payload.get("sub")
+    if username is None or payload.get("type") not in ACCESS_TOKEN_TYPES:
+        logger.warning("JWT validation failed - invalid claims")
+        return None
+
+    async with AsyncSessionFactory() as db:
+        result = await db.execute(select(User).where(User.username == username))
+        user = result.scalar_one_or_none()
+
+    if user is None or not user.is_active:
+        logger.warning("JWT validation failed - user missing or inactive", username=username)
+        return None
+
     return user
 
 

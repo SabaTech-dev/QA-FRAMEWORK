@@ -1,6 +1,8 @@
 """WebSocket connection manager for QA-FRAMEWORK Dashboard."""
+
 from typing import Dict, List
 from fastapi import WebSocket
+from starlette.websockets import WebSocketState
 import json
 import logging
 
@@ -15,14 +17,19 @@ class ConnectionManager:
         self.active_connections: Dict[int, List[WebSocket]] = {}
 
     async def connect(self, websocket: WebSocket, user_id: int):
-        """Accept a new WebSocket connection."""
-        await websocket.accept()
+        """Accept (when still pending) and register a new WebSocket connection."""
+        # F-3: the endpoint may have already accepted the handshake to read
+        # the first auth message; a second accept() would crash the handler.
+        if websocket.application_state == WebSocketState.CONNECTING:
+            await websocket.accept()
 
         if user_id not in self.active_connections:
             self.active_connections[user_id] = []
 
         self.active_connections[user_id].append(websocket)
-        logger.info(f"WebSocket connected for user {user_id}. Total connections: {len(self.active_connections[user_id])}")
+        logger.info(
+            f"WebSocket connected for user {user_id}. Total connections: {len(self.active_connections[user_id])}"
+        )
 
     def disconnect(self, websocket: WebSocket, user_id: int):
         """Remove a WebSocket connection."""
@@ -65,11 +72,7 @@ class ConnectionManager:
     async def send_notification(self, user_id: int, notification: dict):
         """Send a notification to a specific user."""
         await self.send_personal_message(
-            {
-                "type": "notifications:new",
-                "notification": notification
-            },
-            user_id
+            {"type": "notifications:new", "notification": notification}, user_id
         )
 
     def get_connection_count(self, user_id: int) -> int:
