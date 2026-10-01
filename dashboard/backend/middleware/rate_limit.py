@@ -14,6 +14,7 @@ from typing import Optional, Callable
 from fastapi import Request, Response, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
+from prometheus_client import Counter
 import structlog
 
 from core.rate_limit_config import get_rate_limit, get_burst_limit, get_endpoint_limit
@@ -25,6 +26,15 @@ logger = structlog.get_logger()
 # not on every request (post-mortem Read the Docs DDoS scenario).
 _REDIS_ALERT_WINDOW_SECONDS = 60.0
 _redis_down = {"last_alert": 0.0}
+
+# PR #106 port (card 77079bca, audit OBS-1): backing-store failures are never
+# silent — Prometheus counter per fail_mode, exposed via the existing /metrics
+# mount and alertable.
+RATE_LIMIT_BACKEND_FAILURES = Counter(
+    "rate_limit_backend_failures",
+    "Rate limit checks that failed on the backing store (e.g. redis errors)",
+    ["fail_mode"],
+)
 
 
 def _get_fail_mode() -> str:
@@ -138,6 +148,10 @@ class RateLimiter:
             )
             if not is_allowed:
                 return False, info
+            if info.get("degraded"):
+                # PR #106 port: single backing-store failure per request —
+                # remaining buckets skipped (counter stays 1:1, no 3x inflation).
+                return is_allowed, info
 
         # Check burst limit
         burst_key = f"{self.prefix}burst:{identifier}"
@@ -148,6 +162,8 @@ class RateLimiter:
         )
         if not is_allowed:
             return False, burst_info
+        if burst_info.get("degraded"):
+            return is_allowed, burst_info
 
         # Check hourly limit
         hourly_key = f"{self.prefix}hourly:{identifier}"
@@ -213,11 +229,17 @@ class RateLimiter:
 
         except Exception as e:
             _alert_redis_down(key, e)
+            try:
+                RATE_LIMIT_BACKEND_FAILURES.labels(fail_mode=_get_fail_mode()).inc()
+            except Exception:
+                pass
             if _get_fail_mode() == "closed":
                 # F-1 (card 39ea6180): fail closed - deny when Redis is down
-                return False, {"limit": limit, "remaining": 0, "error": str(e)}
-            # Fail open (default, staging compat) - allow request if Redis fails
-            return True, {"limit": limit, "remaining": limit, "error": str(e)}
+                return False, {"limit": limit, "remaining": 0, "degraded": True}
+            # Fail open (default, staging compat) - allow request if Redis fails.
+            # PR #106 port: degraded flag + S-3 (no backend error strings in info;
+            # details stay server-side in the alert log).
+            return True, {"limit": limit, "remaining": limit, "degraded": True}
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -273,6 +295,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             "X-RateLimit-Remaining": str(rate_info.get("remaining", 0)),
             "X-RateLimit-Reset": str(rate_info.get("reset", 0))
         }
+        if rate_info.get("degraded"):
+            # PR #106 port: open mode keeps serving but signals degradation.
+            headers["X-RateLimit-Mode"] = "degraded"
 
         if not is_allowed:
             # Rate limit exceeded

@@ -182,7 +182,7 @@ class TestRateLimiter:
 
     @pytest.mark.asyncio
     async def test_redis_failure_fails_open(self, rate_limiter, mock_redis):
-        """Should allow request if Redis fails"""
+        """Should allow request if Redis fails (default open), flagged degraded"""
         mock_redis.zcard = AsyncMock(side_effect=Exception("Redis error"))
 
         is_allowed, info = await rate_limiter.is_allowed(
@@ -192,7 +192,8 @@ class TestRateLimiter:
         )
 
         assert is_allowed is True
-        assert "error" in info
+        assert info.get("degraded") is True
+        # S-3 (PR #106 port): error details stay server-side, not in info
 
 
 def _make_failing_redis():
@@ -224,12 +225,12 @@ class TestFailModeF1:
         limiter = RateLimiter(redis_client=_make_failing_redis())
 
         with patch("middleware.rate_limit.logger") as mock_logger:
-            for _ in range(2):  # 2 requests, up to 3 redis failures each
+            for _ in range(2):  # 2 requests → 1 redis failure each (short-circuit, port PR #106)
                 is_allowed, info = await limiter.is_allowed(
                     identifier="user:123", plan="free", endpoint="/api/v1/test"
                 )
                 assert is_allowed is True
-                assert "error" in info
+                assert info.get("degraded") is True
             assert mock_logger.critical.call_count == 1
 
     @pytest.mark.asyncio
@@ -244,7 +245,7 @@ class TestFailModeF1:
 
         assert is_allowed is False
         assert info["remaining"] == 0
-        assert "error" in info
+        assert info.get("degraded") is True
 
     @pytest.mark.asyncio
     async def test_closed_mode_middleware_returns_429(self, monkeypatch):
@@ -293,7 +294,63 @@ class TestFailModeF1:
         )
 
         assert is_allowed is True
-        assert "error" in info
+        assert info.get("degraded") is True
+
+
+class TestFailModePortPR106:
+    """Port PR #106 (card 77079bca): metric, degraded header, short-circuit.
+    Adaptado a semántica F-1: fail mode leído at call time (env), closed→429.
+    """
+
+    @pytest.mark.asyncio
+    async def test_backend_failure_short_circuits_single_event(self, monkeypatch):
+        """One backing-store failure per request: first redis error short-circuits"""
+        monkeypatch.setenv("RATE_LIMIT_FAIL_MODE", "open")
+        redis = _make_failing_redis()
+        limiter = RateLimiter(redis_client=redis)
+        await limiter.is_allowed("user:1", "pro", "/api/v1/auth/login")
+        # Primer bucket en fallar hace short-circuit → exactamente 1 redis op, no 3
+        assert redis.zremrangebyscore.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_failure_metric_incremented(self, monkeypatch):
+        """Every backing-store failure increments the Prometheus counter"""
+        from prometheus_client import REGISTRY
+
+        def sample(mode):
+            return REGISTRY.get_sample_value(
+                "rate_limit_backend_failures_total", {"fail_mode": mode}
+            ) or 0
+
+        before_open = sample("open")
+        before_closed = sample("closed")
+
+        monkeypatch.setenv("RATE_LIMIT_FAIL_MODE", "open")
+        await RateLimiter(redis_client=_make_failing_redis()).is_allowed(
+            "user:1", "free", "/api/v1/test")
+        monkeypatch.setenv("RATE_LIMIT_FAIL_MODE", "closed")
+        await RateLimiter(redis_client=_make_failing_redis()).is_allowed(
+            "user:1", "free", "/api/v1/test")
+
+        assert sample("open") == before_open + 1
+        assert sample("closed") == before_closed + 1
+
+    def test_middleware_open_mode_200_with_degraded_header(self, monkeypatch):
+        """Middleware: open mode keeps serving but exposes X-RateLimit-Mode: degraded"""
+        monkeypatch.setenv("RATE_LIMIT_FAIL_MODE", "open")
+        app = FastAPI()
+        app.add_middleware(
+            RateLimitMiddleware,
+            rate_limiter=RateLimiter(redis_client=_make_failing_redis()),
+        )
+
+        @app.get("/test")
+        async def test_endpoint():
+            return {"status": "ok"}
+
+        response = TestClient(app).get("/test")
+        assert response.status_code == 200
+        assert response.headers.get("X-RateLimit-Mode") == "degraded"
 
 
 class TestRateLimitMiddleware:
