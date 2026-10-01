@@ -52,6 +52,37 @@ def _alert_redis_down(key: str, error: Exception) -> None:
     )
 
 
+def _resolve_client_ip(request: Request) -> str:
+    """Resolve the client IP for rate limiting (card d9056216, F-2).
+
+    X-Forwarded-For is client-controlled unless a trusted proxy chain is
+    declared via TRUSTED_PROXY_DEPTH=N: the rightmost N XFF entries were
+    appended by our own proxies, so the client IP is the (N+1)-th entry from
+    the right (invariant under attacker prepends).
+
+    depth=0 (default, staging): XFF is fully client-controlled and is
+    ignored; the socket peer address (request.client.host) is used instead.
+    Read at call time, not import time, so config is never frozen.
+    """
+    try:
+        depth = int(os.getenv("TRUSTED_PROXY_DEPTH", "0"))
+    except ValueError:
+        depth = 0
+
+    if depth <= 0:
+        return request.client.host if request.client else "unknown"
+
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    hops = [hop.strip() for hop in forwarded.split(",") if hop.strip()]
+    if len(hops) <= depth:
+        # Too few hops for the configured proxy depth: the XFF chain does
+        # not prove the trusted proxies touched it -> fall back to peer IP.
+        return request.client.host if request.client else "unknown"
+
+    return hops[-(depth + 1)]
+
+
+
 class RateLimiter:
     """
     Redis-backed rate limiter with sliding window algorithm
@@ -277,13 +308,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if hasattr(request.state, "user") and request.state.user:
             return f"user:{request.state.user.id}"
 
-        # Fall back to IP address
-        forwarded = request.headers.get("X-Forwarded-For")
-        if forwarded:
-            return f"ip:{forwarded.split(',')[0].strip()}"
-
-        client_ip = request.client.host if request.client else "unknown"
-        return f"ip:{client_ip}"
+        # Fall back to client IP (validated against TRUSTED_PROXY_DEPTH,
+        # never the raw client-controlled X-Forwarded-For leftmost value)
+        return f"ip:{_resolve_client_ip(request)}"
 
     def _get_plan(self, request: Request) -> str:
         """Get user's plan for rate limiting"""
