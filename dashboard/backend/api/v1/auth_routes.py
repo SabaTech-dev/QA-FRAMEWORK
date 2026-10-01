@@ -14,6 +14,7 @@ from services.auth_service import (
     login_for_access_token,
     get_current_user,
     revoke_refresh_token,
+    revoke_user_refresh_tokens,
 )
 from schemas import (
     LoginRequest,
@@ -25,8 +26,10 @@ from schemas import (
     UserCreate,
     UserResponse,
     RefreshTokenRequest,
+    ChangePasswordRequest,
 )
 from models import User
+from services.auth_service import verify_password, hash_password
 from core.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -38,6 +41,54 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 @router.post("/login", response_model=TokenResponse)
 async def login(login_request: LoginRequest, db: AsyncSession = Depends(get_db_session)):
     return await login_for_access_token(login_request, db)
+
+
+# Change Password (card 4920f947: replaces the unmounted stub with real behavior)
+@router.post("/change-password")
+async def change_password(
+    request: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Change the authenticated user's password.
+
+    Verifies the current password, then re-hashes the new one with bcrypt
+    (cost 12, via hash_password) and UPDATEs the row. A 200 response always
+    means the hash changed in the database.
+
+    CWE-613 (card 4920f947, M-1): after the commit succeeds, every
+    refresh-token family minted before the change is revoked, so
+    outstanding refresh tokens die with the old password.
+    """
+    if not verify_password(request.old_password, current_user.hashed_password):
+        logger.warning(
+            "Change password rejected - invalid current password",
+            user_id=current_user.id,
+            username=current_user.username,
+        )
+        # B1 (card 4920f947): the principal is ALREADY authenticated here —
+        # a wrong current password is a payload validation error, not an
+        # auth failure. 401 made the frontend's session-expiry interceptor
+        # log out users who merely mistyped their old password. 401 stays
+        # reserved for missing/invalid credentials at the JWT layer.
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+
+    current_user.hashed_password = hash_password(request.new_password)
+    db.add(current_user)
+    await db.commit()
+
+    # Only after the new hash is persisted: kill pre-change sessions.
+    await revoke_user_refresh_tokens(current_user.username)
+
+    logger.info(
+        "Password changed successfully",
+        user_id=current_user.id,
+        username=current_user.username,
+    )
+    return {"message": "Password changed successfully"}
 
 
 # User Registration

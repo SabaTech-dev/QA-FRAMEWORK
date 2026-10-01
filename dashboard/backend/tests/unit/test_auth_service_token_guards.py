@@ -32,6 +32,7 @@ from services.auth_service import (
     get_current_user,
     get_current_user_optional,
     get_qa_visual_principal,
+    verify_token,
 )
 
 from config import settings
@@ -65,7 +66,9 @@ def make_credentials(token: str) -> Mock:
 
 
 def decode(token: str) -> dict:
-    return jwt.decode(token, settings.secret_key.get_secret_value(), algorithms=[settings.algorithm])
+    return jwt.decode(
+        token, settings.secret_key.get_secret_value(), algorithms=[settings.algorithm]
+    )
 
 
 class TestTokenTypeGuard:
@@ -100,7 +103,9 @@ class TestTokenTypeGuard:
         token = create_access_token({"sub": "testuser"})
         payload = decode(token)
         payload["type"] = "password-reset"
-        forged = jwt.encode(payload, settings.secret_key.get_secret_value(), algorithm=settings.algorithm)
+        forged = jwt.encode(
+            payload, settings.secret_key.get_secret_value(), algorithm=settings.algorithm
+        )
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(make_credentials(forged), make_db(make_user()))
         assert exc_info.value.status_code == 401
@@ -163,3 +168,75 @@ class TestPrincipalOwnerEdge:
         principal = await get_qa_visual_principal(current_user=make_user())
         assert principal.owner == "testuser"
         assert principal.is_admin is False
+
+
+def _fake_db_factory(db):
+    """AsyncSessionFactory stand-in yielding the given mocked session."""
+
+    class _SessionContext:
+        async def __aenter__(self):
+            return db
+
+        async def __aexit__(self, *exc_info):
+            return False
+
+    return _SessionContext
+
+
+class TestVerifyToken:
+    """F-3: verify_token backs the WebSocket handshake auth path.
+
+    Same guards as get_current_user (token type, active user) but returns
+    None instead of raising, so the WS handler can close with 4401.
+    """
+
+    async def test_missing_token_returns_none(self):
+        assert await verify_token(None) is None
+        assert await verify_token("") is None
+
+    async def test_garbage_token_returns_none(self):
+        assert await verify_token("not-a-jwt") is None
+
+    async def test_expired_token_returns_none(self):
+        token = create_access_token({"sub": "testuser"}, expires_delta=timedelta(minutes=-5))
+        assert await verify_token(token) is None
+
+    async def test_refresh_token_rejected(self, monkeypatch):
+        """L-1 parity: a refresh token must not open a WebSocket session."""
+        import services.auth_service as auth_service
+
+        token = create_refresh_token({"sub": "testuser"})
+        monkeypatch.setattr(
+            auth_service, "AsyncSessionFactory", _fake_db_factory(make_db(make_user()))
+        )
+        assert await verify_token(token) is None
+
+    async def test_unknown_user_returns_none(self, monkeypatch):
+        import services.auth_service as auth_service
+
+        token = create_access_token({"sub": "ghost"})
+        monkeypatch.setattr(auth_service, "AsyncSessionFactory", _fake_db_factory(make_db(None)))
+        assert await verify_token(token) is None
+
+    async def test_inactive_user_returns_none(self, monkeypatch):
+        import services.auth_service as auth_service
+
+        token = create_access_token({"sub": "testuser"})
+        monkeypatch.setattr(
+            auth_service,
+            "AsyncSessionFactory",
+            _fake_db_factory(make_db(make_user(is_active=False))),
+        )
+        assert await verify_token(token) is None
+
+    async def test_valid_access_token_returns_active_user(self, monkeypatch):
+        import services.auth_service as auth_service
+
+        token = create_access_token({"sub": "testuser"})
+        monkeypatch.setattr(
+            auth_service, "AsyncSessionFactory", _fake_db_factory(make_db(make_user()))
+        )
+        user = await verify_token(token)
+        assert user is not None
+        assert user.username == "testuser"
+        assert user.is_active is True

@@ -53,6 +53,12 @@ services:
     volumes:
       - ./dashboard/frontend:/app
       - /app/node_modules
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     networks:
       - qa-network
     restart: unless-stopped
@@ -142,6 +148,12 @@ services:
       - prometheus-data:/prometheus
     ports:
       - "127.0.0.1:9091:9090"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     networks:
       - qa-network
     restart: unless-stopped
@@ -163,6 +175,12 @@ services:
       - grafana-data:/var/lib/grafana
     ports:
       - "127.0.0.1:3005:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     networks:
       - qa-network
     depends_on:
@@ -182,6 +200,12 @@ services:
       - alertmanager-data:/alertmanager
     ports:
       - "127.0.0.1:9093:9093"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     networks:
       - qa-network
     restart: unless-stopped

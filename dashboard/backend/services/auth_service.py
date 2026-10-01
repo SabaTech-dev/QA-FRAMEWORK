@@ -15,7 +15,7 @@ from typing import Optional
 from uuid import uuid4
 
 import bcrypt
-from database import get_db_session
+from database import AsyncSessionFactory, get_db_session
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
@@ -108,7 +108,10 @@ def hash_password(password: str) -> str:
     explicitly instead.
     """
     logger.debug("Hashing password")
-    hashed = bcrypt.hashpw(_validate_password_bytes(password), bcrypt.gensalt())
+    # Cost pinned explicitly (security gate, card 4920f947): relying on the
+    # library default would let a dependency bump silently change the KDF
+    # cost factor. Tests pin the $2b$12$ prefix.
+    hashed = bcrypt.hashpw(_validate_password_bytes(password), bcrypt.gensalt(rounds=12))
     logger.debug("Password hashed successfully")
     return hashed.decode("ascii")
 
@@ -221,6 +224,42 @@ async def get_current_user(
     return user
 
 
+async def verify_token(token: Optional[str]) -> Optional[User]:
+    """Verify a JWT access token outside HTTP dependency injection (WebSocket).
+
+    F-3: backs the /ws/notifications handshake auth. Applies the same
+    guards as ``get_current_user`` (token type, active user) but returns
+    None instead of raising so the caller can close the socket with 4401.
+    """
+    if not token or not isinstance(token, str):
+        return None
+
+    try:
+        payload = jwt.decode(
+            token,
+            settings.secret_key.get_secret_value(),
+            algorithms=[settings.algorithm],
+        )
+    except JWTError:
+        logger.warning("JWT validation failed")
+        return None
+
+    username = payload.get("sub")
+    if username is None or payload.get("type") not in ACCESS_TOKEN_TYPES:
+        logger.warning("JWT validation failed - invalid claims")
+        return None
+
+    async with AsyncSessionFactory() as db:
+        result = await db.execute(select(User).where(User.username == username))
+        user = result.scalar_one_or_none()
+
+    if user is None or not user.is_active:
+        logger.warning("JWT validation failed - user missing or inactive", username=username)
+        return None
+
+    return user
+
+
 async def login_for_access_token(auth_request: LoginRequest, db: AsyncSession) -> TokenResponse:
     """Login and return access token"""
     logger.info("Login attempt", username=auth_request.username)
@@ -234,13 +273,65 @@ async def login_for_access_token(auth_request: LoginRequest, db: AsyncSession) -
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # CWE-613 (card 4920f947): index the fresh family under the user so a
+    # later password change can revoke every outstanding refresh token.
+    # Fails closed like the rest of the store-backed flows: a family that
+    # cannot be indexed cannot be revoked later either.
+    family_id = str(uuid4())
+    try:
+        await get_refresh_token_store().register_family(
+            user.username, family_id, ttl_seconds=FAMILY_REVOCATION_TTL_SECONDS
+        )
+    except TokenStoreUnavailableError:
+        logger.error("Token store unavailable - refusing login (fail closed)")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Token store unavailable",
+        )
+
     access_token = create_access_token(data={"sub": user.username})
-    refresh_token = create_refresh_token(data={"sub": user.username})
+    refresh_token = create_refresh_token(data={"sub": user.username}, family_id=family_id)
     logger.info("Login successful - tokens generated", username=user.username, user_id=user.id)
 
     return TokenResponse(
         access_token=access_token, token_type="bearer", refresh_token=refresh_token
     )
+
+
+async def revoke_user_refresh_tokens(
+    username: str,
+    store: RefreshTokenStore | None = None,
+) -> int:
+    """Revoke every refresh-token family indexed for ``username`` (CWE-613).
+
+    Called by /auth/change-password right after the new hash is committed:
+    tokens minted before the change must not survive it. Rotation reuses
+    the family minted at login, so one index entry covers the whole chain.
+    """
+    token_store = store if store is not None else get_refresh_token_store()
+    try:
+        count = await token_store.revoke_families_for_user(
+            username, ttl_seconds=FAMILY_REVOCATION_TTL_SECONDS
+        )
+    except TokenStoreUnavailableError:
+        # Fail closed, consistent with refresh/revoke: the password DID
+        # change, but revocation could not be enforced — surface it, never
+        # answer a silent 200 while pre-change tokens stay alive.
+        logger.error(
+            "Token store unavailable during password-change revocation",
+            username=username,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Token store unavailable",
+        )
+    if count:
+        logger.info(
+            "Password change revoked refresh token families",
+            username=username,
+            families=count,
+        )
+    return count
 
 
 def create_refresh_token(
