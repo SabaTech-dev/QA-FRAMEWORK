@@ -19,6 +19,7 @@ from fastapi.testclient import TestClient
 import time
 
 from middleware.rate_limit import RateLimiter, RateLimitMiddleware
+from middleware import rate_limit as rate_limit_mod
 from core.rate_limit_config import (
     get_rate_limit,
     get_burst_limit,
@@ -51,19 +52,19 @@ def app():
     """Create test FastAPI app with rate limiting"""
     app = FastAPI()
     app.add_middleware(RateLimitMiddleware)
-    
+
     @app.get("/test")
     async def test_endpoint():
         return {"status": "ok"}
-    
+
     @app.get("/api/v1/auth/login")
     async def login():
         return {"token": "test"}
-    
+
     @app.get("/health")
     async def health():
         return {"status": "ok"}
-    
+
     return app
 
 
@@ -75,42 +76,42 @@ def client(app):
 
 class TestRateLimitConfig:
     """Tests for rate limit configuration"""
-    
+
     def test_get_rate_limit_free(self):
         """Should return free plan limit"""
         limit = get_rate_limit("free")
         assert limit == RATE_LIMITS[PlanType.FREE]
-    
+
     def test_get_rate_limit_pro(self):
         """Should return pro plan limit"""
         limit = get_rate_limit("pro")
         assert limit == RATE_LIMITS[PlanType.PRO]
-    
+
     def test_get_rate_limit_enterprise(self):
         """Should return enterprise plan limit"""
         limit = get_rate_limit("enterprise")
         assert limit == RATE_LIMITS[PlanType.ENTERPRISE]
-    
+
     def test_get_rate_limit_invalid(self):
         """Should return free limit for invalid plan"""
         limit = get_rate_limit("invalid")
         assert limit == RATE_LIMITS[PlanType.FREE]
-    
+
     def test_get_burst_limit(self):
         """Should return burst limit"""
         limit = get_burst_limit("pro")
         assert limit == BURST_LIMITS[PlanType.PRO]
-    
+
     def test_get_endpoint_limit_login(self):
         """Should return login endpoint limit"""
         limit = get_endpoint_limit("/api/v1/auth/login")
         assert limit == 20
-    
+
     def test_get_endpoint_limit_executions(self):
         """Should return executions endpoint limit"""
         limit = get_endpoint_limit("/api/v1/executions")
         assert limit == 60
-    
+
     def test_get_endpoint_limit_unlimited(self):
         """Should return None for unlimited endpoint"""
         limit = get_endpoint_limit("/api/v1/suites")
@@ -119,148 +120,249 @@ class TestRateLimitConfig:
 
 class TestRateLimiter:
     """Tests for RateLimiter"""
-    
+
     @pytest.mark.asyncio
     async def test_is_allowed_under_limit(self, rate_limiter, mock_redis):
         """Should allow request under limit"""
         mock_redis.zcard = AsyncMock(return_value=5)
-        
+
         is_allowed, info = await rate_limiter.is_allowed(
             identifier="user:123",
             plan="pro",
             endpoint="/api/v1/test"
         )
-        
+
         assert is_allowed is True
         assert info["remaining"] > 0
-    
+
     @pytest.mark.asyncio
     async def test_is_allowed_at_limit(self, rate_limiter, mock_redis):
         """Should deny request at limit"""
         # Set count to limit
         mock_redis.zcard = AsyncMock(return_value=1000)
-        
+
         is_allowed, info = await rate_limiter.is_allowed(
             identifier="user:123",
             plan="pro",
             endpoint="/api/v1/test"
         )
-        
+
         assert is_allowed is False
         assert info["remaining"] == 0
-    
+
     @pytest.mark.asyncio
     async def test_is_allowed_endpoint_limit(self, rate_limiter, mock_redis):
         """Should enforce endpoint-specific limit"""
         # Set count to 15 (under pro limit but over login limit)
         mock_redis.zcard = AsyncMock(return_value=15)
-        
+
         is_allowed, info = await rate_limiter.is_allowed(
             identifier="user:123",
             plan="pro",
             endpoint="/api/v1/auth/login"
         )
-        
+
         # Login limit is 20, so 15 should be allowed
         assert is_allowed is True
-    
+
     @pytest.mark.asyncio
     async def test_is_allowed_burst_limit(self, rate_limiter, mock_redis):
         """Should enforce burst limit"""
         # Set count to 150 (over pro burst limit of 100)
         mock_redis.zcard = AsyncMock(return_value=150)
-        
+
         is_allowed, info = await rate_limiter.is_allowed(
             identifier="user:123",
             plan="pro",
             endpoint="/api/v1/test"
         )
-        
+
         assert is_allowed is False
-    
+
     @pytest.mark.asyncio
     async def test_redis_failure_fails_open(self, rate_limiter, mock_redis):
         """Should allow request if Redis fails"""
         mock_redis.zcard = AsyncMock(side_effect=Exception("Redis error"))
-        
+
         is_allowed, info = await rate_limiter.is_allowed(
             identifier="user:123",
             plan="free",
             endpoint="/api/v1/test"
         )
-        
+
+        assert is_allowed is True
+        assert "error" in info
+
+
+def _make_failing_redis():
+    """Redis mock where the first sliding-window op blows up (Redis down)"""
+    redis = AsyncMock()
+    redis.zremrangebyscore = AsyncMock(side_effect=Exception("Redis down"))
+    redis.zcard = AsyncMock(side_effect=Exception("Redis down"))
+    return redis
+
+
+class TestFailModeF1:
+    """card 39ea6180 (F-1, OWASP API4:2023): RATE_LIMIT_FAIL_MODE=open|closed.
+
+    Env is read at CALL time (pattern F-2), never frozen at import.
+    Default open keeps staging compat; closed denies (429) when Redis is down.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _clean_env_and_alert_state(self, monkeypatch):
+        monkeypatch.delenv("RATE_LIMIT_FAIL_MODE", raising=False)
+        rate_limit_mod._redis_down["last_alert"] = 0.0
+        yield
+        rate_limit_mod._redis_down["last_alert"] = 0.0
+
+    @pytest.mark.asyncio
+    async def test_open_mode_allows_and_alerts_once(self, monkeypatch):
+        """mode=open: requests pass + critical alert logged ONCE (dedup window)"""
+        monkeypatch.setenv("RATE_LIMIT_FAIL_MODE", "open")
+        limiter = RateLimiter(redis_client=_make_failing_redis())
+
+        with patch("middleware.rate_limit.logger") as mock_logger:
+            for _ in range(2):  # 2 requests, up to 3 redis failures each
+                is_allowed, info = await limiter.is_allowed(
+                    identifier="user:123", plan="free", endpoint="/api/v1/test"
+                )
+                assert is_allowed is True
+                assert "error" in info
+            assert mock_logger.critical.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_closed_mode_denies(self, monkeypatch):
+        """mode=closed: Redis down -> denied with remaining=0"""
+        monkeypatch.setenv("RATE_LIMIT_FAIL_MODE", "closed")
+        limiter = RateLimiter(redis_client=_make_failing_redis())
+
+        is_allowed, info = await limiter.is_allowed(
+            identifier="user:123", plan="free", endpoint="/api/v1/test"
+        )
+
+        assert is_allowed is False
+        assert info["remaining"] == 0
+        assert "error" in info
+
+    @pytest.mark.asyncio
+    async def test_closed_mode_middleware_returns_429(self, monkeypatch):
+        """mode=closed: middleware dispatch returns a 429 response"""
+        monkeypatch.setenv("RATE_LIMIT_FAIL_MODE", "closed")
+        mw = RateLimitMiddleware(
+            app=Mock(),
+            rate_limiter=RateLimiter(redis_client=_make_failing_redis()),
+        )
+        request = MagicMock()
+        request.url.path = "/api/v1/test"
+        request.headers.get.return_value = None
+        request.client.host = "127.0.0.1"
+        call_next = AsyncMock(return_value=MagicMock())
+
+        response = await mw.dispatch(request, call_next)
+
+        assert response.status_code == 429
+        call_next.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_env_read_at_call_time(self, monkeypatch):
+        """Same limiter instance: flipping env flips behavior (pattern F-2)"""
+        limiter = RateLimiter(redis_client=_make_failing_redis())
+
+        monkeypatch.setenv("RATE_LIMIT_FAIL_MODE", "open")
+        is_allowed, _ = await limiter.is_allowed(
+            identifier="user:123", plan="free", endpoint="/api/v1/test"
+        )
+        assert is_allowed is True
+
+        monkeypatch.setenv("RATE_LIMIT_FAIL_MODE", "closed")
+        is_allowed, _ = await limiter.is_allowed(
+            identifier="user:123", plan="free", endpoint="/api/v1/test"
+        )
+        assert is_allowed is False
+
+    @pytest.mark.asyncio
+    async def test_invalid_mode_falls_back_to_open(self, monkeypatch):
+        """Garbage value -> treated as open (staging-safe default)"""
+        monkeypatch.setenv("RATE_LIMIT_FAIL_MODE", "garbage")
+        limiter = RateLimiter(redis_client=_make_failing_redis())
+
+        is_allowed, info = await limiter.is_allowed(
+            identifier="user:123", plan="free", endpoint="/api/v1/test"
+        )
+
         assert is_allowed is True
         assert "error" in info
 
 
 class TestRateLimitMiddleware:
     """Tests for RateLimitMiddleware"""
-    
+
     def test_skip_paths(self, client):
         """Should skip rate limiting for certain paths"""
         # These should not have rate limit headers
         response = client.get("/health")
         assert response.status_code == 200
         assert "X-RateLimit-Limit" not in response.headers
-    
+
     def test_rate_limit_headers(self, client):
         """Should add rate limit headers"""
         response = client.get("/test")
         assert response.status_code == 200
         # Note: Would check headers in real test with proper middleware setup
-    
+
     def test_rate_limit_exceeded(self, mock_redis):
         """Should return 429 when rate limit exceeded via direct limiter check"""
         mock_redis.zcard = AsyncMock(return_value=10000)
-        
+
         limiter = RateLimiter(redis_client=mock_redis)
-        
+
         # Use direct limiter check (middleware integration requires async ASGI)
         import asyncio
         is_allowed, info = asyncio.run(
             limiter.is_allowed("user:123", "free", "/api/v1/test")
         )
-        
+
         assert is_allowed is False
         assert info["remaining"] == 0
 
 
 class TestSlidingWindow:
     """Tests for sliding window algorithm"""
-    
+
     @pytest.mark.asyncio
     async def test_sliding_window_expiry(self, rate_limiter, mock_redis):
         """Should expire old entries"""
         await rate_limiter._check_limit("test_key", 100, window=60)
-        
+
         # Should call zremrangebyscore to remove old entries
         mock_redis.zremrangebyscore.assert_called_once()
-    
+
     @pytest.mark.asyncio
     async def test_sliding_window_adds_entry(self, rate_limiter, mock_redis):
         """Should add current request to sorted set"""
         await rate_limiter._check_limit("test_key", 100, window=60)
-        
+
         # Should call zadd to add current request
         mock_redis.zadd.assert_called_once()
-    
+
     @pytest.mark.asyncio
     async def test_sliding_window_sets_expiry(self, rate_limiter, mock_redis):
         """Should set expiry on key"""
         await rate_limiter._check_limit("test_key", 100, window=60)
-        
+
         # Should call expire to set TTL
         mock_redis.expire.assert_called_once()
 
 
 class TestIntegration:
     """Integration tests"""
-    
+
     @pytest.mark.asyncio
     async def test_full_rate_limiting_flow(self, mock_redis):
         """Test complete rate limiting flow"""
         limiter = RateLimiter(redis_client=mock_redis)
-        
+
         # Simulate 5 requests
         for i in range(5):
             is_allowed, info = await limiter.is_allowed(
@@ -268,7 +370,7 @@ class TestIntegration:
                 plan="free",
                 endpoint="/api/v1/test"
             )
-            
+
             if i < 100:  # Free limit is 100/hour
                 assert is_allowed is True
             else:
