@@ -55,6 +55,7 @@
     "vitest": "^0.34.6"
   },
   "allowScripts": {
-    "esbuild@0.21.5": true
+    "esbuild@0.21.5": true,
+    "msw@2.15.0": true
   }
 }
