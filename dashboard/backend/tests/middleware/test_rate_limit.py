@@ -503,11 +503,21 @@ class TestSkipPathTrailingSlash:
 
 
 class TestClientIPTrustedProxyDepth:
-    """card d9056216 (F-2, OWASP API4/API8:2023): the rate-limit key must not
-    derive from a client-controlled X-Forwarded-For leftmost value.
+    """card d9056216 (F-2) + fix off-by-one (card 77079bca, review Alfred).
 
-    TRUSTED_PROXY_DEPTH=N -> client IP is the (N+1)-th XFF entry from the
-    right; depth=0 (default) -> XFF ignored, socket peer (client.host) used.
+    The rate-limit key must never derive from a client-controlled XFF entry.
+    Real proxy semantics covered (the old tests modeled an append form that
+    exists neither on this host nor in standard semantics):
+
+    - SET (nginx vhost qa.sabatech.dev: `proxy_set_header X-Forwarded-For
+      $remote_addr`): XFF carries EXACTLY the real client IP (1 entry);
+      the client's own XFF history is destroyed by the proxy.
+    - APPEND ($proxy_add_x_forwarded_for chains): trusted proxies append
+      their peer; the client IP is the N-th entry from the right (depth=N)
+      and attacker prepends fall outside the trusted suffix.
+
+    depth=0 / invalid / unset -> XFF ignored, socket peer used.
+    Insufficient hops (len(hops) < depth) -> peer (chain not proven).
     """
 
     @staticmethod
@@ -526,28 +536,53 @@ class TestClientIPTrustedProxyDepth:
         request.state = SimpleNamespace(user=None)
         return request
 
-    def test_depth1_uses_entry_after_trusted_proxy(self, monkeypatch):
-        """depth=1: key must be the 2nd XFF entry from the right (1.2.3.4),
-        not the leftmost client-controlled value"""
+    def test_depth1_set_semantics_uses_the_single_entry(self, monkeypatch):
+        """nginx SET (prod vhost): XFF = real client IP only -> depth=1 picks it.
+        Old code (len<=depth fallback) returned the peer for EVERYONE:
+        global bucket collapse (Probe A, review Alfred)."""
         monkeypatch.setenv("TRUSTED_PROXY_DEPTH", "1")
         mw = self._make_middleware()
-        request = self._make_request(xff="1.2.3.4, 10.0.0.9", client_ip="10.0.0.9")
+        request = self._make_request(xff="1.2.3.4", client_ip="10.0.0.9")
         assert mw._get_identifier(request) == "ip:1.2.3.4"
 
-    def test_depth1_rotating_leftmost_xff_does_not_change_key(self, monkeypatch):
-        """Attack (F-2): rotating/prepending XFF hops must NOT yield a fresh
-        bucket. The key is anchored to the trusted suffix, not the leftmost."""
+    def test_depth1_append_semantics_uses_rightmost(self, monkeypatch):
+        """APPEND with one trusted proxy: the client real IP is the appended
+        peer (rightmost entry); the client-controlled leftmost is ignored."""
+        monkeypatch.setenv("TRUSTED_PROXY_DEPTH", "1")
+        mw = self._make_middleware()
+        request = self._make_request(xff="9.9.9.9, 1.2.3.4", client_ip="10.0.0.9")
+        assert mw._get_identifier(request) == "ip:1.2.3.4"
+
+    def test_depth1_prepends_do_not_change_key(self, monkeypatch):
+        """Attack: prepending XFF hops must NOT yield a fresh bucket — the
+        trusted suffix (rightmost depth entries) is anchored."""
         monkeypatch.setenv("TRUSTED_PROXY_DEPTH", "1")
         mw = self._make_middleware()
         key_before = mw._get_identifier(
-            self._make_request(xff="1.2.3.4, 10.0.0.9", client_ip="10.0.0.9")
+            self._make_request(xff="9.9.9.9, 1.2.3.4", client_ip="10.0.0.9")
         )
         for rotated in (
-            "9.9.9.9, 1.2.3.4, 10.0.0.9",
-            "8.8.8.8, 7.7.7.7, 1.2.3.4, 10.0.0.9",
+            "8.8.8.8, 9.9.9.9, 1.2.3.4",
+            "7.7.7.7, 8.8.8.8, 9.9.9.9, 1.2.3.4",
         ):
             key_after = mw._get_identifier(self._make_request(xff=rotated, client_ip="10.0.0.9"))
             assert key_after == key_before == "ip:1.2.3.4"
+
+    def test_depth2_append_uses_second_from_right(self, monkeypatch):
+        """APPEND with two trusted proxies: client is the 2nd entry from the
+        right (the rightmost is the closest trusted proxy's peer)."""
+        monkeypatch.setenv("TRUSTED_PROXY_DEPTH", "2")
+        mw = self._make_middleware()
+        request = self._make_request(xff="evil, 1.2.3.4, 10.0.0.8", client_ip="10.0.0.9")
+        assert mw._get_identifier(request) == "ip:1.2.3.4"
+
+    def test_depth2_insufficient_hops_falls_back_to_peer(self, monkeypatch):
+        """depth=2 but only 1 entry: the chain does not prove the trusted
+        proxies touched it -> fall back to the socket peer."""
+        monkeypatch.setenv("TRUSTED_PROXY_DEPTH", "2")
+        mw = self._make_middleware()
+        request = self._make_request(xff="1.2.3.4", client_ip="203.0.113.7")
+        assert mw._get_identifier(request) == "ip:203.0.113.7"
 
     def test_depth0_ignores_xff_uses_client_host(self, monkeypatch):
         """depth=0 (staging, no proxy): XFF must be ignored entirely"""
@@ -569,21 +604,6 @@ class TestClientIPTrustedProxyDepth:
         mw = self._make_middleware()
         request = self._make_request(xff="1.2.3.4, 10.0.0.9", client_ip="203.0.113.7")
         assert mw._get_identifier(request) == "ip:203.0.113.7"
-
-    def test_depth_with_insufficient_hops_falls_back_to_client_host(self, monkeypatch):
-        """depth=3 but only 2 hops: XFF cannot satisfy the trusted chain ->
-        fall back to the socket peer instead of trusting client-side entries"""
-        monkeypatch.setenv("TRUSTED_PROXY_DEPTH", "3")
-        mw = self._make_middleware()
-        request = self._make_request(xff="1.2.3.4, 10.0.0.9", client_ip="203.0.113.7")
-        assert mw._get_identifier(request) == "ip:203.0.113.7"
-
-    def test_depth2_uses_third_from_right(self, monkeypatch):
-        """depth=2: client IP is the 3rd entry from the right"""
-        monkeypatch.setenv("TRUSTED_PROXY_DEPTH", "2")
-        mw = self._make_middleware()
-        request = self._make_request(xff="evil, 1.2.3.4, 10.0.0.8, 10.0.0.9", client_ip="10.0.0.9")
-        assert mw._get_identifier(request) == "ip:1.2.3.4"
 
 
 # Run tests

@@ -63,12 +63,17 @@ def _alert_redis_down(key: str, error: Exception) -> None:
 
 
 def _resolve_client_ip(request: Request) -> str:
-    """Resolve the client IP for rate limiting (card d9056216, F-2).
+    """Resolve the client IP for rate limiting (card d9056216, F-2; fix
+    off-by-one card 77079bca, review Alfred).
 
-    X-Forwarded-For is client-controlled unless a trusted proxy chain is
-    declared via TRUSTED_PROXY_DEPTH=N: the rightmost N XFF entries were
-    appended by our own proxies, so the client IP is the (N+1)-th entry from
-    the right (invariant under attacker prepends).
+    With TRUSTED_PROXY_DEPTH=N, the rightmost N XFF entries were put there by
+    our own proxies, so the client IP is the N-th entry from the right
+    (invariant under attacker prepends). Covers both real proxy semantics:
+    - SET (nginx vhost qa.sabatech.dev: `proxy_set_header X-Forwarded-For
+      $remote_addr`): XFF carries EXACTLY the real client IP (client-sent
+      history is destroyed by the proxy) -> depth=1 picks it.
+    - APPEND (`$proxy_add_x_forwarded_for` chains): the appended peers form
+      the trusted suffix; prepended attacker entries fall outside it.
 
     depth=0 (default, staging): XFF is fully client-controlled and is
     ignored; the socket peer address (request.client.host) is used instead.
@@ -84,12 +89,16 @@ def _resolve_client_ip(request: Request) -> str:
 
     forwarded = request.headers.get("X-Forwarded-For", "")
     hops = [hop.strip() for hop in forwarded.split(",") if hop.strip()]
-    if len(hops) <= depth:
-        # Too few hops for the configured proxy depth: the XFF chain does
-        # not prove the trusted proxies touched it -> fall back to peer IP.
+    if len(hops) < depth:
+        # Fewer hops than the configured proxy depth: the XFF chain does not
+        # prove the trusted proxies touched it -> fall back to peer IP.
         return request.client.host if request.client else "unknown"
 
-    return hops[-(depth + 1)]
+    # Fix off-by-one (card 77079bca, review Alfred): the client IP is the N-th
+    # entry from the right, not the (N+1)-th. Covers SET semantics (nginx
+    # XFF=$remote_addr: single entry = real client) and APPEND chains (the
+    # trusted suffix is ours; prepended attacker entries fall outside it).
+    return hops[-depth]
 
 
 

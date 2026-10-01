@@ -24,6 +24,7 @@ from starlette.websockets import WebSocketState
 
 from services.auth_service import verify_token
 from core.logging_config import get_logger
+from middleware.rate_limit import _resolve_client_ip
 from websocket.manager import manager
 
 logger = get_logger(__name__)
@@ -39,10 +40,15 @@ _ip_conn_count: Dict[str, int] = {}
 
 
 def _client_ip(websocket: WebSocket) -> str:
-    """Direct peer address (uvicorn --proxy-headers rewrites it behind a proxy)."""
-    if websocket.client and websocket.client.host:
-        return websocket.client.host
-    return "unknown"
+    """Client IP honoring TRUSTED_PROXY_DEPTH (fix card 77079bca, review Alfred).
+
+    Behind the prod nginx (XFF SET to $remote_addr) the raw peer is always
+    127.0.0.1 and the per-IP WS limit would collapse globally. The shared
+    resolver reads XFF when the trusted depth proves the chain and falls
+    back to the peer otherwise (duck-typed: WebSocket exposes .headers and
+    .client with the same shape as Request).
+    """
+    return _resolve_client_ip(websocket)
 
 
 @router.websocket("/ws/notifications")
