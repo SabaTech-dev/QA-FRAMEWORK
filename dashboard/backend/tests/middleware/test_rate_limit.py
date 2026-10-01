@@ -10,9 +10,10 @@ Covers:
 """
 
 import pytest
-pytest.importorskip('fastapi')
-pytest.importorskip('redis')
-pytest.importorskip('asyncpg')
+
+pytest.importorskip("fastapi")
+pytest.importorskip("redis")
+pytest.importorskip("asyncpg")
 from types import SimpleNamespace
 from unittest.mock import Mock, AsyncMock, MagicMock, patch
 from fastapi import FastAPI, Request
@@ -27,7 +28,7 @@ from core.rate_limit_config import (
     get_endpoint_limit,
     PlanType,
     RATE_LIMITS,
-    BURST_LIMITS
+    BURST_LIMITS,
 )
 
 
@@ -118,6 +119,41 @@ class TestRateLimitConfig:
         limit = get_endpoint_limit("/api/v1/suites")
         assert limit is None
 
+    # F-6 (card 044bde0e): expensive routes get their own ceiling.
+
+    def test_get_endpoint_limit_browser_use_execute(self):
+        """Should limit browser-use execute (LLM+browser task spawn)"""
+        assert get_endpoint_limit("/api/v1/browser-use/execute") == 10
+
+    def test_get_endpoint_limit_suites_bulk(self):
+        """Prefix entry should cover all bulk suite operations"""
+        for path in (
+            "/api/v1/suites/bulk-delete",
+            "/api/v1/suites/bulk-execute",
+            "/api/v1/suites/bulk-archive",
+        ):
+            assert get_endpoint_limit(path) == 20
+        # Guard: non-bulk suite paths stay unlimited
+        assert get_endpoint_limit("/api/v1/suites") is None
+        assert get_endpoint_limit("/api/v1/suites/42") is None
+
+    def test_get_endpoint_limit_search(self):
+        """Should limit global search and suggestions (prefix match)"""
+        assert get_endpoint_limit("/api/v1/search") == 30
+        assert get_endpoint_limit("/api/v1/search/suggestions") == 30
+
+    def test_get_endpoint_limit_analytics(self):
+        """Prefix entry should cover all analytics subpaths"""
+        for path in (
+            "/api/v1/analytics/dashboard",
+            "/api/v1/analytics/users",
+            "/api/v1/analytics/tests",
+            "/api/v1/analytics/revenue",
+            "/api/v1/analytics/features",
+            "/api/v1/analytics/export",
+        ):
+            assert get_endpoint_limit(path) == 30
+
 
 class TestRateLimiter:
     """Tests for RateLimiter"""
@@ -128,9 +164,7 @@ class TestRateLimiter:
         mock_redis.zcard = AsyncMock(return_value=5)
 
         is_allowed, info = await rate_limiter.is_allowed(
-            identifier="user:123",
-            plan="pro",
-            endpoint="/api/v1/test"
+            identifier="user:123", plan="pro", endpoint="/api/v1/test"
         )
 
         assert is_allowed is True
@@ -143,9 +177,7 @@ class TestRateLimiter:
         mock_redis.zcard = AsyncMock(return_value=1000)
 
         is_allowed, info = await rate_limiter.is_allowed(
-            identifier="user:123",
-            plan="pro",
-            endpoint="/api/v1/test"
+            identifier="user:123", plan="pro", endpoint="/api/v1/test"
         )
 
         assert is_allowed is False
@@ -158,13 +190,24 @@ class TestRateLimiter:
         mock_redis.zcard = AsyncMock(return_value=15)
 
         is_allowed, info = await rate_limiter.is_allowed(
-            identifier="user:123",
-            plan="pro",
-            endpoint="/api/v1/auth/login"
+            identifier="user:123", plan="pro", endpoint="/api/v1/auth/login"
         )
 
         # Login limit is 20, so 15 should be allowed
         assert is_allowed is True
+
+    @pytest.mark.asyncio
+    async def test_is_allowed_endpoint_limit_browser_use(self, rate_limiter, mock_redis):
+        """F-6: should deny at the browser-use execute limit (10/min), below plan burst"""
+        mock_redis.zcard = AsyncMock(return_value=10)  # at browser-use limit
+
+        is_allowed, info = await rate_limiter.is_allowed(
+            identifier="user:123", plan="pro", endpoint="/api/v1/browser-use/execute"
+        )
+
+        assert is_allowed is False
+        assert info["limit"] == 10
+        assert info["remaining"] == 0
 
     @pytest.mark.asyncio
     async def test_is_allowed_burst_limit(self, rate_limiter, mock_redis):
@@ -173,9 +216,7 @@ class TestRateLimiter:
         mock_redis.zcard = AsyncMock(return_value=150)
 
         is_allowed, info = await rate_limiter.is_allowed(
-            identifier="user:123",
-            plan="pro",
-            endpoint="/api/v1/test"
+            identifier="user:123", plan="pro", endpoint="/api/v1/test"
         )
 
         assert is_allowed is False
@@ -186,9 +227,7 @@ class TestRateLimiter:
         mock_redis.zcard = AsyncMock(side_effect=Exception("Redis error"))
 
         is_allowed, info = await rate_limiter.is_allowed(
-            identifier="user:123",
-            plan="free",
-            endpoint="/api/v1/test"
+            identifier="user:123", plan="free", endpoint="/api/v1/test"
         )
 
         assert is_allowed is True
@@ -318,19 +357,22 @@ class TestFailModePortPR106:
         from prometheus_client import REGISTRY
 
         def sample(mode):
-            return REGISTRY.get_sample_value(
-                "rate_limit_backend_failures_total", {"fail_mode": mode}
-            ) or 0
+            return (
+                REGISTRY.get_sample_value("rate_limit_backend_failures_total", {"fail_mode": mode})
+                or 0
+            )
 
         before_open = sample("open")
         before_closed = sample("closed")
 
         monkeypatch.setenv("RATE_LIMIT_FAIL_MODE", "open")
         await RateLimiter(redis_client=_make_failing_redis()).is_allowed(
-            "user:1", "free", "/api/v1/test")
+            "user:1", "free", "/api/v1/test"
+        )
         monkeypatch.setenv("RATE_LIMIT_FAIL_MODE", "closed")
         await RateLimiter(redis_client=_make_failing_redis()).is_allowed(
-            "user:1", "free", "/api/v1/test")
+            "user:1", "free", "/api/v1/test"
+        )
 
         assert sample("open") == before_open + 1
         assert sample("closed") == before_closed + 1
@@ -377,9 +419,8 @@ class TestRateLimitMiddleware:
 
         # Use direct limiter check (middleware integration requires async ASGI)
         import asyncio
-        is_allowed, info = asyncio.run(
-            limiter.is_allowed("user:123", "free", "/api/v1/test")
-        )
+
+        is_allowed, info = asyncio.run(limiter.is_allowed("user:123", "free", "/api/v1/test"))
 
         assert is_allowed is False
         assert info["remaining"] == 0
@@ -424,9 +465,7 @@ class TestIntegration:
         # Simulate 5 requests
         for i in range(5):
             is_allowed, info = await limiter.is_allowed(
-                identifier="user:123",
-                plan="free",
-                endpoint="/api/v1/test"
+                identifier="user:123", plan="free", endpoint="/api/v1/test"
             )
 
             if i < 100:  # Free limit is 100/hour
@@ -447,12 +486,19 @@ class TestSkipPathTrailingSlash:
         return RateLimitMiddleware(app=Mock(), rate_limiter=rate_limiter or Mock())
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("path", [
-        "/metrics", "/metrics/",
-        "/health", "/health/",
-        "/docs", "/docs/",
-        "/openapi.json", "/openapi.json/",
-    ])
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/metrics",
+            "/metrics/",
+            "/health",
+            "/health/",
+            "/docs",
+            "/docs/",
+            "/openapi.json",
+            "/openapi.json/",
+        ],
+    )
     async def test_dispatch_skips_without_ratelimit_call(self, path):
         """Skipped paths (with/without trailing slash) bypass the limiter entirely"""
         mw = self._make_middleware()
@@ -471,9 +517,9 @@ class TestSkipPathTrailingSlash:
     async def test_dispatch_non_skip_path_calls_limiter(self):
         """Control: non-skipped paths still go through the limiter"""
         limiter = Mock()
-        limiter.is_allowed = AsyncMock(return_value=(
-            True, {"limit": 100, "remaining": 99, "reset": 0}
-        ))
+        limiter.is_allowed = AsyncMock(
+            return_value=(True, {"limit": 100, "remaining": 99, "reset": 0})
+        )
         mw = self._make_middleware(rate_limiter=limiter)
         request = MagicMock()
         request.url.path = "/api/v1/test"
@@ -489,9 +535,9 @@ class TestSkipPathTrailingSlash:
     async def test_dispatch_lookalike_paths_not_skipped(self):
         """Lookalike paths must NOT be skipped (normalization must not over-match)"""
         limiter = Mock()
-        limiter.is_allowed = AsyncMock(return_value=(
-            True, {"limit": 100, "remaining": 99, "reset": 0}
-        ))
+        limiter.is_allowed = AsyncMock(
+            return_value=(True, {"limit": 100, "remaining": 99, "reset": 0})
+        )
         mw = self._make_middleware(rate_limiter=limiter)
         for path in ("/api/v1/metrics", "/metricsx", "/v1/health"):
             request = MagicMock()

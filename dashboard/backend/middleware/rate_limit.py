@@ -3,7 +3,7 @@ Rate Limiting Middleware
 
 Implements granular rate limiting:
 - Per-plan limits (Free: 100/hr, Pro: 1,000/hr, Enterprise: 10,000/hr)
-- Per-endpoint limits (login: 20/min, executions: 60/min)
+- Per-endpoint limits (see core.rate_limit_config.ENDPOINT_LIMITS)
 - Burst protection
 - Redis-backed for distributed rate limiting
 """
@@ -11,7 +11,7 @@ Implements granular rate limiting:
 import os
 import time
 from typing import Optional, Callable
-from fastapi import Request, Response, HTTPException
+from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from prometheus_client import Counter
@@ -101,7 +101,6 @@ def _resolve_client_ip(request: Request) -> str:
     return hops[-depth]
 
 
-
 class RateLimiter:
     """
     Redis-backed rate limiter with sliding window algorithm
@@ -123,12 +122,7 @@ class RateLimiter:
         self.redis = redis_client or get_redis_client()
         self.prefix = "ratelimit:"
 
-    async def is_allowed(
-        self,
-        identifier: str,
-        plan: str,
-        endpoint: str
-    ) -> tuple[bool, dict]:
+    async def is_allowed(self, identifier: str, plan: str, endpoint: str) -> tuple[bool, dict]:
         """
         Check if request is allowed
 
@@ -153,7 +147,7 @@ class RateLimiter:
             is_allowed, info = await self._check_limit(
                 endpoint_key,
                 endpoint_limit,
-                window=60  # 1 minute
+                window=60,  # 1 minute
             )
             if not is_allowed:
                 return False, info
@@ -167,7 +161,7 @@ class RateLimiter:
         is_allowed, burst_info = await self._check_limit(
             burst_key,
             burst_limit,
-            window=60  # 1 minute
+            window=60,  # 1 minute
         )
         if not is_allowed:
             return False, burst_info
@@ -179,7 +173,7 @@ class RateLimiter:
         is_allowed, hourly_info = await self._check_limit(
             hourly_key,
             hourly_limit,
-            window=3600  # 1 hour
+            window=3600,  # 1 hour
         )
         if not is_allowed:
             return False, hourly_info
@@ -187,12 +181,7 @@ class RateLimiter:
         # All checks passed
         return True, hourly_info
 
-    async def _check_limit(
-        self,
-        key: str,
-        limit: int,
-        window: int
-    ) -> tuple[bool, dict]:
+    async def _check_limit(self, key: str, limit: int, window: int) -> tuple[bool, dict]:
         """
         Check rate limit using sliding window
 
@@ -231,7 +220,7 @@ class RateLimiter:
                 "limit": limit,
                 "remaining": remaining,
                 "reset": int(current_time + window),
-                "window": window
+                "window": window,
             }
 
             return is_allowed, info
@@ -274,7 +263,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             "/api/v1/health",
             "/docs",
             "/redoc",
-            "/openapi.json"
+            "/openapi.json",
         }
         self._skip_paths_norm = {p.rstrip("/") for p in self.skip_paths}
 
@@ -293,16 +282,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         # Check rate limit
         is_allowed, rate_info = await self.rate_limiter.is_allowed(
-            identifier=identifier,
-            plan=plan,
-            endpoint=request.url.path
+            identifier=identifier, plan=plan, endpoint=request.url.path
         )
 
         # Add rate limit headers
         headers = {
             "X-RateLimit-Limit": str(rate_info.get("limit", 0)),
             "X-RateLimit-Remaining": str(rate_info.get("remaining", 0)),
-            "X-RateLimit-Reset": str(rate_info.get("reset", 0))
+            "X-RateLimit-Reset": str(rate_info.get("reset", 0)),
         }
         if rate_info.get("degraded"):
             # PR #106 port: open mode keeps serving but signals degradation.
@@ -314,7 +301,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 "Rate limit exceeded",
                 identifier=identifier,
                 endpoint=request.url.path,
-                limit=rate_info.get("limit")
+                limit=rate_info.get("limit"),
             )
 
             return JSONResponse(
@@ -322,9 +309,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 content={
                     "detail": "Rate limit exceeded",
                     "limit": rate_info.get("limit"),
-                    "reset": rate_info.get("reset")
+                    "reset": rate_info.get("reset"),
                 },
-                headers=headers
+                headers=headers,
             )
 
         # Process request
@@ -354,35 +341,3 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         # Default to free plan
         return "free"
-
-
-# Dependency for manual rate limiting
-async def check_rate_limit(request: Request, plan: str = "free"):
-    """
-    Dependency to check rate limit manually
-
-    Usage:
-        @router.get("/endpoint")
-        async def endpoint(request: Request, _: None = Depends(check_rate_limit)):
-            ...
-    """
-    limiter = RateLimiter()
-    identifier = f"user:{request.state.user.id}" if hasattr(request.state, "user") else f"ip:{request.client.host}"
-
-    is_allowed, rate_info = await limiter.is_allowed(
-        identifier=identifier,
-        plan=plan,
-        endpoint=request.url.path
-    )
-
-    if not is_allowed:
-        raise HTTPException(
-            status_code=429,
-            detail={
-                "message": "Rate limit exceeded",
-                "limit": rate_info.get("limit"),
-                "reset": rate_info.get("reset")
-            }
-        )
-
-    return rate_info
