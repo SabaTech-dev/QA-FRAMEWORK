@@ -81,13 +81,19 @@ def _parse_cors_origins(raw: str) -> tuple[list[str], list[str], list[str]]:
     Returns (origins, normalized, discarded): normalized lists entries that
     required a trailing-slash fix, discarded lists entries that ended up
     empty. Normalization only tightens/cleans input; it never widens the
-    allowlist (the raw malformed value is not added as-is).
+    allowlist (the raw malformed value is not added as-is). The "*"
+    wildcard is discarded (fail closed).
     """
     origins: list[str] = []
     normalized: list[str] = []
     discarded: list[str] = []
     for entry in raw.split(","):
         cleaned = entry.strip().rstrip("/")
+        if cleaned == "*":
+            # ponytail: wildcard allow-all in disguise (CVE-2026-68517) —
+            # fail closed, surface via discarded/boot WARN.
+            discarded.append(entry.strip())
+            continue
         if not cleaned:
             if entry.strip():
                 discarded.append(entry.strip())

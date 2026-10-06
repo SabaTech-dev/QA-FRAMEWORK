@@ -279,3 +279,26 @@ class TestNoHardcodedOrigins:
     def test_prod_without_cors_origins_fails_closed(self, prod_client_no_origins):
         resp = _preflight(prod_client_no_origins, ALLOWED)
         assert "access-control-allow-origin" not in resp.headers
+
+
+class TestWildcardRejected:
+    """CORS_ORIGINS="*" must fail closed (CVE-2026-68517 pattern)."""
+
+    def test_wildcard_preflight_denied(self, monkeypatch):
+        client = _boot_app(
+            monkeypatch,
+            ENVIRONMENT="production",
+            CORS_ORIGINS="*",
+        )
+        resp = _preflight(client, DISALLOWED)
+        assert "access-control-allow-origin" not in resp.headers
+
+    def test_wildcard_discarded_and_warned(self, monkeypatch, capsys):
+        import main as dashboard_main
+
+        _boot_app(monkeypatch, ENVIRONMENT="production", CORS_ORIGINS="*")
+        assert "*" in dashboard_main._cors_discarded
+        assert "*" not in dashboard_main._cors_origins
+        out = capsys.readouterr().out
+        warn_lines = [line for line in out.splitlines() if "cors_origins_normalized" in line]
+        assert warn_lines and "*" in warn_lines[-1]
