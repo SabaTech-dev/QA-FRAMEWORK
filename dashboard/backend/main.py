@@ -3,6 +3,7 @@ import os
 from database import init_db
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.datastructures import MutableHeaders
 from integration.qa_framework_client import get_qa_test_suites
 from middleware.apm import APMMiddleware, init_app_info
 from middleware.rate_limit import RateLimitMiddleware
@@ -37,26 +38,98 @@ app = FastAPI(
     redoc_url=None if settings.is_production else "/api/v1/redoc",
 )
 
+
 # CORS middleware (F-8 hardening): Bearer auth, no cookies, so no
 # credentials. Origins come from CORS_ORIGINS (comma-separated env var);
 # localhost dev defaults only apply outside production. Without
 # CORS_ORIGINS in production the allowlist is empty (fail closed).
-_cors_origins = [
-    origin.strip() for origin in os.getenv("CORS_ORIGINS", "").split(",") if origin.strip()
-]
+
+_CORS_ALLOWED_METHODS = frozenset(["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+
+
+class CorsMethodGuardMiddleware:
+    """Strip CORS headers from actual responses to non-allowed methods.
+
+    Starlette's CORSMiddleware only enforces the method allowlist on
+    preflights; simple requests with a disallowed method (e.g. TRACE) still
+    get access-control-allow-origin when the Origin is allowed. Browsers
+    reject those anyway, but the negative contract is cheaper to prove than
+    to argue about: no CORS headers on methods we do not serve.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope["method"].upper() not in _CORS_ALLOWED_METHODS:
+
+            async def send_without_cors(message):
+                if message["type"] == "http.response.start":
+                    headers = MutableHeaders(scope=message)
+                    if "access-control-allow-origin" in headers:
+                        del headers["access-control-allow-origin"]
+                await send(message)
+
+            await self.app(scope, receive, send_without_cors)
+        else:
+            await self.app(scope, receive, send)
+
+
+def _parse_cors_origins(raw: str) -> tuple[list[str], list[str], list[str]]:
+    """Split CORS_ORIGINS with benign normalization (trim + rstrip '/').
+
+    Returns (origins, normalized, discarded): normalized lists entries that
+    required a trailing-slash fix, discarded lists entries that ended up
+    empty. Normalization only tightens/cleans input; it never widens the
+    allowlist (the raw malformed value is not added as-is).
+    """
+    origins: list[str] = []
+    normalized: list[str] = []
+    discarded: list[str] = []
+    for entry in raw.split(","):
+        cleaned = entry.strip().rstrip("/")
+        if not cleaned:
+            if entry.strip():
+                discarded.append(entry.strip())
+            continue
+        if entry.strip() != cleaned:
+            normalized.append(cleaned)
+        origins.append(cleaned)
+    return origins, normalized, discarded
+
+
+_cors_origins, _cors_normalized, _cors_discarded = _parse_cors_origins(
+    os.getenv("CORS_ORIGINS", "")
+)
+if _cors_normalized or _cors_discarded:
+    # A malformed CORS_ORIGINS used to fail closed silently (empty or
+    # mismatched allowlist tumbles the frontend with no clue). Surface it.
+    logger.warning(
+        "CORS_ORIGINS contained malformed entries (benign normalization "
+        "applied; fail-closed allowlist semantics unchanged)",
+        extra={
+            "event": "cors_origins_normalized",
+            "normalized": _cors_normalized,
+            "discarded": _cors_discarded,
+        },
+    )
 if not _cors_origins and not settings.is_production:
     _cors_origins = [
         settings.frontend_url,
         "http://localhost:3000",
         "http://localhost:8080",
     ]
+# CorsMethodGuard added AFTER CORSMiddleware so it wraps OUTSIDE it
+# (add_middleware prepends): request passes the guard first, and the
+# response is scrubbed after CORSMiddleware has added its headers.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
     allow_credentials=False,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_methods=sorted(_CORS_ALLOWED_METHODS),
     allow_headers=["Authorization", "Content-Type"],
 )
+app.add_middleware(CorsMethodGuardMiddleware)
 
 # Add Security Headers middleware (before other middleware)
 app.add_middleware(SecurityHeadersMiddleware)
