@@ -1,0 +1,11 @@
+# Deploy override — ventana F-1+F-2+F-3 (card 77079bca, GO Alfred re-gate 14:14)
+# Añade env de rate-limit al backend de prod. SOLO backend; resto del stack intacto.
+# Rollback: flip RATE_LIMIT_FAIL_MODE=open + `up -d backend` (<1 min),
+#           o imagen qa-framework-backend:pre-f123 si el código fuera el problema.
+services:
+  backend:
+    environment:
+      - RATE_LIMIT_FAIL_MODE=closed
+      - TRUSTED_PROXY_DEPTH=1
+      # CORS allowlist (card 38c33752, 06-oct): frontend prod (Vercel)
+      - CORS_ORIGINS=https://frontend-phi-three-52.vercel.app
