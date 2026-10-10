@@ -16,6 +16,10 @@ repos:
     hooks:
       - id: bandit
         args: ['-r', 'src', '-f', 'json']
+        # pre-commit injects staged filenames as positional targets, which
+        # bandit rejects alongside '-r src' (usage error, exit 2) — scan the
+        # configured tree instead. Found while landing card 45644f9f.
+        pass_filenames: false
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
