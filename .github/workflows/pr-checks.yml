@@ -97,17 +97,17 @@ jobs:
               typecheck: '${{ steps.typecheck.outcome }}',
               tests: '${{ steps.tests.outcome }}'
             };
-            
+
             const message = `## PR Check Results
-            
+
             ✅ **Code Formatting**: ${outputs.formatting === 'success' ? 'Passed' : 'Failed'}
             ✅ **Linting**: ${outputs.linting === 'success' ? 'Passed' : 'Failed'}
             ✅ **Type Checking**: ${outputs.typecheck === 'success' ? 'Passed' : 'Failed'}
             ✅ **Tests**: ${outputs.tests === 'success' ? 'Passed' : 'Failed'}
-            
+
             ${outputs.tests === 'success' ? '' : '⚠️ Some checks failed. Please review the details above.'}
             `;
-            
+
             try {
               await github.rest.issues.createComment({
                 issue_number: context.issue.number,
@@ -226,8 +226,26 @@ jobs:
         run: |
           LINES_CHANGED=$(git diff --stat ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | tail -1 | awk '{print $1}')
           echo "Lines changed: $LINES_CHANGED"
-          
+
           if [ "$LINES_CHANGED" -gt 500 ]; then
             echo "⚠️ Warning: This PR changes more than 500 lines. Consider breaking it into smaller PRs."
             exit 0
           fi
+
+  # Slopsquatting guard — verify NEW dependency entries exist in official registries
+  # (cards d859cee2/45644f9f, integration I-3). Check-only: fails the PR on 404
+  # (hallucinated package) or fail-closed registry error. Stdlib-only, no install.
+  slopsquatting-guard:
+    name: Slopsquatting Guard (new deps)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0  # full history for base..head diff
+
+      - name: Check new dependencies against official registries
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          if [ -z "$BASE_SHA" ]; then BASE_SHA="HEAD~1"; fi  # workflow_dispatch fallback
+          python3 scripts/security/slopsquat_ci_check.py --base "$BASE_SHA" --head "$GITHUB_SHA"
