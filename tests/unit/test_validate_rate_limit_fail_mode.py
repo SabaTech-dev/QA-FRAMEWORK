@@ -25,17 +25,13 @@ def run_validator(*compose_paths: Path) -> subprocess.CompletedProcess:
 def write_compose(tmp_path: Path, environment_block: str) -> Path:
     tmp_path.mkdir(parents=True, exist_ok=True)
     compose = tmp_path / "docker-compose.test.yml"
-    compose.write_text(
-        textwrap.dedent(
-            f"""\
+    compose.write_text(textwrap.dedent(f"""\
             services:
               backend:
                 image: backend:test
                 environment:
             {environment_block}
-            """
-        )
-    )
+            """))
     return compose
 
 
