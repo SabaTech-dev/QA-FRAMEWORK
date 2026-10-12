@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Prometheus alert `RateLimitBackendFailures` (card 5221c63f item 1)**:
+  fires on `rate_limit_backend_failures_total > 0` for 1m (severity
+  warning) — the security condition for the default-open rate-limiter
+  fail mode in BETA. Safe to ship before the counter lands with the
+  F-1 line: an absent series never fires.
+  `dashboard/backend/tests/unit/test_alert_rules.py` validates the rule
+  file (rule present, expression tracks the counter, severity/for set,
+  unique alert names).
+
+- **Fail-fast gate for `RATE_LIMIT_FAIL_MODE` (card 5221c63f item 2)**:
+  `scripts/validate_rate_limit_fail_mode.py` rejects any value other
+  than `open|closed` (case/whitespace tolerant, matching the
+  middleware's `strip().lower()`) in the tracked compose files — a typo
+  like `cloed` used to silently behave as open. Wired as a blocking step
+  in `pr-checks.yml` and as Check 15 in
+  `scripts/pre-deploy-check.sh`. Covered by
+  `tests/unit/test_validate_rate_limit_fail_mode.py`.
+
+### Removed
+
+- **Dead rate-limiting code (card 5221c63f items 3–4)**:
+  `dashboard/backend/middleware/granular_rate_limiting.py` (188 lines)
+  and `dashboard/backend/middleware/rate_limiting.py` (33 lines) — zero
+  importers on current main (re-verified before deletion). The unwired
+  `check_rate_limit` dependency (including its untested 503 branch that
+  only ever existed on the superseded PR #106 line) is removed from
+  `middleware/rate_limit.py`: `RateLimitMiddleware` is the single, live
+  rate-limiting mechanism.
+
 ### Security
 
 - **browser-use 0.13 adaptation for the dashboard backend (card fbe1e86d,
