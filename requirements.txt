@@ -5,7 +5,7 @@ pytest==9.0.3
 pytest-asyncio==1.4.0
 pytest-xdist==3.8.0
 pytest-cov==7.1.0
-allure-pytest==2.13.5  # Fixed: correct package name
+allure-pytest==2.16.2  # Fixed: correct package name; aligned with pyproject.toml and allure-python-commons (2.13.5 pins commons==2.13.5)
 pytest-html==4.2.0
 
 # HTTP Clients
