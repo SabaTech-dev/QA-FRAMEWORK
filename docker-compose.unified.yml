@@ -171,8 +171,8 @@ services:
 
   # Alertmanager
   alertmanager:
-    # v0.28.1: telegram_configs.bot_token_file requires >=0.27 (secret externalization)
-    image: prom/alertmanager:v0.28.1
+    # >=0.27: telegram_configs.bot_token_file (secret externalization) — pin alineado al runtime v0.34.1 (13-oct, RCA canary AC7: prune barrió v0.28.1)
+    image: prom/alertmanager:v0.34.1
     container_name: qa-framework-alertmanager
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
