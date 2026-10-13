@@ -193,6 +193,15 @@ else
     warn "pip-audit not installed, skipping vulnerability check"
 fi
 
+# Check 15: RATE_LIMIT_FAIL_MODE fail-fast (card 5221c63f)
+# Invalid values silently fall back to open in the middleware — block here.
+echo "Validating RATE_LIMIT_FAIL_MODE in tracked compose files..."
+if python3 scripts/validate_rate_limit_fail_mode.py; then
+    pass "RATE_LIMIT_FAIL_MODE valid"
+else
+    fail "Invalid RATE_LIMIT_FAIL_MODE in compose files (see error above)"
+fi
+
 echo ""
 
 # ============================================
@@ -202,21 +211,21 @@ echo ""
 echo "📚 Documentation Checks"
 echo "-----------------------"
 
-# Check 15: README exists
+# Check 16: README exists
 if [ -f "README.md" ]; then
     pass "README.md exists"
 else
     warn "README.md not found"
 fi
 
-# Check 16: .env.example exists
+# Check 17: .env.example exists
 if [ -f ".env.example" ]; then
     pass ".env.example exists"
 else
     warn ".env.example not found"
 fi
 
-# Check 17: Deployment docs exist
+# Check 18: Deployment docs exist
 if [ -f "docs/deployment/DEPLOYMENT.md" ] || [ -f "DEPLOYMENT.md" ]; then
     pass "Deployment documentation exists"
 else

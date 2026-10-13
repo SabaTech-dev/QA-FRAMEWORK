@@ -15,7 +15,13 @@ repos:
     rev: 1.7.6
     hooks:
       - id: bandit
-        args: ['-r', 'src', '-f', 'json']
+        # -ll: gate on medium+ severity. No positional targets here: this
+        # hook config is broken otherwise (pre-commit appends the staged
+        # files as targets and `-r src -f json` made bandit's argparse
+        # reject EVERY .py commit; `src/` does not even exist in this
+        # repo). Low findings (B101 asserts in tests, 'bearer'/'refresh'
+        # literals) stay out of the gate.
+        args: ['-ll']
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
