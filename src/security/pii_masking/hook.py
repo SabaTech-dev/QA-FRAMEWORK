@@ -71,9 +71,22 @@ class PiiMaskingHook:
         return value
 
     def _scrub_string(self, value: str) -> str:
+        # Deterministic detectors run first everywhere (they complement the
+        # SDK on free text and own the structured isolated fields). Their
+        # placeholders are registered in the map too, so MASK mode can
+        # restore them in LLM round-trips.
+        result = self._scrubber.scrub(value)
+        if self._placeholder_map is not None:
+            counters: dict[str, int] = {}
+            for det in result.detections:
+                counters[det.label] = counters.get(det.label, 0) + 1
+                self._placeholder_map.register(
+                    det.label, det.original, f"[{det.label.upper()}_{counters[det.label]}]"
+                )
+        scrubbed = result.text
         if _is_structured(value):
-            return self._scrubber.scrub(value).text
-        return self._scrub_free_text(value)
+            return scrubbed
+        return self._scrub_free_text(scrubbed)
 
     def _scrub_free_text(self, value: str) -> str:
         if self._bridge is None:

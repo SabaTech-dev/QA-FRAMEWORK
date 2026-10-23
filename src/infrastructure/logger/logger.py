@@ -7,6 +7,43 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from src.security.pii_masking.config import PiiMaskingConfig
+from src.security.pii_masking.hook import PiiMaskingHook
+
+_HOOK: PiiMaskingHook | None = None
+
+
+def _get_hook() -> PiiMaskingHook | None:
+    """Opt-in hook for sinks; rebuilt when the flag state changes."""
+    global _HOOK
+    config = PiiMaskingConfig.from_env()
+    if not config.enabled:
+        return None
+    if _HOOK is None or not _HOOK.enabled:
+        _HOOK = PiiMaskingHook(config)
+    return _HOOK
+
+
+def scrub_before_sink(message: str) -> str:
+    """Mask a message before it reaches a sink. No-op unless opted in."""
+    hook = _get_hook()
+    if hook is None:
+        return message
+    result = hook.process(message)
+    return result if isinstance(result, str) else message
+
+
+class _PiiMaskingFilter(logging.Filter):
+    """Logging filter applying the opt-in PII hook to every record."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.msg = scrub_before_sink(str(record.msg))
+        if record.args:
+            record.args = tuple(
+                scrub_before_sink(str(a)) if isinstance(a, str) else a for a in record.args
+            )
+        return True
+
 
 class JSONFormatter(logging.Formatter):
     """
@@ -93,6 +130,7 @@ class QALogger:
         if name not in cls._loggers:
             logger = logging.getLogger(name)
             logger.setLevel(logging.DEBUG)
+            logger.addFilter(_PiiMaskingFilter())
 
             # Remove existing handlers
             logger.handlers.clear()

@@ -17,6 +17,7 @@ class MaskingMode(str, Enum):
 
 _ENV_FLAG = "QAFW_PII_MASKING"
 _ENV_MODE = "QAFW_PII_MASKING_MODE"
+_ENV_BRIDGE = "QAFW_PII_BRIDGE_COMMAND"
 
 
 class PiiMaskingConfig(BaseModel):
@@ -40,4 +41,6 @@ class PiiMaskingConfig(BaseModel):
             if mode_raw in {m.value for m in MaskingMode}
             else MaskingMode.MASK
         )
-        return cls(enabled=enabled, mode=mode)
+        bridge_raw = os.environ.get(_ENV_BRIDGE, "").strip()
+        bridge = bridge_raw.split() or None
+        return cls(enabled=enabled, mode=mode, bridge_command=bridge)

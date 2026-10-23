@@ -6,6 +6,8 @@ Integrates with LLM providers (OpenAI, Gemini) for generating tests.
 
 from src.domain.test_generation.entities import GeneratedTest
 from src.domain.test_generation.value_objects import TestFramework
+from src.security.pii_masking.config import PiiMaskingConfig
+from src.security.pii_masking.hook import PiiMaskingHook
 
 
 class LLMTestGenerator:
@@ -20,11 +22,35 @@ class LLMTestGenerator:
         provider: str = "openai",
         api_key: str | None = None,
         model: str = "gpt-4",
+        bridge_command_override: list[str] | None = None,
     ):
         self.provider = provider
         self.api_key = api_key
         self.model = model
         self._client = None
+        self._bridge_command_override = bridge_command_override
+
+    def _ingest_hook(self) -> PiiMaskingHook | None:
+        """Opt-in PII hook for prompts leaving to an external LLM."""
+        config = PiiMaskingConfig.from_env()
+        if not config.enabled:
+            return None
+        if self._bridge_command_override is not None:
+            config = config.model_copy(update={"bridge_command": self._bridge_command_override})
+        return PiiMaskingHook(config)
+
+    def build_prompt_for_ingest(self, requirement: dict) -> str:
+        """Scrubbed plain-text prompt for external LLM sinks (opt-in)."""
+        hook = self._ingest_hook()
+        payload: dict = dict(requirement)
+        if hook is not None:
+            payload = hook.process(payload)  # type: ignore[assignment]
+            hook.close()
+        return (
+            f"Title: {payload.get('title', 'N/A')}\n"
+            f"Description: {payload.get('description', 'N/A')}\n"
+            f"Notes: {payload.get('note', '')}"
+        )
 
     def generate_test(
         self,
@@ -103,11 +129,11 @@ class LLMTestGenerator:
         return f"""
 Generate a {framework.value} test for the following requirement:
 
-Title: {requirement.get('title', 'N/A')}
-Description: {requirement.get('description', 'N/A')}
-Preconditions: {requirement.get('preconditions', [])}
-Steps: {requirement.get('steps', [])}
-Expected Results: {requirement.get('expected_results', [])}
+Title: {requirement.get("title", "N/A")}
+Description: {requirement.get("description", "N/A")}
+Preconditions: {requirement.get("preconditions", [])}
+Steps: {requirement.get("steps", [])}
+Expected Results: {requirement.get("expected_results", [])}
 
 Generate a complete, runnable test with proper imports, setup, and assertions.
 """
@@ -119,29 +145,29 @@ Generate a complete, runnable test with proper imports, setup, and assertions.
         if framework == TestFramework.PYTEST:
             return f'''
 def test_{title}():
-    """Test for: {requirement.get('title', 'Unknown')}"""
+    """Test for: {requirement.get("title", "Unknown")}"""
     # Setup
-    # {requirement.get('preconditions', ['No preconditions'])[0] if requirement.get('preconditions') else 'No preconditions'}
-    
+    # {requirement.get("preconditions", ["No preconditions"])[0] if requirement.get("preconditions") else "No preconditions"}
+
     # Execute steps
-    # {requirement.get('steps', ['No steps'])[0] if requirement.get('steps') else 'No steps'}
-    
+    # {requirement.get("steps", ["No steps"])[0] if requirement.get("steps") else "No steps"}
+
     # Assert expected results
-    # {requirement.get('expected_results', ['No expected results'])[0] if requirement.get('expected_results') else 'No expected results'}
+    # {requirement.get("expected_results", ["No expected results"])[0] if requirement.get("expected_results") else "No expected results"}
     assert True
 '''
         elif framework == TestFramework.PLAYWRIGHT:
             return f'''
 def test_{title}(page):
-    """Test for: {requirement.get('title', 'Unknown')}"""
+    """Test for: {requirement.get("title", "Unknown")}"""
     # Navigate and setup
-    # {requirement.get('preconditions', ['No preconditions'])[0] if requirement.get('preconditions') else 'No preconditions'}
-    
+    # {requirement.get("preconditions", ["No preconditions"])[0] if requirement.get("preconditions") else "No preconditions"}
+
     # Execute steps
-    # {requirement.get('steps', ['No steps'])[0] if requirement.get('steps') else 'No steps'}
-    
+    # {requirement.get("steps", ["No steps"])[0] if requirement.get("steps") else "No steps"}
+
     # Assert expected results
-    # {requirement.get('expected_results', ['No expected results'])[0] if requirement.get('expected_results') else 'No expected results'}
+    # {requirement.get("expected_results", ["No expected results"])[0] if requirement.get("expected_results") else "No expected results"}
     assert True
 '''
         else:
@@ -157,10 +183,10 @@ def test_edge_{name}():
     """Edge case: {edge_case.description}"""
     # Category: {edge_case.category}
     # Risk Level: {edge_case.risk_level}
-    
+
     # Test input values
     input_values = {edge_case.input_values}
-    
+
     # Expected behavior: {edge_case.expected_behavior}
     assert True
 '''
