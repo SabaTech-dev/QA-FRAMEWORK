@@ -1,0 +1,11 @@
+{
+  "name": "qa-fw-pii-redact-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NDJSON sidecar bridging @desert-ant-labs/redact to the QA-FW Python ingest hook",
+  "type": "module",
+  "main": "bridge.mjs",
+  "dependencies": {
+    "@desert-ant-labs/redact": "3.1.0"
+  }
+}
