@@ -25,7 +25,7 @@ Supuestos (marcados como asunciones): (a) el repo no tiene un módulo `ingest` e
 | T3 | S2 | inline | done | 0fb93b0 |
 | T4 | S4, S1 | inline | done | c9a3da5, 494f0e4 |
 | T5 | S1, S5 | inline | done | (ver Log L5) |
-| T6 | S6 | inline | pending | — |
+| T6 | S6 | inline | done | — |
 
 Route declarada: todo inline (un solo módulo nuevo, sin unidades paralelas independientes; ningún trigger de writer aplica).
 
@@ -39,3 +39,4 @@ Route declarada: todo inline (un solo módulo nuevo, sin unidades paralelas inde
 - L4 (2026-10-23): Aprendizaje TDD: `importlib.reload` en tests de config contamina la identidad del enum entre tests (fallo solo en suite paralela). Eliminado el reload; `from_env()` ya lee el entorno por llamada.
 - L5 (2026-10-23): Verificación T5: cobertura módulo 92% (>80% S5) ✓; flag default OFF verificado en test ✓; suite completa: 44 failed/87 errors IDÉNTICOS a base f0418bf (diff de nombres vacío), +36 tests nuevos passing. Fallos de base: tests/security/test_owasp_top10_2025.py (7) y otros preexistentes — fuera de alcance, reportados al reviewer.
 - L6 (2026-10-23): Diseño final del routing del hook: regex determinista SIEMPRE primero (estructura y texto libre, complementa al SDK), bridge SDK solo para texto libre; todas las detecciones (regex y SDK) se registran en el PlaceholderMap en modo MASK.
+- L7 (2026-10-23): T6 done — README del módulo con MODO HIGIENE (recall 88.8%, ~11% residual), licencia DAL 1.0 (100k MAU, umbral card ×10) y plan B GLiNER-PII. Pendiente: PR a main (sin merge) + handoff anti-self-certify.
