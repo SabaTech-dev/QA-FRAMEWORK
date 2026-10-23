@@ -6,36 +6,10 @@ BEFORE any payload reaches an external LLM or storage. Default is OFF.
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from src.security.pii_masking.config import MaskingMode, PiiMaskingConfig
-
-# Deterministic scrub for structured isolated fields (expanded in T2/S3).
-_CARD_RE = re.compile(r"\b(?:\d[ -]?){13,19}\b")
-
-
-def _luhn_ok(digits: str) -> bool:
-    total = 0
-    for i, ch in enumerate(reversed(digits)):
-        d = int(ch)
-        if i % 2 == 1:
-            d *= 2
-            if d > 9:
-                d -= 9
-        total += d
-    return total % 10 == 0
-
-
-def _mask_card(value: str) -> str:
-    digits = re.sub(r"\D", "", value)
-    if 13 <= len(digits) <= 19 and _luhn_ok(digits):
-        return "[CREDIT_CARD_1]"
-    return value
-
-
-def _scrub_string(value: str) -> str:
-    return _CARD_RE.sub(lambda m: _mask_card(m.group(0)), value)
+from src.security.pii_masking.regex_engine import StructuredRegexScrubber
 
 
 class PiiMaskingHook:
@@ -43,6 +17,7 @@ class PiiMaskingHook:
 
     def __init__(self, config: PiiMaskingConfig) -> None:
         self._config = config
+        self._scrubber = StructuredRegexScrubber()
 
     @property
     def enabled(self) -> bool:
@@ -56,7 +31,7 @@ class PiiMaskingHook:
 
     def _scrub(self, value: Any) -> Any:
         if isinstance(value, str):
-            return _scrub_string(value)
+            return self._scrubber.scrub(value).text
         if isinstance(value, dict):
             return {k: self._scrub(v) for k, v in value.items()}
         if isinstance(value, (list, tuple)):
