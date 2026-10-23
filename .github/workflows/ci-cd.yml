@@ -254,7 +254,9 @@ jobs:
         run: poetry install --no-interaction
 
       - name: Install redis-tools
-        run: sudo apt-get install -y redis-tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y redis-tools
 
       - name: Wait for services
         run: |
@@ -471,7 +473,7 @@ jobs:
           pip install codecov
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           files: ./coverage.xml
           flags: unittests
@@ -607,7 +609,7 @@ jobs:
         run: |
           echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           # Unit tests
           if [ -f junit-unit.xml ]; then
             UNIT_TESTS=$(grep -o 'tests="[0-9]*"' junit-unit.xml | head -1 | grep -o '[0-9]*')
@@ -619,7 +621,7 @@ jobs:
             echo "- Errors: $UNIT_ERRORS" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           # Integration tests
           if [ -f junit-integration.xml ]; then
             INT_TESTS=$(grep -o 'tests="[0-9]*"' junit-integration.xml | head -1 | grep -o '[0-9]*')
@@ -629,7 +631,7 @@ jobs:
             echo "- Failures: $INT_FAILURES" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           # E2E tests
           if [ -f junit-e2e.xml ]; then
             E2E_TESTS=$(grep -o 'tests="[0-9]*"' junit-e2e.xml | head -1 | grep -o '[0-9]*')
@@ -639,7 +641,7 @@ jobs:
             echo "- Failures: $E2E_FAILURES" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           # Dashboard Backend Middleware tests
           if [ -f junit-middleware.xml ]; then
             MIDDLEWARE_TESTS=$(grep -o 'tests="[0-9]*"' junit-middleware.xml | head -1 | grep -o '[0-9]*')

@@ -37,19 +37,25 @@ app = FastAPI(
     redoc_url=None if settings.is_production else "/api/v1/redoc",
 )
 
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+# CORS middleware (F-8 hardening): Bearer auth, no cookies, so no
+# credentials. Origins come from CORS_ORIGINS (comma-separated env var);
+# localhost dev defaults only apply outside production. Without
+# CORS_ORIGINS in production the allowlist is empty (fail closed).
+_cors_origins = [
+    origin.strip() for origin in os.getenv("CORS_ORIGINS", "").split(",") if origin.strip()
+]
+if not _cors_origins and not settings.is_production:
+    _cors_origins = [
         settings.frontend_url,
         "http://localhost:3000",
         "http://localhost:8080",
-        "https://frontend-phi-three-52.vercel.app",  # Production frontend
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    # expose_headers=["Access-Control-Allow-Origin"]
+    ]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 # Add Security Headers middleware (before other middleware)

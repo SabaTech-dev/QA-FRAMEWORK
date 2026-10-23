@@ -79,7 +79,9 @@ jobs:
 
       - name: Install redis-tools (for integration tests)
         if: matrix.test-type == 'integration'
-        run: sudo apt-get install -y redis-tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y redis-tools
 
       - name: Install Playwright dependencies (for e2e tests)
         if: matrix.test-type == 'e2e'
@@ -206,7 +208,7 @@ jobs:
           echo "" >> nightly-report.md
           echo "## Summary" >> nightly-report.md
           echo "" >> nightly-report.md
-          
+
           # Count tests from XML files (handle no matches gracefully)
           shopt -s nullglob
           found_xml=false
@@ -218,7 +220,7 @@ jobs:
             echo "- $(basename $file .xml): $TESTS tests, $FAILURES failures, $ERRORS errors" >> nightly-report.md
           done
           shopt -u nullglob
-          
+
           if [ "$found_xml" = false ]; then
             echo "No JUnit XML results found - all test types may have been skipped or errored before report generation." >> nightly-report.md
             echo "Check individual job logs for details." >> nightly-report.md
