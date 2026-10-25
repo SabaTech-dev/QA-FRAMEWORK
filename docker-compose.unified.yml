@@ -94,6 +94,25 @@ services:
       retries: 3
     restart: unless-stopped
 
+  redis-exporter:
+    # Restaurado a compose: el contenedor llevaba huérfano desde 23-ago (creado desde
+    # una revisión sin commit; 'redis-exporter' nunca existió en git) — card b8426c4d.
+    # Misma config que el contenedor vivo (image/env/user/red) + HEALTHCHECK añadido.
+    image: oliver006/redis_exporter:v1.89.0
+    container_name: qa-framework-redis-exporter
+    restart: unless-stopped
+    user: "59000:59000"
+    environment:
+      - REDIS_ADDR=redis://redis:6379
+    networks:
+      - qa-network
+    healthcheck:
+      # Imagen scratch (sin shell/wget/curl): self-exec probe — binario carga y sale 0.
+      test: ["CMD", "/redis_exporter", "--version"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
   # ==================== VULNERABILITY SCANNER SERVICES ====================
 
   # Nuclei Scanner - Template-based vulnerability scanner
