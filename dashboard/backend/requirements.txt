@@ -34,4 +34,5 @@ prometheus-client==0.26.0
 pyotp==2.9.0
 qrcode[pil]==7.4.2
 aiohttp>=3.14.3
+brotli>=1.2.1  # CVE-2026-111497 (CVSS 9.2): pin explicito — antes transitivo 1.2.0 vulnerable (card e915532c)
 browser-use==0.13.*
