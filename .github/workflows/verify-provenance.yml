@@ -1,0 +1,32 @@
+# =============================================================================
+# SLSA L1 — Verify Provenance Attestation (OWASP A03: Supply Chain)
+# Verifies that build artifacts have valid provenance
+# =============================================================================
+
+name: Verify Provenance
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  attestations: read
+  id-token: write
+
+jobs:
+  verify:
+    name: Verify Source Provenance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify attestation
+        run: |
+          # List attestations for this commit
+          gh attestation verify "${{ github.sha }}" \
+            --owner ${{ github.repository_owner }} \
+            --predicate-type https://slsa.dev/provenance/v1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
