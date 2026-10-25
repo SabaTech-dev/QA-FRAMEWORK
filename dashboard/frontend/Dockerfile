@@ -1,4 +1,5 @@
-FROM node:26-alpine
+# CVE-2026-111497: fix brotli decoder en >=26.12.1 (card e915532c) — relajar a 26-alpine cuando flote >=26.12.1
+FROM node:26.12.1-alpine
 
 WORKDIR /app
 
