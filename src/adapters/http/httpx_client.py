@@ -7,6 +7,7 @@ from typing import Any
 import httpx
 
 from src.core.interfaces import IHTTPClient
+from src.core.security.domain_normalizer import normalize_allowlist
 from src.core.security.url_validator import DEFAULT_ALLOWED_DOMAINS, validate_url
 
 logger = logging.getLogger(__name__)
@@ -17,10 +18,14 @@ def _load_allowed_domains() -> set[str]:
     Load allowed domains from environment variable or use defaults.
 
     Environment: SSRF_ALLOWED_DOMAINS — comma-separated list of domains.
+
+    Entries are normalized with the domain_normalizer contract (card
+    e34711f3, M1): mixed-case, Unicode or trailing-dot entries used to be
+    silent dead rules. Invalid entries are skipped — never fatal.
     """
     env_domains = os.getenv("SSRF_ALLOWED_DOMAINS")
     if env_domains:
-        return {d.strip() for d in env_domains.split(",") if d.strip()}
+        return normalize_allowlist(env_domains.split(","))
     return DEFAULT_ALLOWED_DOMAINS
 
 
@@ -61,9 +66,16 @@ class HTTPXClient(IHTTPClient):
         self.default_headers = headers or {}
         self._client: httpx.AsyncClient | None = None
         self._ssrf_enabled = ssrf_enabled
-        self._allowed_domains = (
-            allowed_domains if allowed_domains is not None else _load_allowed_domains()
-        )
+        if allowed_domains is not None:
+            self._allowed_domains = allowed_domains
+            # Operator-supplied list: its bases are declared by the operator,
+            # so subdomain semantics are enabled (H1 hardening: opt-in only).
+            self._allow_subdomains = True
+        else:
+            self._allowed_domains = _load_allowed_domains()
+            # Env override = operator-controlled bases; the builtin defaults
+            # are third-party domains and never grant subdomain trust.
+            self._allow_subdomains = bool(os.getenv("SSRF_ALLOWED_DOMAINS"))
 
     def _resolve_url(self, url: str) -> str:
         """
@@ -75,7 +87,11 @@ class HTTPXClient(IHTTPClient):
         Returns:
             Fully qualified URL string
         """
-        if url.startswith(("http://", "https://")):
+        # RFC 3986 schemes are case-insensitive and httpx normalizes them:
+        # "HTTPS://evil.com/x" IS absolute for the client. Detection must
+        # match, or the validator checks the base host while the request
+        # goes to evil.com (card e34711f3, H2).
+        if url.lower().startswith(("http://", "https://")):
             return url
         return f"{self.base_url}/{url.lstrip('/')}"
 
@@ -92,8 +108,15 @@ class HTTPXClient(IHTTPClient):
         if not self._ssrf_enabled:
             return
 
+        # Validate the URL that httpx will actually request (H2):
+        # _resolve_url is the single resolution point for absolute vs
+        # base-relative URLs.
         full_url = self._resolve_url(url)
-        validate_url(full_url, allowed_domains=self._allowed_domains)
+        validate_url(
+            full_url,
+            allowed_domains=self._allowed_domains,
+            allow_subdomains=self._allow_subdomains,
+        )
 
     async def _get_client(self) -> httpx.AsyncClient:
         """Get or create HTTPX client (Singleton pattern for connection pooling)"""
