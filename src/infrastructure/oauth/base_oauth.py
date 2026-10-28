@@ -5,11 +5,13 @@ import os
 from abc import abstractmethod
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
 from domain.auth.entities import OAuthUser, Token
 from domain.auth.interfaces import OAuthProvider
+from src.core.security.domain_normalizer import DomainNormalizationError, url_hostname
 from src.core.security.url_validator import DEFAULT_ALLOWED_DOMAINS, validate_url
 
 logger = logging.getLogger(__name__)
@@ -59,6 +61,30 @@ OAUTH_ALLOWED_DOMAINS: set[str] = DEFAULT_ALLOWED_DOMAINS | {
     "api.discord.com",
 }
 
+# Loopback IP literals — the IDNA normalization contract rejects IP
+# addresses, so these are compared as raw (lowercased) hostnames.
+_LOOPBACK_LITERAL_HOSTS = frozenset({"127.0.0.1", "::1"})
+
+
+def _is_local_redirect_uri(uri: str) -> bool:
+    """Exact-hostname carve-out for local development redirect URIs (M2).
+
+    ``True`` only when the URI host is exactly ``localhost`` (IDNA
+    normalized, any case) or a loopback IP literal. The previous prefix
+    check (``uri.startswith("http://localhost")``) also matched attacker
+    hosts such as ``localhost.evil.com``.
+    """
+    try:
+        if url_hostname(uri) == "localhost":
+            return True
+    except DomainNormalizationError:
+        pass  # IP literal or unparseable host: try the raw literal check
+    try:
+        raw_hostname = urlparse(uri).hostname or ""
+    except ValueError:
+        return False
+    return raw_hostname.lower() in _LOOPBACK_LITERAL_HOSTS
+
 
 class BaseOAuthProvider(OAuthProvider):
     """Base implementation for OAuth 2.0 providers.
@@ -93,9 +119,14 @@ class BaseOAuthProvider(OAuthProvider):
         self._redirect_uri = redirect_uri
         self._http_client: httpx.AsyncClient | None = None
         self._ssrf_enabled = ssrf_enabled
-        self._allowed_domains = (
-            allowed_domains if allowed_domains is not None else OAUTH_ALLOWED_DOMAINS
-        )
+        if allowed_domains is not None:
+            self._allowed_domains = allowed_domains
+            # Operator-supplied list: bases controlled by the operator.
+            self._allow_subdomains = True
+        else:
+            self._allowed_domains = OAUTH_ALLOWED_DOMAINS
+            # Third-party OAuth domains never grant subdomain trust (H1).
+            self._allow_subdomains = False
 
     @property
     def client_id(self) -> str:
@@ -135,7 +166,11 @@ class BaseOAuthProvider(OAuthProvider):
         """
         if not self._ssrf_enabled:
             return
-        validate_url(url, allowed_domains=self._allowed_domains)
+        validate_url(
+            url,
+            allowed_domains=self._allowed_domains,
+            allow_subdomains=self._allow_subdomains,
+        )
 
     async def _make_request(
         self,
@@ -199,8 +234,11 @@ class BaseOAuthProvider(OAuthProvider):
 
         uri = redirect_uri or self.redirect_uri
 
-        # Validate redirect URI against the allowlist
-        if self._ssrf_enabled and not uri.startswith("http://localhost"):
+        # Validate redirect URI against the allowlist. Local development
+        # callbacks are carved out by EXACT hostname (localhost / loopback
+        # literal) — never by string prefix (M2: "localhost.evil.com" must
+        # not skip validation).
+        if self._ssrf_enabled and not _is_local_redirect_uri(uri):
             self._validate_url(uri)
 
         params = self._get_authorization_params(state, uri)

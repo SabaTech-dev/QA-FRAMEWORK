@@ -40,6 +40,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **IDNA/domain-spoofing hardening — `domain_normalizer` integration
+  (cards 2eab7e70 + e34711f3)**: new
+  `src/core/security/domain_normalizer.py` (reject format chars → NFKC →
+  lowercase → one root dot → IDNA/UTS46, fail-closed; 48 hostile tests)
+  integrated into the four domain-comparison points:
+  - **H1** `url_validator`: parent/grandparent suffix matching removed —
+    `is_allowed_url('https://evil.github.com/poc')` is now `False`
+    (`*.github.com` is registrable by anyone). Subdomain semantics are
+    opt-in (`allow_subdomains=True`) and only for operator-supplied
+    allowlists; the builtin default list never grants them.
+  - **H2** `httpx_client._resolve_url`: absolute-URL detection is
+    case-insensitive; `HTTPS://evil.com/x` is validated as the absolute
+    URL httpx will actually request (it was validated as a base-relative
+    path while the request went to evil.com).
+  - **M1** `url_validator` + `httpx_client`: allowlist↔hostname comparison
+    under the normalization contract — mixed-case/Unicode/trailing-dot
+    entries (incl. `SSRF_ALLOWED_DOMAINS`) match instead of being silent
+    dead rules; IP literals keep an exact raw comparison.
+  - **M2** `base_oauth`: localhost redirect-uri carve-out is now EXACT
+    hostname (`localhost` any case + loopback literals `127.0.0.1`/`::1`);
+    `http://localhost.evil.com/callback` no longer skips validation.
+  - **L1** `tenant_context`: tenant subdomain label is NFKC+lowercase
+    folded; reserved list (`www`/`api`/`app`) is case-insensitive. No
+    punycode↔unicode translation (fail-closed slug lookup).
+  `idna` promoted to explicit dependency (`requirements.txt` +
+  `pyproject.toml`).
+
 - **browser-use 0.13 adaptation for the dashboard backend (card fbe1e86d,
   closes the runtime gap that blocked Dependabot PR #159)**:
   - `dashboard/backend/services/ai/browser_use_service.py` migrates the

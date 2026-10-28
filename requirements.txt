@@ -11,6 +11,7 @@ pytest-html==4.2.0
 # HTTP Clients
 httpx==0.26.0
 requests==2.34.2  # aligned with pyproject.toml; locust>=2.31 requires requests>=2.32.2
+idna>=3.6  # direct dependency: domain normalization (src/core/security/domain_normalizer.py); previously transitive via httpx/requests
 
 # UI Testing
 playwright==1.63.0

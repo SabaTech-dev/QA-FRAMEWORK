@@ -8,6 +8,7 @@ This middleware:
 """
 
 import logging
+import unicodedata
 import uuid
 from collections.abc import Callable
 
@@ -19,6 +20,10 @@ from src.domain.entities.tenant import Tenant
 from src.infrastructure.persistence.tenant_repository import TenantRepositoryInterface
 
 logger = logging.getLogger(__name__)
+
+# Reserved subdomain labels, compared AFTER NFKC + lowercase folding, so
+# "WWW" or fullwidth variants are reserved exactly like "www".
+RESERVED_SUBDOMAINS = frozenset({"www", "api", "app"})
 
 
 class TenantContext:
@@ -146,7 +151,7 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
             host = request.headers.get("host", "")
             subdomain = self._extract_subdomain(host)
 
-            if subdomain and subdomain not in ["www", "api", "app"]:
+            if subdomain and subdomain not in RESERVED_SUBDOMAINS:
                 tenant = await self.tenant_repository.get_by_slug(subdomain)
                 if tenant:
                     resolved_from = "subdomain"
@@ -198,7 +203,13 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
         # If we have at least 3 parts, the first is the subdomain
         # e.g., acme.app.com -> acme
         if len(parts) >= 3:
-            return parts[0]
+            # NFKC + lowercase (card e34711f3, L1): the Host header is
+            # attacker-controllable and the raw label broke case-insensitive
+            # slug lookups and the reserved-list check ("WWW" was not
+            # reserved). Policy: no punycode<->unicode translation — xn--
+            # labels stay punycode, Unicode labels stay Unicode, so a lookup
+            # that matches no real slug fails closed.
+            return unicodedata.normalize("NFKC", parts[0]).lower()
 
         # For localhost or IP addresses, no subdomain
         return None
