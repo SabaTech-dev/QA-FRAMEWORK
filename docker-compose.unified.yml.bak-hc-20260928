@@ -1,0 +1,236 @@
+version: '3.8'
+
+services:
+  # ==================== DASHBOARD SERVICES ====================
+
+  # Backend API
+  backend:
+    build:
+      context: ./dashboard/backend
+      dockerfile: Dockerfile
+    container_name: qa-framework-backend
+    ports:
+      - "127.0.0.1:8010:8000"
+    environment:
+      - DATABASE_URL=postgresql://qa_user:qa_pass@postgres:5432/qa_dashboard
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # Required: no committed fallback. Provide via env or an overrides
+      # file (e.g. docker-compose.staging-overrides.yml, untracked, chmod 600).
+      # docker compose fails fast when the variable is unset.
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required - set it via env or a local overrides file}
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./dashboard/backend:/app
+      - backend-logs:/app/logs
+    networks:
+      - qa-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Frontend React
+  frontend:
+    build:
+      context: ./dashboard/frontend
+      dockerfile: Dockerfile
+    container_name: qa-framework-frontend
+    ports:
+      - "127.0.0.1:3010:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    volumes:
+      - ./dashboard/frontend:/app
+      - /app/node_modules
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - qa-network
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: qa-framework-db
+    environment:
+      POSTGRES_DB: qa_dashboard
+      POSTGRES_USER: qa_user
+      POSTGRES_PASSWORD: qa_pass
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - qa-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qa_user -d qa_dashboard"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: qa-framework-cache
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - qa-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # ==================== VULNERABILITY SCANNER SERVICES ====================
+
+  # Nuclei Scanner - Template-based vulnerability scanner
+  nuclei-scanner:
+    image: projectdiscovery/nuclei:latest
+    container_name: qa-framework-nuclei
+    profiles:
+      - scanners
+      - full
+    volumes:
+      - nuclei-templates:/root/nuclei-templates
+      - ./templates/vuln/custom:/custom-templates
+      - ./reports/vuln:/output
+    networks:
+      - qa-network
+    command: ["--help"]
+    restart: "no"
+
+  # WSTG Scanner - OWASP Web Security Testing Guide
+  wstg-scanner:
+    build:
+      context: ./docker/vuln
+      dockerfile: Dockerfile.wstg
+    container_name: qa-framework-wstg
+    profiles:
+      - scanners
+      - full
+    volumes:
+      - ./reports/vuln:/output
+    networks:
+      - qa-network
+    command: ["--help"]
+    restart: "no"
+
+  # ==================== MONITORING SERVICES ====================
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: qa-framework-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    volumes:
+      - ./dashboard/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:9091:9090"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - qa-network
+    restart: unless-stopped
+
+  # Grafana
+  grafana:
+    # 11.6.0: upgrade 18-sep (card e18d452e) se aplicó FUERA del compose → línea stale en 10.0.0
+    # revirtió el contenedor al recrear (24-sep, card 09322faf). Ahora compose = verdad operativa.
+    image: grafana/grafana:11.6.0
+    container_name: qa-framework-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      # Creds en .env (card 09322faf): password fuerte aplicada por API al live 24-sep;
+      # el env cubre fresh-volumes. Grafana solo aplica admin env en primer arranque.
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./dashboard/monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3005:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - qa-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # Alertmanager
+  alertmanager:
+    # v0.28.1: telegram_configs.bot_token_file requires >=0.27 (secret externalization)
+    image: prom/alertmanager:v0.28.1
+    container_name: qa-framework-alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    volumes:
+      - ./dashboard/monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager-data:/alertmanager
+    ports:
+      - "127.0.0.1:9093:9093"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - qa-network
+    restart: unless-stopped
+    secrets:
+      - alertmanager_telegram_token
+
+# Named volumes
+volumes:
+  postgres-data:
+  redis-data:
+  backend-logs:
+  prometheus-data:
+  grafana-data:
+  alertmanager-data:
+  nuclei-templates:
+
+# Secrets (host-local files, NEVER committed — see .gitignore)
+secrets:
+  alertmanager_telegram_token:
+    file: ./dashboard/monitoring/alertmanager/.secrets/telegram_token
+
+# Networks
+networks:
+  qa-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
