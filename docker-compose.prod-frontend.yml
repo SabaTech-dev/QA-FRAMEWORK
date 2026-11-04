@@ -1,0 +1,26 @@
+# Prod frontend override (card 4a2dbdca) — reemplaza el Vite DEV server.
+# Uso (sobre docker-compose.unified.yml):
+#   docker compose -f docker-compose.unified.yml -f docker-compose.prod-frontend.yml up -d --build frontend
+# Rollback: `up -d --build frontend` solo con el compose unified (vuelve al dev server).
+#
+# Nota CORS: al servirse mismo-origen con proxy /api server-side (nginx -> backend:8000),
+# el navegador no hace requests cross-origin -> CORS_ORIGINS del backend no requiere
+# https://qa.sabatech.dev (pero puede añadirse por defense-in-depth).
+services:
+  frontend:
+    build:
+      context: ./dashboard/frontend
+      dockerfile: Dockerfile.prod
+      args:
+        - VITE_API_URL=/api
+    image: qa-framework-frontend:prod-nginx
+    container_name: qa-framework-frontend
+    ports:
+      - "127.0.0.1:3010:8080"
+    environment:
+      # runtime (no build-time): el bundle usa rutas relativas /api
+      - VITE_API_URL=/api
+    depends_on:
+      - backend
+    # SIN volume-mount del source: imagen inmutable, assets de build prod
+    restart: unless-stopped
