@@ -15,6 +15,8 @@ wildcard-tolerant policy only invites regressions. Contract:
 """
 
 import importlib
+import json
+from urllib.parse import urlsplit
 
 import pytest
 from fastapi.testclient import TestClient
@@ -267,7 +269,26 @@ class TestOriginNormalization:
             if "cors_origins_normalized" in line or "CORS_ORIGINS" in line
         ]
         assert warn_lines, "expected a WARN about malformed CORS_ORIGINS entries"
-        assert "https://a.example.com" in warn_lines[-1]
+        # Compare parsed components, not substring (CodeQL
+        # py/incomplete-url-substring-sanitization).
+        payloads = [
+            json.loads(line) for line in reversed(warn_lines) if line.startswith("{")
+        ]
+        # structlog nests the logger extra fields under an "extra" key.
+        with_normalized = [
+            p.get("extra", p) for p in payloads if "normalized" in p.get("extra", p)
+        ]
+        assert with_normalized, f"no WARN payload with normalized entries: {warn_lines}"
+        payload = with_normalized[0]
+        normalized = payload["normalized"]
+        assert len(normalized) == 1, f"unexpected normalized set: {normalized}"
+        parts = urlsplit(normalized[0])
+        expected = urlsplit("https://a.example.com")
+        assert (parts.scheme, parts.netloc, parts.path) == (
+            expected.scheme,
+            expected.netloc,
+            expected.path,
+        )
 
 
 class TestNoHardcodedOrigins:
