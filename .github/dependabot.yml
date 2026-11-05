@@ -73,6 +73,15 @@ updates:
           - "patch"
         exclude-patterns:
           - "stripe"
+    # 2026-11-05 (card b2b81e7a / RCA 5634db43): browser-use==0.13.14 fija
+    # pydantic==2.13.5 y pydantic-settings==2.15.0; ignorar los rangos que
+    # rompen el resolver (ResolutionImpossible en #302) hasta que browser-use
+    # publique soporte de pydantic>=2.14 / pydantic-settings>=2.16.
+    ignore:
+      - dependency-name: "pydantic"
+        versions: [">=2.14"]
+      - dependency-name: "pydantic-settings"
+        versions: [">=2.16"]
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
