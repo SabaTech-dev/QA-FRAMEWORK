@@ -39,7 +39,7 @@ bandit==1.9.4
 safety>=3.0.0
 
 # Code Quality
-black>=26.5.1
+black>=26.10.1
 ruff==0.16.4
 mypy==1.8.0
 pre-commit==3.6.0
