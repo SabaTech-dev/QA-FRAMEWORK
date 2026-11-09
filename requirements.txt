@@ -1,7 +1,7 @@
 # QA-FRAMEWORK - Dependencies
 
 # Core Testing Framework
-pytest==9.0.3
+pytest==9.2.0
 pytest-asyncio==1.4.0
 pytest-xdist==3.8.0
 pytest-cov==7.1.0
@@ -14,7 +14,7 @@ requests==2.34.2  # aligned with pyproject.toml; locust>=2.31 requires requests>
 
 # UI Testing
 playwright==1.64.1
-selenium==4.16.0
+selenium==4.52.0
 
 # Data Generation
 faker==23.2.0
@@ -22,7 +22,7 @@ factory-boy==3.3.3
 
 # Validation & Configuration
 pydantic==2.6.1
-pydantic-settings==2.1.0
+pydantic-settings==2.16.2
 pyyaml==6.0.3
 python-dotenv==1.2.4
 pydantic-extra-types==2.11.1
@@ -32,7 +32,7 @@ allure-python-commons==2.16.2
 
 # Performance Testing
 locust==2.47.0
-pytest-benchmark==5.3.0
+pytest-benchmark==5.3.1
 
 # Security Testing
 bandit==1.9.4
@@ -58,7 +58,7 @@ redis==5.0.1  # Redis client
 psutil==5.9.8  # System monitoring
 
 # Database ORM & Migration
-sqlalchemy==2.1.6  # ORM for database operations
+sqlalchemy==2.1.8  # ORM for database operations
 alembic==1.20.1  # Database migrations
 
 # async HTTP
