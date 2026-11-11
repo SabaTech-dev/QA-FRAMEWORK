@@ -29,3 +29,18 @@ CVE-2026-63374 # anyio 4.12.1 (backend image) — fix ≥4.14.2 BLOQUEADO: brows
 CVE-2026-104848 # tinypool 0.7.0 dev-only (transitiva de vitest ^0.34.6), NO reachable en runtime prod — solo al correr vitest en CI. Fix en PR #252 (tinypool ≥2.1.1). RCE prototype-pollution mitigada por no-ejecución. devops triage + Alfred GO 2026-10-09 (card eaa6e336)
 # exp: 2027-01-07
 CVE-2026-104849 # ídem tinypool 0.7.0. devops triage + Alfred GO 2026-10-09 (card eaa6e336)
+
+# --- Pillow 12.3.0 waivers (2026-11-11, Alfred — card 26e973ff, decisión dueño 11-nov 21:45) ---
+# pillow 12.3.0 es transitiva de browser-use==0.13.* (clava pillow==12.3.0 EXACTO en requires_dist;
+# pillow 13.0.0 única versión no vulnerable → ResolutionImpossible). Fix real: port de
+# BrowserUseService a playwright/patchright (card c478c23a) — RETIRAR estos waivers es AC de esa card.
+# exp: 2026-12-11
+CVE-2026-112393 # pillow 12.3.0 (backend image) — transitiva de browser-use==0.13.* (pin exacto); waiver temporal pendiente port playwright, card c478c23a. Alfred 2026-11-11 (card 26e973ff)
+# exp: 2026-12-11
+CVE-2026-112398 # ídem pillow 12.3.0. waiver temporal pendiente port playwright, card c478c23a. Alfred 2026-11-11 (card 26e973ff)
+# exp: 2026-12-11
+CVE-2026-112403 # ídem pillow 12.3.0. waiver temporal pendiente port playwright, card c478c23a. Alfred 2026-11-11 (card 26e973ff)
+# exp: 2026-12-11
+CVE-2026-112900 # ídem pillow 12.3.0. waiver temporal pendiente port playwright, card c478c23a. Alfred 2026-11-11 (card 26e973ff)
+# exp: 2026-12-11
+CVE-2026-96639 # ídem pillow 12.3.0. waiver temporal pendiente port playwright, card c478c23a. Alfred 2026-11-11 (card 26e973ff)
