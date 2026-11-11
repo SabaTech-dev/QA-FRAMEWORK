@@ -87,7 +87,7 @@ jobs:
         if: matrix.test-type == 'e2e'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgbm-dev libwoff1 libopus0 libwebpdemux2 libenchant-2-2 libsecret-1-0 libhyphen0 libgdk-pixbuf2.0-0 libegl1 libgles2
+          sudo apt-get install -y libgbm-dev libwoff1 libopus0 libwebpdemux2 libenchant-2-2 libsecret-1-0 libhyphen0 libgdk-pixbuf-2.0-0 libegl1 libgles2
           poetry run pip install playwright pytest-playwright
           poetry run playwright install chromium
 
