@@ -312,7 +312,7 @@ jobs:
       - name: Install Playwright dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgbm-dev libwoff1 libopus0 libwebpdemux2 libenchant-2-2 libsecret-1-0 libhyphen0 libgdk-pixbuf2.0-0 libegl1 libgles2
+          sudo apt-get install -y libgbm-dev libwoff1 libopus0 libwebpdemux2 libenchant-2-2 libsecret-1-0 libhyphen0 libgdk-pixbuf-2.0-0 libegl1 libgles2
 
       - name: Cache pip packages
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
