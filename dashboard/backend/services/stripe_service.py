@@ -386,11 +386,15 @@ async def _handle_subscription_updated(db: AsyncSession, event: Dict[str, Any]) 
 
     if user:
         user.subscription_status = subscription["status"]
+        # current_period_start/end moved to items.data[0]; fall back to the
+        # subscription root for older API shapes.
+        items_data = (subscription.get("items") or {}).get("data") or []
+        period_source = items_data[0] if items_data else subscription
         user.subscription_current_period_start = datetime.fromtimestamp(
-            subscription["current_period_start"]
+            period_source["current_period_start"]
         )
         user.subscription_current_period_end = datetime.fromtimestamp(
-            subscription["current_period_end"]
+            period_source["current_period_end"]
         )
         await db.commit()
         logger.info("Subscription updated", user_id=user.id)
