@@ -1,10 +1,20 @@
-"""Browser-Use Service - AI-Powered Test Automation."""
+"""Browser Automation Service - AI-Powered Test Automation (playwright port).
+
+Port of the former browser-use 0.13 integration (card c478c23a, decision
+Joker 11-nov). Same public interface as before (execute_task / get_status),
+but the agent loop now runs on Playwright (already in the stack) and the
+LLM is reached through the LiteLLM gateway (:4000 -> :8009), removing the
+old agent-library and vendor LLM SDK dependencies.
+"""
 
 import asyncio
-from typing import Optional, Dict, Any
+import json
+import re
+from typing import Optional, Dict, Any, List
 from uuid import uuid4
 from datetime import datetime
 
+import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -14,55 +24,109 @@ from core.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+_MAX_SNIPPET_CHARS = 4000
+
+_SYSTEM_PROMPT = (
+    "You drive a browser to complete the user's task. Each turn you receive "
+    "the current page state. Reply ONLY with a JSON object choosing one action:\n"
+    '{"action": "click"|"type"|"scroll"|"navigate"|"done", '
+    '"selector": "<css selector>", "text": "<text to type or final answer>"}\n'
+    'Use "done" with "text" set to a short summary when the task is complete.'
+)
+
+
+class BrowserAutomationError(RuntimeError):
+    """Raised when the automation loop cannot proceed."""
+
 
 class BrowserUseService:
-    """Service for executing browser-use tasks."""
+    """Service for executing browser automation tasks (playwright backend)."""
 
     def __init__(self):
         self.active_tasks: Dict[str, asyncio.Task] = {}
-        self._llm = None
 
-    def _get_llm(self):
-        """Get LLM instance based on configuration."""
-        if self._llm is None:
-            if settings.BROWSER_USE_LLM_PROVIDER == "groq":
-                # browser-use 0.13 ships its own LLM wrappers (BaseChatModel protocol);
-                # langchain models are no longer accepted by Agent.
-                from browser_use import ChatGroq
+    # ------------------------------------------------------------------ LLM
+    def _get_llm_config(self) -> Dict[str, str]:
+        """Resolve LiteLLM/OpenAI-compatible endpoint config.
 
-                self._llm = ChatGroq(
-                    model=settings.BROWSER_USE_MODEL,
-                    api_key=(
-                        settings.GROQ_API_KEY.get_secret_value() if settings.GROQ_API_KEY else None
-                    ),
-                )
-            else:
-                raise ValueError(f"Unsupported LLM provider: {settings.BROWSER_USE_LLM_PROVIDER}")
-        return self._llm
+        The old Groq path is gone: the LiteLLM gateway (:4000 -> :8009) is the
+        single remote door. Existing deployments that only set the groq vars
+        keep working because we route them through LiteLLM too.
+        """
+        base_url = getattr(settings, "LITELLM_BASE_URL", None) or "http://127.0.0.1:4000/v1"
+        api_key = None
+        if getattr(settings, "LITELLM_API_KEY", None):
+            api_key = settings.LITELLM_API_KEY.get_secret_value()
+        elif getattr(settings, "GROQ_API_KEY", None):
+            api_key = settings.GROQ_API_KEY.get_secret_value()
+        return {"base_url": base_url, "api_key": api_key or "sk-noop", "model": settings.BROWSER_USE_MODEL}
+
+    async def _ask_llm(self, messages) -> str:
+        """One chat completion through the LiteLLM gateway."""
+        cfg = self._get_llm_config()
+        async with httpx.AsyncClient(timeout=60) as client:
+            resp = await client.post(
+                cfg["base_url"] + "/chat/completions",
+                headers={"Authorization": "Bearer " + cfg["api_key"]},
+                json={"model": cfg["model"], "messages": messages, "temperature": 0},
+            )
+            resp.raise_for_status()
+            return resp.json()["choices"][0]["message"]["content"]
+
+    async def _plan_step(self, prompt: str, page_state: str, history) -> Dict[str, Any]:
+        """Ask the LLM for the next action given the current page state."""
+        messages = [{"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "user", "content": "Task: " + prompt}]
+        messages.extend(history)
+        messages.append({"role": "user", "content": "Current page state:\n" + page_state})
+        raw = await self._ask_llm(messages)
+        match = re.search(r"\{.*\}", raw, re.DOTALL)
+        if not match:
+            raise BrowserAutomationError("LLM returned non-JSON action: " + raw[:200])
+        return json.loads(match.group(0))
+
+    # ------------------------------------------------------------ page state
+    @staticmethod
+    async def _page_state(page) -> str:
+        """Compact textual snapshot of the page for the LLM."""
+        title = await page.title()
+        current = page.url
+        body = await page.evaluate(
+            "() => {"
+            "const els = Array.from(document.querySelectorAll("
+            "'a[href], button, input, textarea, select, [role=button], [onclick]'));"
+            "return els.slice(0, 60).map((e, i) => {"
+            "const label = (e.innerText || e.placeholder || e.value || e.getAttribute('aria-label') || '').trim().slice(0, 80);"
+            "const sel = e.id ? '#' + e.id : (e.name ? '[name=' + e.name + ']' : e.tagName.toLowerCase() + ':' + i);"
+            "return sel + ' -> ' + label;"
+            "}).join('\n');"
+            "}"
+        )
+        return "URL: " + current + "\nTitle: " + title + "\nInteractive elements:\n" + body[:_MAX_SNIPPET_CHARS]
 
     @staticmethod
+    async def _apply_action(page, action: Dict[str, Any]) -> None:
+        """Execute one LLM-chosen action on the page."""
+        kind = action.get("action", "")
+        if kind == "click":
+            await page.click(action["selector"], timeout=10000)
+        elif kind == "type":
+            await page.fill(action["selector"], action.get("text", ""), timeout=10000)
+        elif kind == "scroll":
+            await page.mouse.wheel(0, 600)
+        elif kind == "navigate":
+            await page.goto(action.get("text") or action.get("selector"), timeout=30000)
+        elif kind == "done":
+            return
+        else:
+            raise BrowserAutomationError("Unsupported action from LLM: " + str(kind))
+        await page.wait_for_load_state("domcontentloaded", timeout=15000)
+
+    # ----------------------------------------------------------------- task
+    @staticmethod
     def _compose_task(prompt: str, url: str) -> str:
-        """Embed the start URL in the task text.
-
-        browser-use 0.13 removed ``run(url)``: with ``directly_open_url=True``
-        (the default) the agent extracts a single URL from the task and opens
-        it as its initial action.
-        """
-        return f"{prompt}\n\nStart by navigating to: {url}"
-
-    def _build_agent(self, prompt: str, url: str, options: Optional[Dict[str, Any]] = None):
-        """Construct a browser-use 0.13 Agent (no network, no browser launch).
-
-        ``browser_config=`` was removed in 0.13; the headless flag now lives on
-        a ``BrowserProfile`` passed as ``browser_profile=``.
-        """
-        from browser_use import Agent, BrowserProfile
-
-        return Agent(
-            task=self._compose_task(prompt, url),
-            llm=self._get_llm(),
-            browser_profile=BrowserProfile(headless=(options or {}).get("headless", True)),
-        )
+        """Embed the start URL in the task text (kept for interface compat)."""
+        return prompt + " (start URL: " + url + ")"
 
     async def execute_task(
         self,
@@ -72,22 +136,9 @@ class BrowserUseService:
         db: AsyncSession,
         options: Optional[Dict[str, Any]] = None,
     ) -> str:
-        """
-        Execute a browser-use task asynchronously.
+        """Execute a browser automation task asynchronously. Returns task ID."""
+        task_id = "bu_" + uuid4().hex[:8]
 
-        Args:
-            prompt: Natural language task description
-            url: Target URL
-            user_id: User ID executing the task
-            db: Database session
-            options: Optional execution options
-
-        Returns:
-            Task ID
-        """
-        task_id = f"bu_{uuid4().hex[:8]}"
-
-        # Create task record
         db_task = BrowserUseTask(
             task_id=task_id,
             user_id=user_id,
@@ -99,14 +150,11 @@ class BrowserUseService:
         db.add(db_task)
         await db.commit()
 
-        logger.info("Created browser-use task", task_id=task_id, prompt=prompt, url=url)
-
-        # Start background execution
-        async_task = asyncio.create_task(
+        background_task = asyncio.create_task(
             self._execute_browser_agent(task_id, prompt, url, db, options)
         )
-        self.active_tasks[task_id] = async_task
-
+        self.active_tasks[task_id] = background_task
+        background_task.add_done_callback(lambda _: self.active_tasks.pop(task_id, None))
         return task_id
 
     async def _execute_browser_agent(
@@ -117,24 +165,47 @@ class BrowserUseService:
         db: AsyncSession,
         options: Optional[Dict[str, Any]] = None,
     ):
-        """Execute browser-use agent in background."""
+        """Run the playwright automation loop in background."""
         try:
-            # Update status to running
             await self._update_task_status(db, task_id, TaskStatus.RUNNING)
-
             options = options or {}
-            # browser-use 0.13: Agent construction uses browser_profile= (browser_config
-            # was removed) and the start URL travels inside the task text.
-            agent = self._build_agent(prompt, url, options)
+            max_steps = options.get("max_steps", 100)
+            headless = options.get("headless", True)
+
+            from playwright.async_api import async_playwright
 
             start_time = datetime.utcnow()
+            history = []
+            final_answer = None
 
-            # Cap at 100 steps (the 0.1.x default) to bound task cost; 0.13 defaults to 500.
-            result = await agent.run(max_steps=options.get("max_steps", 100))
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=headless)
+                context = await browser.new_context()
+                page = await context.new_page()
+                await page.goto(url, timeout=30000, wait_until="domcontentloaded")
+
+                for _ in range(max_steps):
+                    state = await self._page_state(page)
+                    action = await self._plan_step(prompt, state, history)
+                    history.append({"role": "assistant", "content": json.dumps(action)})
+                    if action.get("action") == "done":
+                        final_answer = action.get("text", "")
+                        break
+                    await self._apply_action(page, action)
+
+                result = {
+                    "url": page.url,
+                    "title": await page.title(),
+                    "final_answer": final_answer,
+                    "steps_used": len(history),
+                }
+                if options.get("screenshot"):
+                    result["screenshot"] = await page.screenshot(
+                        path=options.get("screenshot_path") or "/tmp/" + task_id + ".png"
+                    )
+                await browser.close()
 
             duration = (datetime.utcnow() - start_time).total_seconds()
-
-            # Update task with results
             await self._update_task_result(
                 db,
                 task_id,
@@ -142,15 +213,14 @@ class BrowserUseService:
                 result=self._parse_result(result),
                 duration_seconds=int(duration),
             )
-
-            logger.info("Browser-use task completed", task_id=task_id, duration=duration)
+            logger.info("Browser automation task completed", task_id=task_id, duration=duration)
 
         except Exception as e:
-            logger.error("Browser-use task failed", task_id=task_id, error=str(e))
+            logger.error("Browser automation task failed", task_id=task_id, error=str(e))
             await self._update_task_result(db, task_id, TaskStatus.FAILED, error_message=str(e))
 
     def _parse_result(self, result: Any) -> Dict:
-        """Parse browser-use result into dict."""
+        """Parse automation result into dict."""
         if isinstance(result, dict):
             return result
         if hasattr(result, "model_dump"):
@@ -179,16 +249,18 @@ class BrowserUseService:
             select(BrowserUseTask).where(BrowserUseTask.task_id == task_id)
         )
         task = result_obj.scalar_one_or_none()
-        if task:
-            task.status = status
-            if result:
-                task.result = result
-            if error_message:
-                task.error_message = error_message
-            if duration_seconds:
-                task.duration_seconds = duration_seconds
+        if not task:
+            return
+        task.status = status
+        if result is not None:
+            task.result = result
+        if error_message is not None:
+            task.error_message = error_message
+        if duration_seconds is not None:
+            task.duration_seconds = duration_seconds
+        if status in (TaskStatus.COMPLETED, TaskStatus.FAILED):
             task.completed_at = datetime.utcnow()
-            await db.commit()
+        await db.commit()
 
     async def get_status(self, task_id: str, db: AsyncSession) -> Optional[Dict[str, Any]]:
         """Get task status."""
@@ -196,27 +268,12 @@ class BrowserUseService:
         task = result.scalar_one_or_none()
         if not task:
             return None
-
         return {
             "task_id": task.task_id,
-            "status": task.status.value,
-            "progress": 100 if task.status == TaskStatus.COMPLETED else 0,
-            "current_step": None,
-            "error": task.error_message,
-        }
-
-    async def get_results(self, task_id: str, db: AsyncSession) -> Optional[Dict[str, Any]]:
-        """Get full task results."""
-        result = await db.execute(select(BrowserUseTask).where(BrowserUseTask.task_id == task_id))
-        task = result.scalar_one_or_none()
-        if not task:
-            return None
-
-        return {
-            "task_id": task.task_id,
-            "status": task.status.value,
-            "success": task.status == TaskStatus.COMPLETED,
-            "steps": task.result.get("steps", []) if task.result else [],
+            "status": task.status.value if hasattr(task.status, "value") else task.status,
+            "prompt": task.prompt,
+            "url": task.url,
+            "result": task.result,
             "screenshots": task.screenshots or [],
             "video": task.video_path,
             "duration_seconds": float(task.duration_seconds) if task.duration_seconds else None,

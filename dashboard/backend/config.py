@@ -64,9 +64,11 @@ class Settings(BaseSettings):
     # Feature Flags
     ENABLE_BILLING: bool = os.getenv("ENABLE_BILLING", "false").lower() == "true"
 
-    # Browser-Use AI-Powered Test Automation
-    BROWSER_USE_LLM_PROVIDER: str = os.getenv("BROWSER_USE_LLM_PROVIDER", "groq")
+    # Browser-Use AI-Powered Test Automation (playwright port, card c478c23a)
+    BROWSER_USE_LLM_PROVIDER: str = os.getenv("BROWSER_USE_LLM_PROVIDER", "litellm")
     BROWSER_USE_MODEL: str = os.getenv("BROWSER_USE_MODEL", "llama-3.3-70b-versatile")
+    LITELLM_BASE_URL: str = os.getenv("LITELLM_BASE_URL", "http://127.0.0.1:4000/v1")
+    LITELLM_API_KEY: Optional[SecretStr] = os.getenv("LITELLM_API_KEY") or None
     GROQ_API_KEY: Optional[SecretStr] = None
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
