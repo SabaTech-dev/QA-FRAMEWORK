@@ -1,58 +1,31 @@
-# QA-FRAMEWORK Frontend - Production Dockerfile (Coolify)
-# Multi-stage build optimized for Coolify with base_directory: "/"
-FROM node:26-alpine AS builder
+# syntax=docker/dockerfile:1
+# Prod-grade frontend image (card 4a2dbdca): multi-stage build -> nginx alpine.
+# Replaces the Vite DEV server for qa.sabatech.dev.
+# Build:  docker build -f dashboard/frontend/Dockerfile.prod --build-arg VITE_API_URL=/api dashboard/frontend
 
+# ---- Stage 1: build ----
+FROM node:26-alpine AS build
 WORKDIR /app
 
-# Copy package files
-COPY dashboard/frontend/package*.json ./
+COPY package*.json ./
+# npm 12: install-scripts allowlist enforced (same policy as dev Dockerfile)
+RUN npm ci --legacy-peer-deps
 
-# Install ALL dependencies (including devDependencies for build)
-# npm 12: enforce del allowlist de install scripts (allowScripts en package.json)
-# TODO: remover --legacy-peer-deps cuando typescript-eslint soporte TS7 (peer <6.1.0)
-RUN npm ci --legacy-peer-deps --strict-allow-scripts
-
-# Smoke post-install: fallar el build si el binario nativo no carga
-# (npm 12 bloquea scripts por defecto con exit 0 silencioso)
-COPY dashboard/frontend/scripts/smoke-install.mjs ./scripts/smoke-install.mjs
-RUN node scripts/smoke-install.mjs
-
-# Copy source code
-COPY dashboard/frontend/ ./
-
-# Build argument for API URL (injected by Coolify env)
-ARG VITE_API_URL=http://localhost:8000/api/v1
-ENV VITE_API_URL=$VITE_API_URL
-
-# Build the app
+COPY . .
+# VITE_API_URL: relative by default so nginx proxies /api to the backend container
+ARG VITE_API_URL=/api
+ENV VITE_API_URL=${VITE_API_URL}
 RUN npm run build
 
-# Production stage
-FROM node:18-alpine
+# ---- Stage 2: serve ----
+FROM nginxinc/nginx-unprivileged:1.27-alpine
+USER 101
+COPY --from=build --chown=101:101 /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-WORKDIR /app
+EXPOSE 8080
 
-# Create non-root user for security (F-002 FIX)
-# WORKDIR antes del chown: /app debe existir (bug preexistente, fix card 0c00d7eb)
-RUN addgroup -g 1001 -S appuser && \
-    adduser -S -D -H -u 1001 -s /sbin/nologin -G appuser appuser && \
-    chown appuser:appuser /app
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:8080/healthz || exit 1
 
-# Install serve for production
-RUN npm install -g serve
-
-# Copy built assets from builder with correct ownership
-COPY --from=builder --chown=appuser:appuser /app/dist ./dist
-
-# Switch to non-root user (F-002 FIX)
-USER appuser
-
-# Expose port
-EXPOSE 3000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD wget -q --spider http://localhost:3000/ || exit 1
-
-# Start the app with serve
-CMD ["serve", "-s", "dist", "-l", "3000"]
+CMD ["nginx", "-g", "daemon off;"]
