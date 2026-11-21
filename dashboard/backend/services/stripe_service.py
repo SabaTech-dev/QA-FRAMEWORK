@@ -379,18 +379,24 @@ async def _handle_payment_failed(db: AsyncSession, event: Dict[str, Any]) -> Dic
 async def _handle_subscription_updated(db: AsyncSession, event: Dict[str, Any]) -> Dict[str, Any]:
     """Handle subscription update"""
     subscription = event["data"]["object"]
-    customer_id = subscription["customer"]
+    customer_id = subscription.get("customer", "")
 
     result = await db.execute(select(User).where(User.stripe_customer_id == customer_id))
     user = result.scalar_one_or_none()
 
     if user:
-        user.subscription_status = subscription["status"]
+        user.subscription_status = subscription.get("status", user.subscription_status)
+        # NOTE (basil): current_period_start/end moved from Subscription to
+        # SubscriptionItem (items.data[0]). Read from the item with a defensive
+        # fallback to the subscription root for older API shapes, using .get()
+        # defaults to avoid KeyError -> webhook retry storms (CWE-754).
+        items_data = subscription.get("items", {}).get("data", []) or []
+        first_item = items_data[0] if items_data else subscription
         user.subscription_current_period_start = datetime.fromtimestamp(
-            subscription["current_period_start"]
+            first_item.get("current_period_start", 0) or 0
         )
         user.subscription_current_period_end = datetime.fromtimestamp(
-            subscription["current_period_end"]
+            first_item.get("current_period_end", 0) or 0
         )
         await db.commit()
         logger.info("Subscription updated", user_id=user.id)
