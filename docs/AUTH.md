@@ -4,6 +4,8 @@
 **Version:** 1.0.0
 **Sprint:** 2.2 - Authentication & Authorization
 
+> **🔐 Secretos externalizados (card d870cafa, 2026-11-13):** los valores reales NUNCA viven en git — `${VAULT:<NOMBRE>}` referencia el gestor de secretos (owner-lane). Sanitizado por security; commit pendiente de review.
+
 ---
 
 ## Overview
@@ -38,7 +40,7 @@ src/domain/auth/
 | `User` | Base user entity with email, password hash, tenant association |
 | `OAuthUser` | OAuth-specific user data from social providers |
 | `Token` | Access and refresh tokens with expiration |
-| `Session` | User session with device info and activity tracking |
+| `Session` | User session with device info and activity |
 | `APIKey` | API key for programmatic access with scopes |
 
 #### Value Objects
@@ -72,14 +74,14 @@ src/infrastructure/oauth/
 ```bash
 # Google OAuth
 GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_CLIENT_SECRET=${VAULT:GOOGLE_CLIENT_SECRET}
 
 # GitHub OAuth
 GITHUB_CLIENT_ID=your_github_client_id
-GITHUB_CLIENT_SECRET=your_github_client_secret
+GITHUB_CLIENT_SECRET=${VAULT:GITHUB_CLIENT_SECRET}
 
 # JWT Settings
-JWT_SECRET_KEY=your_secure_secret_key
+JWT_SECRET_KEY=${VAULT:JWT_SECRET_KEY}
 JWT_ALGORITHM=HS256
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
 JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
@@ -178,10 +180,10 @@ curl -X POST https://api.qaframework.io/auth/login \
 Response:
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "access_token": "${VAULT:JWT_ACCESS_TOKEN_EXAMPLE}",
   "token_type": "Bearer",
   "expires_in": 3600,
-  "refresh_token": "rt_abc123...",
+  "refresh_token": "${VAULT:REFRESH_TOKEN_EXAMPLE}",
   "user_id": "uuid-here"
 }
 ```
@@ -223,7 +225,7 @@ Response (key shown only once!):
 {
   "id": "uuid-here",
   "name": "CI/CD Pipeline",
-  "key": "qa_1a2b3c4d5e6f...",
+  "key": "${VAULT:API_KEY_EXAMPLE}",
   "scopes": ["read:tests", "write:tests"],
   "created_at": "2026-02-24T21:00:00Z",
   "expires_at": "2026-05-25T21:00:00Z"
@@ -234,7 +236,7 @@ Response (key shown only once!):
 
 ```bash
 curl https://api.qaframework.io/api/v1/tests \
-  -H "X-API-Key: qa_1a2b3c4d5e6f..."
+  -H "X-API-Key: ${VAULT:API_KEY_EXAMPLE}"
 ```
 
 ---
@@ -306,7 +308,7 @@ All authentication is tenant-aware:
 
 - Users belong to a specific tenant
 - Sessions are isolated per tenant
-- API keys are scoped to tenant
+- API keys are scoped per tenant
 - OAuth flows maintain tenant context
 
 ---

@@ -3,6 +3,8 @@
 **Fecha:** 2026-02-24 21:35 UTC
 **Objetivo:** Configurar PostgreSQL y Redis para el backend de QA-FRAMEWORK
 
+> **🔐 Secretos externalizados (card d870cafa, 2026-11-13):** los valores reales NUNCA viven en git — `${VAULT:<NOMBRE>}` referencia el gestor de secretos (owner-lane). Sanitizado por security; commit pendiente de review.
+
 ---
 
 ## 📋 Prerrequisitos
@@ -77,7 +79,7 @@ En Railway Web UI:
 
 El formato será:
 ```
-postgresql://username:password@host:port/database
+postgresql://<usuario>:<contraseña>@<host>:<puerto>/<base>
 ```
 
 ### Redis Connection URL
@@ -90,7 +92,7 @@ En Railway Web UI:
 
 El formato será:
 ```
-redis://username:password@host:port
+redis://<usuario>:<contraseña>@<host>:<puerto>
 ```
 
 ---
@@ -105,15 +107,15 @@ redis://username:password@host:port
 
 ```bash
 # Database
-DATABASE_URL=postgresql://username:password@host:port/database
+DATABASE_URL=${VAULT:DATABASE_URL}
 
 # Redis
-REDIS_HOST=host
-REDIS_PORT=port
-REDIS_PASSWORD=password
+REDIS_HOST=${VAULT:REDIS_HOST}
+REDIS_PORT=${VAULT:REDIS_PORT}
+REDIS_PASSWORD=${VAULT:REDIS_PASSWORD}
 ```
 
-**Nota:** Reemplazar `username`, `password`, `host`, `port`, `database` con los valores reales del paso 3.
+**Nota:** Los valores reales viven en el gestor de secretos (owner-lane) — nunca en este documento ni en git.
 
 ---
 
@@ -188,8 +190,7 @@ alembic init alembic
 Editar `alembic.ini`:
 
 ```ini
-# sqlalchemy.url = driver://user:pass@localhost/dbname
-sqlalchemy.url = postgresql+asyncpg://username:password@host:port/database
+sqlalchemy.url = ${VAULT:DATABASE_URL}
 ```
 
 ### Crear primera migration
@@ -234,25 +235,25 @@ Resumen completo de variables necesarias:
 
 ```bash
 # Database (Railway PostgreSQL)
-DATABASE_URL=postgresql://user:pass@host:port/db
+DATABASE_URL=${VAULT:DATABASE_URL}
 
 # Redis (Railway Redis)
-REDIS_HOST=redis-host
-REDIS_PORT=6379
-REDIS_PASSWORD=redis-password
+REDIS_HOST=${VAULT:REDIS_HOST}
+REDIS_PORT=${VAULT:REDIS_PORT}
+REDIS_PASSWORD=${VAULT:REDIS_PASSWORD}
 
 # Auth
-JWT_SECRET_KEY=your-secret-key-here
+JWT_SECRET_KEY=${VAULT:JWT_SECRET_KEY}
 
 # Stripe (obtener de Stripe dashboard)
-STRIPE_API_KEY=sk_test_xxxxx
-STRIPE_WEBHOOK_SECRET=whsec_xxxxx
+STRIPE_API_KEY=${VAULT:STRIPE_API_KEY}
+STRIPE_WEBHOOK_SECRET=${VAULT:STRIPE_WEBHOOK_SECRET}
 
 # OAuth (obtener de provider dashboards)
 GOOGLE_CLIENT_ID=google-client-id
-GOOGLE_CLIENT_SECRET=google-client-secret
+GOOGLE_CLIENT_SECRET=${VAULT:GOOGLE_CLIENT_SECRET}
 GITHUB_CLIENT_ID=github-client-id
-GITHUB_CLIENT_SECRET=github-client-secret
+GITHUB_CLIENT_SECRET=${VAULT:GITHUB_CLIENT_SECRET}
 
 # Frontend
 FRONTEND_URL=https://your-frontend-url.com
@@ -316,3 +317,4 @@ alembic upgrade head
 
 **Creado por:** Alfred (IA Asistente)
 **Última actualización:** 2026-02-24 21:35 UTC
+**Sanitizado:** 2026-11-13 (card d870cafa) — secretos → `${VAULT:*}`

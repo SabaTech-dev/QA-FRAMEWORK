@@ -4,6 +4,8 @@
 **Proyecto:** QA-FRAMEWORK
 **Servicio:** qa-framework-backend
 
+> **🔐 Secretos externalizados (card d870cafa, 2026-11-13):** los valores reales NUNCA viven en git — `${VAULT:<NOMBRE>}` referencia el gestor de secretos (owner-lane). Sanitizado por security; commit pendiente de review.
+
 ---
 
 ## Variables Requeridas
@@ -28,14 +30,14 @@ Estas variables DEBEN estar configuradas en Railway Dashboard para que el backen
 
 | Variable | Valor | Descripción |
 |----------|-------|-------------|
-| `JWT_SECRET_KEY` | `PLACEHOLDER-REDACTED-2026-08-26` | Clave secreta para JWT tokens |
+| `JWT_SECRET_KEY` | `${VAULT:JWT_SECRET_KEY}` | Clave secreta para JWT tokens |
 
 ### Pagos (Stripe)
 
 | Variable | Valor | Descripción |
 |----------|-------|-------------|
-| `STRIPE_API_KEY` | `sk_live_...` | API key de Stripe (LIVE) |
-| `STRIPE_WEBHOOK_SECRET` | `PLACEHOLDER-REDACTED-2026-08-26` | Secreto del webhook de Stripe |
+| `STRIPE_API_KEY` | `${VAULT:STRIPE_API_KEY}` | API key de Stripe (LIVE) |
+| `STRIPE_WEBHOOK_SECRET` | `${VAULT:STRIPE_WEBHOOK_SECRET}` | Secreto del webhook de Stripe |
 | `ENABLE_BILLING` | `true` | Habilitar funcionalidades de billing |
 
 ### Configuración General
@@ -70,9 +72,9 @@ value = "${{Redis.REDIS_URL}}"
 Ir a Railway Dashboard → Proyecto → Servicio → Variables y añadir manualmente:
 
 ```
-JWT_SECRET_KEY=PLACEHOLDER-REDACTED-2026-08-26
-STRIPE_API_KEY=sk_live_YOUR_KEY_HERE
-STRIPE_WEBHOOK_SECRET=PLACEHOLDER-REDACTED-2026-08-26
+JWT_SECRET_KEY=${VAULT:JWT_SECRET_KEY}
+STRIPE_API_KEY=${VAULT:STRIPE_API_KEY}
+STRIPE_WEBHOOK_SECRET=${VAULT:STRIPE_WEBHOOK_SECRET}
 ENABLE_BILLING=true
 ENVIRONMENT=production
 FRONTEND_URL=https://frontend-phi-three-52.vercel.app
@@ -117,5 +119,6 @@ Si el backend falla al iniciar con este error, significa que faltan variables re
 ## Última Actualización
 
 **Fecha:** 2026-03-08 23:15 UTC
-**Commit:** (pending)
+**Sanitizado:** 2026-11-13 (card d870cafa) — secretos → `${VAULT:*}`
+**Commit:** (pending review)
 **Estado:** Variables documentadas, pendiente configuración en Railway
